@@ -15,16 +15,16 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 ## Requirements ##
 
 ### Client and Server ###
-# CFEngine 3.5.2+
-# [EFL]:https://github.com/evolvethinking/evolve\_cfengine\_freelib/, the Evolve Thinking free promise library. It very important that you know how to use this.
-# Perl 5.10+
+1. CFEngine 3.5.2+
+1. [EFL]:https://github.com/evolvethinking/evolve\_cfengine\_freelib/, the Evolve Thinking free promise library. It very important that you know how to use this.
+1. Perl 5.10+
 
 ### Server ###
-# Perl Module NET::DNS
-# Perl Module DBI
-# Perl Module DBD::Pg
-# Postgresql 8.3+
-# Apache recommended for proxy front end.
+1. Perl Module NET::DNS
+1. Perl Module DBI
+1. Perl Module DBD::Pg
+1. Postgresql 8.3+
+1. Apache recommended for proxy front end.
 
 ## Support ##
 
@@ -36,19 +36,19 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 
 ## Installation ##
 
-# Install prerequisites.
+1. Install prerequisites.
 
-# Create database delta\_reporting.
+1. Create database delta\_reporting.
 
-# Install contents of repo to /opt/delta\_reporting/.
+1. Install contents of repo to /opt/delta\_reporting/.
 
-# Configure using DeltaR.conf. Be sure to configure your database properly for authentication and authorization.
+1. Configure using DeltaR.conf. Be sure to configure your database properly for authentication and authorization.
 
-# Copy bin/delta\_reporting script to /etc/init.d. This is your start script. Run it.
+1. Copy bin/delta\_reporting script to /etc/init.d. This is your start script. Run it.
 
-# Go to http://localhost:8080/initialize\_database.
+1. Go to http://localhost:8080/initialize\_database.
 
-# You can DR run as is, or proxy behind Apache:
+1. You can DR run as is, or proxy behind Apache:
 
 `<VirtualHost *:80>
    ServerName ettin.example.com
@@ -63,16 +63,16 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
    </LocationMatch>
 </VirtualHost>`
 
-# Install delta\_reporting.cf into your CFEngine policy. Run bundles in the following order. Use of EFL's main methods bundle is encouraged. Don't forget the null parameters.
-## deltarep\_prelogging as early as possible on all hosts.
-## deltarep\_postlogging as late as possible on all hosts.
-## deltarep\_client\_get after deltarep\_postlogging on policy servers only.
+1. Install delta\_reporting.cf into your CFEngine policy. Run bundles in the following order. Use of EFL's main methods bundle is encouraged. Don't forget the null parameters.
+  1. deltarep\_prelogging as early as possible on all hosts.
+  1. deltarep\_postlogging as late as possible on all hosts.
+  1. deltarep\_client\_get after deltarep\_postlogging on policy servers only.
 
-# Define the namespace class delta\_reporting for all hosts, as early as possible.
+1. Define the namespace class delta\_reporting for all hosts, as early as possible.
 
-# Install bin/dhlogmaker and configure CFEngine to install it on all hosts. /opt/delta\_reporting/bin/dhlogmaker suggested. 
+1. Install bin/dhlogmaker and configure CFEngine to install it on all hosts. /opt/delta\_reporting/bin/dhlogmaker suggested. 
 
-# Create server access promises that allow the policy server's agent to download from cf-serverd on all agents, including itself, the directory ${sys.workdir}/delta\_reporting. Use of the EFL bundle efl\_server is encouraged.
+1. Create server access promises that allow the policy server's agent to download from cf-serverd on all agents, including itself, the directory ${sys.workdir}/delta\_reporting. Use of the EFL bundle efl\_server is encouraged.
 
 ## License ##
 
