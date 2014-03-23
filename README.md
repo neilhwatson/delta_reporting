@@ -50,7 +50,8 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 
 1. You can DR run as is, or proxy behind Apache:
 
-`<VirtualHost *:80>
+```apache
+<VirtualHost *:80>
    ServerName ettin.example.com
    ProxyPass / http://localhost:8080/
    ProxyPassReverse / http://localhost:8080/
@@ -61,7 +62,8 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
       AuthName 'Evolve Thinking Delta Reporting'
       Require valid-user
    </LocationMatch>
-</VirtualHost>`
+</VirtualHost>
+```
 
 1. Install delta\_reporting.cf into your CFEngine policy. Run bundles in the following order. Use of EFL's main methods bundle is encouraged. Don't forget the null parameters.
   1. deltarep\_prelogging as early as possible on all hosts.
