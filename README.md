@@ -12,6 +12,10 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 - Sort and filter your report results.
 - Save your reports in multiple formats.
 
+## Demo ##
+
+[demo.evolvethinking.com](http://demo.evolvethinking.com). User 'evolve', password 'thinking'.
+
 ## Requirements ##
 
 ### Client and Server ###
