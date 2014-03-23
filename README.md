@@ -16,7 +16,7 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 
 ### Client and Server ###
 1. CFEngine 3.5.2+
-1. [EFL]:https://github.com/evolvethinking/evolve\_cfengine\_freelib/, the Evolve Thinking free promise library. It very important that you know how to use this.
+1. [EFL](https://github.com/evolvethinking/evolve\_cfengine\_freelib/), the Evolve Thinking free promise library. It very important that you know how to use this.
 1. Perl 5.10+
 
 ### Server ###
@@ -78,10 +78,10 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 
 ## License ##
 
-Copyright Evolve Thinking ( [www.evolvethinking.com]:www.evolvethinking.com  ).
+Copyright Evolve Thinking ( [evolvethinking.com](http://evolvethinking.com) ).
 
 Delta Reporting is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program. If not, see [http://www.gnu.org/licenses/]:http://www.gnu.org/licenses/.
+You should have received a copy of the GNU General Public License along with this program. If not, see [http://www.gnu.org/licenses/](http://www.gnu.org/licenses/).
