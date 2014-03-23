@@ -1,0 +1,8 @@
+% layout 'main';
+
+<p class="alert alert-danger"><span class="glyphicon glyphicon-exclamation-sign"></span>
+<b>Error</b></p>
+
+% foreach my $e ( @$errors ) {
+   <p class="alert alert-danger"><%= $e %></p>
+% }

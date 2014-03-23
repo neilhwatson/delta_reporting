@@ -1,0 +1,25 @@
+% layout 'main';
+
+   <ul>
+      <li>Copywrite 2013 <a href="http://evolvethinking.com">Evolve Thinking Limited</a></li>
+      <li><a href="http://github.com/evolvethinking/delta-hardening">Source code here</a>.</li>
+      <li>Powered by <a href="http://mojolicio.us">Mojolicious</a> and <a href="http://perl.org">Perl</a>.</li>
+      <li>Back end is <a href="http://postgresql.org">PostgeSQL</a>
+         by default, but will work with most databases.
+         This database has <%= $number_of_records %> records and is growing.</li>
+   </ul>
+
+   <h2>Delta Hardening </h2>
+
+   <a href="http://evolvethinking.com/products/delta_hardening/"><img src="/media/dh-logo.png" style="padding-bottom:5px" height="110"></a>
+   <p><a href="http://evolvethinking.com/products/delta_hardening/">Delta Hardening</a> is a host hardening addon for Delta Reporting.</p> 
+
+   <h2>License</h2>
+
+   <p>Copyright Evolve Thinking (<a href="www.evolvethinking.com">www.evolvethinking.com</a>).</p>
+
+   <p>Delta Reporting is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p>
+
+   <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.</p>
+
+   <p>You should have received a copy of the GNU General Public License along with this program. If not, see <a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a></p>

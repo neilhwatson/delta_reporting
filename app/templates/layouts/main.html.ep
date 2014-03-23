@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %></title>
+
+  <!-- Bootstrap -->
+  <link href="/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/bootstrap-datetimepicker.css" rel="stylesheet">
+  <link href="/css/dataTables.bootstrap.css" rel="stylesheet">
+
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+  <![endif]-->
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script src="/js/bootstrap.min.js"></script>
+  <script src="/js/bootstrap-datetimepicker.js"></script>
+  <script src="/js/jquery.dataTables.js"></script>
+  <script src="/js/TableTools.js"></script>
+  <script src="/js/ZeroClipboard.js"></script>
+  <script src="/js/dataTables.bootstrap.js"></script>
+  
+</head>
+<body>
+   <div class="container-fluid">
+      <div class="page-header" style="margin-top:5px">
+         <div class="row" style="padding-bottom:5px">
+            <div class="col-md-2"><img height="100" src="/media/dr-logo.png"></div>
+            <div class="col-sm-3 col-md-6 col-lg-8"><h2><%= title %></h2></div>
+            <div class="col-md-2"><a href="http://evolvethinking.com"><img height="100" src="/media/et-logo.png"></a></div>
+         </div>
+         <div class="row">
+
+            <div class="btn-group btn-group-justified" role="toolbar">
+               <div class="btn-group">
+                  <a href="/"><button type=button" class="btn btn-primary">Home</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/classes"><button type=button" class="btn btn-primary">Classes</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/promises"><button type=button" class="btn btn-primary">Promises</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/inventory"><button type=button" class="btn btn-primary">Inventory</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/help"><button type=button" class="btn btn-primary">Help</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/about"><button type=button" class="btn btn-primary">About</button></a>
+               </div>
+            </div>
+
+         </div>
+      </div>
+
+      <div class="container-fluid">
+            <h1><%= title %></h1>
+            <%= content %>
+      </div>
+         
+      <div class="page-footer">
+         <div class="row">
+
+            <div class="btn-group btn-group-justified" role="toolbar">
+               <div class="btn-group">
+                  <a href="/"><button type=button" class="btn btn-primary">Home</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/classes"><button type=button" class="btn btn-primary">Classes</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/promises"><button type=button" class="btn btn-primary">Promises</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/inventory"><button type=button" class="btn btn-primary">Inventory</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/help"><button type=button" class="btn btn-primary">Help</button></a>
+               </div>
+               <div class="btn-group">
+                  <a href="/about"><button type=button" class="btn btn-primary">About</button></a>
+               </div>
+            </div>
+
+         </div>
+         <div class="row bg-info">
+            <div class="col-sm-offset-7 col-md-offset-9 col-sm-3 col-md-3">Copyright <a href="http://evolvethinking.com">Evolve Thinking Limited</a></div>
+         </div>
+      </div>
+   </div>
+</body>
+</html>

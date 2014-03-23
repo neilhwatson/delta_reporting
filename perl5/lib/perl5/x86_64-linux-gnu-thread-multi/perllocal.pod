@@ -1,0 +1,22 @@
+=head2 Wed Mar 19 15:32:48 2014: C<Module> L<Sys::Hostname::Long|Sys::Hostname::Long>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.4>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

@@ -1,0 +1,55 @@
+% layout 'main';
+
+<p class="alert alert-info"><span class="glyphicon glyphicon-info-sign"></span> limited to <%= $record_limit %> entries.</p>
+
+<table id="dr-results-table" class="table table-hover table-condensed table-striped">
+   <thead>
+      <tr>
+         % foreach my $column ( @$columns ) {
+         <th data-toggle="tooltip" title="sort"><%= $column %></th>
+         % }
+      </tr>
+   </thead>
+   <tbody>
+
+   % foreach my $row ( @$rows )
+   % {
+      </tr>
+        % foreach my $column (@$row ) {
+            <td><%= $column %></td>
+        % }
+      </tr>
+   % }
+   </tbody>
+   <tfoot>
+      <tr>
+         % foreach my $column ( @$columns ) {
+         <th><%= $column %></th>
+         % }
+      </tr>
+   </tfoot>
+</table>
+
+<!-- Datatables for pagination, print, and saving -->
+<script type="text/javascript">
+$(document).ready(function() {
+   $('#dr-results-table').dataTable( { 
+      "iDisplayLength": 50,
+        "sDom": 'T<"clear">lfrtip',
+        "oTableTools": {
+            "aButtons": [ "csv",
+               {
+                  "sExtends": "print",
+                  "bShowAll": true
+               },
+               {
+                  "sExtends": "pdf",
+                  "sPdfOrientation": "landscape",
+                  "sPdfSize": "Letter"
+               }
+            ]
+        }
+   } );
+} );
+</script>
+

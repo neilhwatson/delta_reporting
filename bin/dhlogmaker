@@ -1,0 +1,124 @@
+#!/usr/bin/perl
+
+# TODO remove all use statements before deployment.
+#use strict;
+#use warnings;
+#use Data::Dumper;
+
+=pod
+Requirements
+
+1. classes log will be in the format of:
+
+BEGIN 2014-03-17T22:03:56-0400
+_var_cache_cfengine__etc_ssh_sshd_config_handle_efl_service_svc_cache_kept
+_etc_rsyslog_conf_handle_efl_service_files_config_kept
+
+2. promises log will be in the format of:
+
+BEGIN 2014-03-17T22:03:56-0400
+efl_command_commands ;; /bin/echo =lsb_release=$(lsb_release -cs) ;; environment
+efl_delete_files_files_isdir ;; /var/tmp ;; Neil Watson
+
+3. Both class and promise files are new on each run. The timestamps should be the same.
+
+4. The final log is appended. CFEngine deletes it.
+
+=cut
+
+my $cf_workdir = '/var/cfengine/delta_reporting/log';
+my $classes = "$cf_workdir/classes";
+my $promises = "$cf_workdir/promises";
+my $final_log = "$cf_workdir/final";
+my $timestamp = '^BEGIN (\d{4}-\d{2}-\d{2}\S*)';
+
+my ( $class, $promise_handle, $promiser, $promise_outcome, $promisee );
+format FINAL =
+@* ;; @* ;; @* ;; @* ;; @* ;; @*
+$timestamp, $class, $promise_handle, $promiser, $promise_outcome, $promisee
+.
+
+sub readfile {
+   my $ts;
+	my $file = shift;
+	my ( @file, %remove_duplicates);
+
+	open(FH, "<", $file) || die "Cannot open $file, $!";
+	while (<FH>){
+		chomp;
+      if ( m/$timestamp/ ){
+         $ts = $1;
+         next;
+      }
+		$remove_duplicates{$_} = '';
+	}
+	close FH;
+
+	@file = keys %remove_duplicates;
+   unshift( @file, $ts);
+	return @file
+}
+
+#
+# Main matter
+# 
+my @classes = readfile $classes;
+my @promises = readfile $promises;
+
+my %timestamp;
+$timestamp{classes} = shift @classes;
+$timestamp{promises} = shift @promises;
+
+if ( $timestamp{classes} eq $timestamp{promises} )
+{
+   $timestamp = $timestamp{classes};
+}
+else
+{
+   die ( "Timestamps $timestamp{classes} and $timestamp{promsises} not the same.");
+}
+
+open (FINAL, ">>", $final_log) || die "Cannot open $final_log, $!";
+foreach $class ( @classes )
+{
+   $promise_handle  = 'empty';
+   $promiser        = 'empty';
+   $promise_outcome = 'empty';
+   $promisee        = 'empty';
+
+   if ( $class =~ m/(\S+)_handle_(\w+)_(((not)?kept)|repaired)$/ )
+   {
+      # Look for matching promise records
+      my $class_canonizied_promiser = $1; 
+      $promise_handle = $2;
+      $promise_outcome = $3;
+
+		for my $i ( 0 .. $#promises )
+      {
+         my $tmp_handle;
+         ( $tmp_handle, $promiser, $promisee ) = split '\s*;;\s*', $promises[$i];
+         
+         (my $promises_canonized_promiser = $promiser) =~ s/[\W\s]/_/g;
+
+            print "$promises_canonized_promiser eq $class_canonizied_promiser\n";
+            print "$tmp_handle eq $promise_handle\n";
+         if (
+            $promises_canonized_promiser eq $class_canonizied_promiser &&
+            $tmp_handle eq $promise_handle
+            )
+         {
+            splice @promises, $i, 1; # Shrink to shorten next loop;
+            # Write promise line
+            write FINAL;
+            last;
+         }
+      }
+   }
+   else
+   {
+      # Write class line.
+      write FINAL;
+   }
+}
+
+close FINAL;

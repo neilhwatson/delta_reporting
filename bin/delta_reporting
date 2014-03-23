@@ -1,0 +1,39 @@
+#!/bin/bash
+
+DESC="Delta Reporting hypnotoad http deamon"
+NAME="Delta Reporting"
+DIR=/opt/delta_reporting/app/
+PID=${DIR}/hypnotoad.pid
+
+usage ()
+{
+   echo "Options: start, restart, or stop."
+   exit 1
+}
+
+if [ $# -ne 1 ]
+then
+   usage
+fi
+
+case "$1" in
+
+   start|restart)
+      echo "Starting $NAME"
+      cd ${DIR}
+      ${DIR}/start
+      ;;
+
+   stop)
+      echo "Stopping $NAME"
+      kill $(cat $PID)
+      ;;
+
+   *)
+      echo "unknown option"
+      usage
+      ;;
+esac
+
+
+      

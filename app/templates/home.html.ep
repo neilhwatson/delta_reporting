@@ -1,0 +1,17 @@
+% title 'Delta Reporting';
+% layout 'main';
+
+   <p>Welcome to Delta Reporting, a promise and class reporting tool for CFEngine. With Delta Reporting you'll be able to query agent knowledge of classes and promise outcomes, both past and present.</p>
+
+   <h2>Getting started</h2>
+
+   <p>There are menu buttons at the top and bottom of every page.</p>
+
+   <dl class="dl-horizontal">
+      <dt>Classes</dt>
+      <dd>Query current and past classes for some or all hosts.</dd>
+      <dt>Promises</dt>
+      <dd>Query current and past promise outcomes for some or all hosts.</dd>
+      <dt>Inventory</dt>
+      <dd>See a count of all known recently defined hard classes.
+   </dl>

@@ -1,0 +1,220 @@
+=head2 Sat Mar  8 10:16:33 2014: C<Module> L<ExtUtils::MakeMaker|ExtUtils::MakeMaker>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 6.90>
+
+=item *
+
+C<EXE_FILES: bin/instmodsh>
+
+=back
+
+=head2 Sat Mar  8 10:17:22 2014: C<Module> L<parent|parent>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.228>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Sat Mar  8 10:17:24 2014: C<Module> L<version|version>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.9908>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Sat Mar  8 10:17:24 2014: C<Module> L<Module::Metadata|Module::Metadata>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.000019>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Sat Mar  8 10:17:37 2014: C<Module> L<Perl::OSType|Perl::OSType>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 1.007>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Sat Mar  8 10:18:21 2014: C<Module> L<local::lib|local::lib>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 2.000004>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Sat Mar  8 10:22:41 2014: C<Module> L<Mojolicious|Mojolicious>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 4.87>
+
+=item *
+
+C<EXE_FILES: script/hypnotoad script/mojo script/morbo>
+
+=back
+
+=head2 Sat Mar  8 11:26:41 2014: C<Module> L<ExtUtils::Constant|ExtUtils::Constant>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.23>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Sat Mar  8 11:34:41 2014: C<Module> L<YAML|YAML>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.90>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
+=head2 Sat Mar  8 11:39:33 2014: C<Module> L<Socket|Socket>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 2.013>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

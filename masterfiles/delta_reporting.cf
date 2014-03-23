@@ -1,0 +1,107 @@
+# deltarep bundles
+
+bundle agent deltarep_prelogging( ref )
+{
+   meta:
+      "Purpose" string => "Create dirs to hold logs";
+
+   vars:
+      "logdir"           string => "${efl_c.logdir}";
+      "client_log_final" string => "${logdir}/final";
+      "client_logs_dir"  string => "${logdir}/client_logs";
+      "class_log"        string => "${logdir}/classes";
+      "promise_log"      string => "${efl_c.promise_log}";
+      "raw_logs"          slist => { "${class_log}", "${promise_log}" };
+
+   files:
+      "${logdir}/." -> { "deltarep Evolve Thinking" }
+         handle => "deltarep_prelogging_files_create_dir",
+         create => 'true',
+         perms  => m( "644"  );
+
+      "${client_log_final}" -> { "deltarep Evolve Thinking" }
+         handle  => "deltarep_prelogging_files_tidy_final_log",
+         comment => "Cleanup logs",
+         action  => if_elapsed( "25" ),
+         delete  => tidy;
+
+      "${raw_logs}" -> { "deltarep Evolve Thinking" }
+         handle  => "deltarep_prelogging_files_tidy_client_raw_logs",
+         comment => "Cleanup logs",
+         delete  => tidy;
+
+      am_policy_hub::
+         "${client_logs_dir}/." -> { "deltarep Evolve Thinking" }
+				handle => "deltarep_prelogging_files_create_client_logs_dir",
+				create => 'true',
+				perms  => m( "644"  );
+
+         "${client_logs_dir}" -> { "deltarep Evolve Thinking" }
+            handle       => "deltarep_prelogging_files_tidy_client_logs",
+            depth_search => recurse( "inf"),
+            action       => if_elapsed( "60" ),
+            file_select  => plain,
+            delete       => tidy;
+
+   reports:
+      "BEGIN ${efl_c.udate}" -> { "deltarep Evolve Thinking" }
+         depends_on     => { "deltarep_prelogging_files_tidy_client_raw_logs" },
+         report_to_file => "${promise_log}";
+}
+
+bundle agent deltarep_postlogging( ref )
+{
+   vars:
+      "classes" slist => classesmatching( ".*" );
+
+   commands:
+      "/opt/delta_reporting/bin/dhlogmaker"
+         depends_on => { "deltarep_postlogging_reports_begin", "deltarep_postlogging_reports_classes" },
+         comment => "Make final log",
+            contain => silent;
+
+   reports:
+      "BEGIN ${efl_c.udate}" -> { "deltarep Evolve Thinking" }
+         handle         => "deltarep_postlogging_reports_begin",
+         depends_on     => { "deltarep_prelogging_files_tidy_client_raw_logs" },
+         report_to_file => "${deltarep_prelogging.class_log}";
+
+      "${classes}" -> { "deltarep Evolve Thinking" }
+         handle         => "deltarep_postlogging_reports_classes",
+         depends_on     => { "deltarep_postlogging_reports_begin", "deltarep_prelogging_files_tidy_client_raw_logs" },
+         report_to_file => "${deltarep_prelogging.class_log}";
+}
+
+bundle agent deltarep_client_get ( ref )
+{
+    vars:
+         "download_dir" string => "${deltarep_prelogging.client_logs_dir}";
+         'clients'       slist => { hostsseen( "2", "lastseen", "address" ) };
+
+    methods:
+       "deltarep"
+         usebundle => bg_deltarep_get ( "${download_dir}", "${clients}" ),
+         comment   => "Background for parallel processing",
+         action    => bg( "5", "5" );
+}
+
+bundle agent bg_deltarep_get( download_dir, clients )
+{
+   vars:
+      "final_log" string => "${deltarep_prelogging.client_log_final}";
+
+   files:
+      "$(download_dir)/${clients}.log" -> { "deltarep" }
+         comment     => "Download client logs",
+         handle      => "deltarep_client_get_files_final",
+         classes     => if_repaired("insert_deltarep_data_for_${clients}"),
+         perms       => m( "644" ),
+         copy_from   => remote_dcp( "${final_log}", "$(clients)");
+
+   commands:
+      "/usr/bin/curl http://localhost:8080/load?client_log=${clients}.log"
+         comment    => "Insert data into database",
+         handle     => "deltarep_client_get_commands_insert",
+         contain    => silent,
+         ifvarclass => canonify( "insert_deltarep_data_for_${clients}" );
+}

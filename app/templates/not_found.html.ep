@@ -1,0 +1,4 @@
+% layout 'main';
+
+<p class="alert alert-danger"><span class="glyphicon glyphicon-exclamation-sign"></span>
+<b>Page not found</b></p>

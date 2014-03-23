@@ -1,0 +1,123 @@
+% title 'Classes report form';
+% layout 'main';
+
+<div class="row">
+   <form method="post" action="/report_classes" class="form-horizontal" role="form">
+      <div class="form-group">
+         <label for="report_title" class="col-sm-2 control-label">Report Title</label>
+         <div class="col-sm-10">
+            <input name="report_title" tabindex="1" type="text" class="form-control" id="report_title" autocomplete="off" value="Class report <%= $timestamp %>"></input>
+         </div>
+      </div>
+
+      <div class="form-group">
+         <label for="class" class="col-sm-2 control-label">Class to search for:<br><small>(SQL '%' wildcard allowed)</small></label>
+         <div class="col-sm-10">
+            <input name="class" value="any" tabindex="2" type="text" class="form-control" id="class" placeholder="SQL '%' wildcard allowed"></input>
+         </div>
+      </div>
+
+      <div class="form-group">
+         <label for="hostname" class="col-sm-2 control-label">Hostname to search for:<br><small>(SQL '%' wildcard allowed)</small></label>
+         <div class="col-sm-10">
+            <input name="hostname" value="%" tabindex="3" type="text" class="form-control" id="hostname" placeholder="SQL '%' wildcard allowed"></input>
+         </div>
+      </div>
+
+      <div class="form-group">
+         <label for="ip_address" class="col-sm-2 control-label">IP Address to search for:<br><small>(SQL '%' wildcard and ipv6 allowed)</small></label>
+         <div class="col-sm-10">
+            <input name="ip_address" value="%" tabindex="4" type="text" class="form-control" id="ip_address" placeholder="SQL '%' wildcard allowed, ipv6 supported"></input>
+         </div>
+      </div>
+
+      <div class="form-group">
+         <label for="policy_server" class="col-sm-2 control-label">Policy server to search for:<br><small>(SQL '%' wildcard allowed)</small></label>
+         <div class="col-sm-10">
+            <input name="policy_server" value="%" tabindex="5" type="text" class="form-control" id="policy_server" placeholder="SQL '%' wildcard allowed, should be a hostname unless DNS is broken"></input>
+         </div>
+      </div>
+
+      <div class="form-group">
+         <label for="latest_record" class="col-sm-2 control-label">Search for latest records. (Slower than a time window.)</label>
+         <div class="col-sm-1">
+            <input name="latest_record" value='1' tabindex="6" type="checkbox" class="form-control" id="latest_record"></input>
+         </div>
+      </div>
+
+      <div id="timestamp_div">
+         <div class="form-group">
+            <label for="timestamp" class="col-sm-2 control-label">Timestamp to search for:<br><small>(yyyy-mm-dd HH:mm:ss)</small></label>
+            <div class="col-sm-10">
+               <div class="input-group date form_datetime" data-date="<%= $timestamp %>" data-link-field="timestamp">
+                  <span class="input-group-addon"><span class="glyphicon glyphicon-remove"></span></span>
+                  <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+                  <input name="timestamp" tabindex="7" class="form-control" type="text" value="<%= $timestamp %>" id="timestamp"></input>
+                  <!-- <input name="timestamp_hidden" tabindex="0" type="hidden" id="timestamp"></input> -->
+
+               </div>
+            </div>
+         </div>
+         <div class="form-group">
+            <label for="gmt_offset" class="col-sm-2 control-label">GMT Offset</label>
+            <div class="col-sm-10">
+               <input name="gmt_offset" tabindex="8" id="gmt_offset" value="<%= $gmt_offset %>" type="text" class="form-control"/></input>
+            </div>
+         </div>
+
+         <div class="form-group">
+            <label for="delta_minutes" class="col-sm-2 control-label">Delta minutes</label>
+            <div class="col-sm-10">
+               <input name="delta_minutes" value="-30" tabindex="9" type="text" class="form-control" id="delta_minutes" placeholder="&plusmn minutes from timestamp"></input>
+            </div>
+         </div>
+      </div>
+<script type="text/javascript">
+  $(function() {
+    $('.form_datetime').datetimepicker({
+      format: 'yyyy-mm-dd hh:ii:ss',
+      pickerPosition: 'top-right',
+      weekStart: 1,
+      todayBtn:  1,
+		autoclose: 1,
+		todayHighlight: 1,
+		startView: 2,
+		forceParse: 0,
+    });
+  });
+</script>
+
+     <div class="form-group">
+       <div class="col-sm-offset-2 col-sm-10">
+         <button tabindex="10" type="submit" class="btn btn-primary">Submit</button>
+       </div>
+     </div>
+   </form>
+
+   <script>
+   $(document).ready(function() {
+      $('#latest_record').click(function () {
+         $("#timestamp_div").toggle(!this.checked);
+      });
+      
+      if($('#latest_record').is(':checked')){
+         $("#timestamp_div").hide();
+      }else{
+         $("#timestamp_div").show();
+      }
+      
+   });
+   </script>
+</div>
+
+<div class="row">
+   <div class="col-sm-6">
+      <h1><span class="glyphicon glyphicon-question-sign"></span>Help <small>What does this form mean?</small></h1>
+      
+      <p>This query allows you to determine if a class was true during a specific time window, or return the last time the class was true. Results can be reduced by increasing your search criteria. Only <%= $record_limit %> records will be returned.</p>
+
+      <p>Using this form you can answer questions, like what AIX hosts do I have? What hosts have IP addresses 10.10.10.x? Query any class you like.</p>
+
+      <p>A tabbing order is in place for fast keyboard data entry</p>
+   </div>
+</div>

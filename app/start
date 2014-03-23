@@ -1,0 +1,10 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use lib "/opt/delta_reporting/perl5/lib/perl5";
+
+use Mojo::Server::Hypnotoad;
+
+my $toad = Mojo::Server::Hypnotoad->new;
+$toad->run('/opt/delta_reporting/app/DeltaR.pl');

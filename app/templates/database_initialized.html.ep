@@ -1,0 +1,5 @@
+% layout 'main';
+
+<p class="alert alert-info"><span class="glyphicon glyphicon-ok-sign"></span>
+<b>Database tables created.</b></p>
+

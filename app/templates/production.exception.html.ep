@@ -1,0 +1,4 @@
+% layout 'main';
+
+<p class="alert alert-danger"><span class="glyphicon glyphicon-exclamation-sign"></span>
+<b>There was an expection error. Run in development mode for more information.</b></p>

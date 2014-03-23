@@ -1,0 +1,7 @@
+% layout 'main';
+
+<h3>Database setup</h3>
+
+<p>The database settings are in DeltaR.conf. Create the database, start this application, and load the URL <a href="/initialize_database">/initialize_database</a>. If your tables are previously created or partially created then expect initialization errors. You can drop the database and try again.</p>
+
+
