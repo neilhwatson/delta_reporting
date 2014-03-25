@@ -2,7 +2,7 @@
 
    <ul>
       <li>Copywrite 2013 <a href="http://evolvethinking.com">Evolve Thinking Limited</a></li>
-      <li><a href="http://github.com/evolvethinking/delta-hardening">Source code here</a>.</li>
+      <li><a href="http://github.com/evolvethinking/delta_reporting">Source code here</a>.</li>
       <li>Powered by <a href="http://mojolicio.us">Mojolicious</a> and <a href="http://perl.org">Perl</a>.</li>
       <li>Back end is <a href="http://postgresql.org">PostgeSQL</a>
          by default, but will work with most databases.
