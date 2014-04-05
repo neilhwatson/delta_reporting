@@ -1,3 +1,4 @@
+-- psql -U postgres -w -h localhost < testsql.sql 
 \c delta_reporting;
 
 -- count any classes for now - 24 hours and -24 to -48 hours. 
@@ -62,3 +63,90 @@ SELECT promiser,promisee,promise_handle,promise_outcome,timestamp,hostname,ip_ad
 FROM(
    SELECT promiser,promisee,promise_handle,promise_outcome,timestamp,hostname,ip_address,policy_server
 */
+
+-- INSERT INTO inventory_table ( class ) VALUES ( 'cfengine_3%' );
+
+-- get random sample
+/*
+CREATE TEMPORARY TABLE agent_log_sample 
+   AS
+   SELECT * FROM agent_log
+	WHERE timestamp > ( now() - interval '1440' minute )
+   AND NOT promise_outcome = 'empty'
+   ORDER BY RANDOM()
+   LIMIT 100000
+   ; 
+SELECT promise_outcome,count(promise_outcome) AS count
+   FROM agent_log_sample
+   GROUP BY promise_outcome
+   ;
+SELECT count( DISTINCT CONCAT (ip_address,hostname)) AS hosts
+   FROM agent_log_sample
+   ;
+DROP TABLE agent_log_sample
+   ;
+*/
+
+-- Delete not max records from a single day older x days
+explain SELECT * FROM agent_log 
+WHERE 
+NOT IN (
+   SELECT
+          class,
+          max(timestamp) as timestamp,
+          hostname,
+          ip_address,
+          promise_handle,
+          promiser,
+          promisee,
+          policy_server,
+          promise_outcome
+      FROM agent_log
+      WHERE timestamp < now() - interval '7 days' 
+      GROUP BY
+          class,
+          DATE_TRUNC( 'day', timestamp),
+          hostname,
+          ip_address,
+          promise_handle,
+          promiser,
+          promisee,
+          policy_server,
+          promise_outcome
+)
+AND timestamp < now() - interval '7 days' 
+/*
+SELECT timestamp,hostname,class FROM agent_log
+   WHERE timestamp IN (
+      SELECT max(timestamp )
+         FROM (
+            SELECT timestamp,class,ip_address,hostname
+               FROM agent_log
+               WHERE timestamp < now() - interval '5 days'
+               AND class = 'any'
+               GROUP BY class,ip_address,hostname
+         ) AS grouped_promises
+      GROUP by DATE_TRUNC( 'day', timestamp )
+   )
+   ORDER BY class,timestamp
+;
+*/
+/*
+            SELECT MAX(timestamp) AS maxtime,class,ip_address,hostname
+               FROM agent_log
+               WHERE timestamp < now() - interval '5 days'
+               AND class = 'any'
+               GROUP BY class,ip_address,hostname
+               LIMIT 1000;
+*/
+-- GROUP BY promiser,promisee,promise_handle,promise_outcome,ip_address,hostname,timestamp,Day
+
+-- Purge old data
+/*
+DELETE FROM agent_log WHERE timestamp < now() - interval '7 days';
+vacuum agent_log;
+REINDEX TABLE agent_log;
+*/
+
+-- Count all records
+-- SELECT count(*) FROM agent_log WHERE timestamp > now() - interval '7 days'
