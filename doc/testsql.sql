@@ -7,14 +7,14 @@ SELECT
 ( SELECT COUNT( DISTINCT ip_address ) FROM agent_log WHERE class = 'any'
 	AND timestamp > ( now() - interval '1440' minute )) AS class_today,
 ( SELECT COUNT( DISTINCT ip_address ) FROM agent_log WHERE class = 'any'
-	AND timestamp < ( now() - interval '1440' minute ) AND Timestamp > ( now() - interval '2880' minute )) AS class_yesterday
+	AND timestamp < ( now() - interval '1440' minute ) AND timestamp > ( now() - interval '2880' minute )) AS class_yesterday
 ;
 */
 
 -- list hosts that checked in 24 to 48 hours ago but no within the past 24 hours. 
 /*
 SELECT DISTINCT ip_address AS missing_ip_addresses FROM agent_log WHERE class = 'any'
-	AND timestamp < ( now() - interval '24' hour ) AND Timestamp > ( now() - interval '48' hour )
+	AND timestamp < ( now() - interval '24' hour ) AND timestamp > ( now() - interval '48' hour )
 EXCEPT
 SELECT DISTINCT ip_address FROM agent_log WHERE class = 'any'
    AND timestamp > ( now() - interval '24' hour )
@@ -88,33 +88,85 @@ DROP TABLE agent_log_sample
 */
 
 -- Delete not max records from a single day older x days
-explain SELECT * FROM agent_log 
-WHERE 
-NOT IN (
+/*
+DROP INDEX cphi;
+CREATE INDEX cphi ON agent_log USING btree (class, promiser, hostname, ip_address);
+REINDEX TABLE agent_log;
+*/
+/*
+explain analyze SELECT * FROM agent_log 
+WHERE timestamp < now() - interval '7 days' 
+AND ( class,timestamp,promiser,ip_address,hostname) NOT IN (
+      SELECT
+             class,
+             max(timestamp) as timestamp,
+             promiser,
+             hostname,
+             ip_address
+         FROM agent_log
+         WHERE timestamp < now() - interval '7 days' 
+         GROUP BY
+             class,
+             DATE_TRUNC( 'day', timestamp),
+             promiser,
+             hostname,
+             ip_address
+      );
+*/
+/*
+explain analyze SELECT t1.class, t1.timestamp, t2.timestamp AS max_time FROM agent_log AS t1, (
    SELECT
-          class,
-          max(timestamp) as timestamp,
-          hostname,
-          ip_address,
-          promise_handle,
-          promiser,
-          promisee,
-          policy_server,
-          promise_outcome
-      FROM agent_log
+      class,
+      max(timestamp) as timestamp,
+      DATE_TRUNC( 'day', timestamp) AS day,
+      promiser,
+      hostname,
+      ip_address
+      FROM agent_log 
       WHERE timestamp < now() - interval '7 days' 
       GROUP BY
-          class,
-          DATE_TRUNC( 'day', timestamp),
-          hostname,
-          ip_address,
-          promise_handle,
-          promiser,
-          promisee,
-          policy_server,
-          promise_outcome
+      class,
+      DATE_TRUNC( 'day', timestamp),
+      promiser,
+      hostname,
+      ip_address
+   ) AS t2
+WHERE t1.timestamp < t2.timestamp
+AND DATE_TRUNC( 'day', t1.timestamp) = t2.day
+AND t2.class=t1.class
+AND t2.promiser=t1.promiser
+AND t2.hostname=t1.hostname
+AND t2.ip_address=t1.ip_address
+ORDER by t1.class,t1.timestamp DESC;
+*/
+
+SELECT (agent_log).class, (agent_log).timestamp FROM (
+   SELECT agent_log, row_number() OVER w
+   FROM agent_log
+   WHERE timestamp < now() - interval '7 days'
+    WINDOW w AS (
+      PARTITION BY class, ip_address, hostname, promiser, date_trunc('day', timestamp)
+      ORDER BY timestamp DESC, "rowId" DESC
+   )
+) t1
+WHERE row_number > 1
+ORDER BY class, timestamp DESC;
+/*
+SELECT * FROM agent_log t1
+WHERE timestamp < now() - interval '7 days' 
+AND timestamp < (
+   SELECT max(timestamp)
+   FROM agent_log t2
+   WHERE t2.class=t1.class AND t2.promiser=t1.promiser AND t2.hostname=t1.hostname AND t2.ip_address=t1.ip_address
 )
-AND timestamp < now() - interval '7 days' 
+ORDER by class,timestamp; 
+*/
+
+
+--DROP INDEX class_promiser_hostname_ip_timestamp;
+--REINDEX TABLE agent_log;
+
+
 /*
 SELECT timestamp,hostname,class FROM agent_log
    WHERE timestamp IN (
