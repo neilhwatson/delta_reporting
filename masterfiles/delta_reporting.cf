@@ -61,7 +61,6 @@ bundle agent deltarep_postlogging( ref )
    files:
       "${deltarep_prelogging.class_log}"
          handle        => "deltarep_postlogging_files_class_log",
-         edit_defaults => empty,
          create        => 'true',
          edit_line     => insert_lines( @{classes_log_lines} );
 
