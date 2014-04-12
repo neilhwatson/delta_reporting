@@ -139,20 +139,22 @@ AND t2.hostname=t1.hostname
 AND t2.ip_address=t1.ip_address
 ORDER by t1.class,t1.timestamp DESC;
 */
-
-SELECT (agent_log).class, (agent_log).timestamp FROM (
-   SELECT agent_log, row_number() OVER w
-   FROM agent_log
-   WHERE timestamp < now() - interval '7 days'
-    WINDOW w AS (
-      PARTITION BY class, ip_address, hostname, promiser, date_trunc('day', timestamp)
-      ORDER BY timestamp DESC, "rowId" DESC
-   )
-) t1
-WHERE row_number > 1
-ORDER BY class, timestamp DESC;
+DELETE FROM agent_log
+WHERE "rowId" IN (
+   SELECT "rowId" FROM (
+      SELECT "rowId", row_number() OVER w
+      FROM agent_log
+      WHERE timestamp < now() - interval '7 days'
+      WINDOW w AS (
+         PARTITION BY class, ip_address, hostname, promiser, date_trunc('day', timestamp)
+         ORDER BY timestamp DESC
+      )   
+   ) t1
+   WHERE row_number > 1
+   ORDER BY "rowId" DESC
+);
 /*
-SELECT * FROM agent_log t1
+SELECT "rowId" FROM agent_log t1
 WHERE timestamp < now() - interval '7 days' 
 AND timestamp < (
    SELECT max(timestamp)

@@ -5,13 +5,13 @@
 
    <h2>Getting started</h2>
 
-   <p>There are menu buttons at the top and bottom of every page.</p>
+   <p>The menu at the top lead to:</p>
 
    <dl class="dl-horizontal">
       <dt>Classes</dt>
       <dd>Query current and past classes for some or all hosts.</dd>
       <dt>Promises</dt>
       <dd>Query current and past promise outcomes for some or all hosts.</dd>
-      <dt>Inventory</dt>
-      <dd>See a count of all known recently defined hard classes.
+      <dt>Reports</dt>
+      <dd>Canned reports including inventory and missing hosts.
    </dl>

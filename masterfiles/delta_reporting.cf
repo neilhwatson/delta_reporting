@@ -53,23 +53,23 @@ bundle agent deltarep_postlogging( ref )
 {
    vars:
       "classes" slist => classesmatching( ".*" );
+      "classes_log_lines" slist => {
+         "BEGIN ${efl_c.udate}",
+         "@{classes}"
+      };
+
+   files:
+      "${deltarep_prelogging.class_log}"
+         handle        => "deltarep_postlogging_files_class_log",
+         edit_defaults => empty,
+         create        => 'true',
+         edit_line     => insert_lines( @{classes_log_lines} );
 
    commands:
       "/opt/delta_reporting/bin/dhlogmaker"
-         depends_on => { "deltarep_postlogging_reports_begin", "deltarep_postlogging_reports_classes" },
-         comment => "Make final log",
-            contain => silent;
-
-   reports:
-      "BEGIN ${efl_c.udate}" -> { "deltarep Evolve Thinking" }
-         handle         => "deltarep_postlogging_reports_begin",
-         depends_on     => { "deltarep_prelogging_files_tidy_client_raw_logs" },
-         report_to_file => "${deltarep_prelogging.class_log}";
-
-      "${classes}" -> { "deltarep Evolve Thinking" }
-         handle         => "deltarep_postlogging_reports_classes",
-         depends_on     => { "deltarep_postlogging_reports_begin", "deltarep_prelogging_files_tidy_client_raw_logs" },
-         report_to_file => "${deltarep_prelogging.class_log}";
+         depends_on => { "deltarep_postlogging_files_class_log" },
+         comment    => "Make final log",
+         contain    => in_shell;
 }
 
 bundle agent deltarep_client_get ( ref )
@@ -99,7 +99,8 @@ bundle agent bg_deltarep_get( download_dir, clients )
          copy_from   => remote_dcp( "${final_log}", "$(clients)");
 
    commands:
-      "/usr/bin/curl http://localhost:8080/load?client_log=${clients}.log"
+# TODO change to app/scripts/load
+   "/opt/delta_reporting/app/script/load '${download_dir}/${clients}.log'" -> { "deltarep" }
          comment    => "Insert data into database",
          handle     => "deltarep_client_get_commands_insert",
          contain    => silent,
