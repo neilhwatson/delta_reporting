@@ -9,9 +9,7 @@ bundle agent deltarep_prelogging( ref )
       "logdir"           string => "${efl_c.logdir}";
       "client_log_final" string => "${logdir}/final";
       "client_logs_dir"  string => "${logdir}/client_logs";
-      "class_log"        string => "${logdir}/classes";
       "promise_log"      string => "${efl_c.promise_log}";
-      "raw_logs"          slist => { "${class_log}", "${promise_log}" };
 
    files:
       "${logdir}/." -> { "deltarep Evolve Thinking" }
@@ -25,10 +23,18 @@ bundle agent deltarep_prelogging( ref )
          action  => if_elapsed( "25" ),
          delete  => tidy;
 
-      "${raw_logs}" -> { "deltarep Evolve Thinking" }
-         handle  => "deltarep_prelogging_files_tidy_client_raw_logs",
-         comment => "Cleanup logs",
-         delete  => tidy;
+      "${promise_log}" -> { "deltarep Evolve Thinking" }
+         handle        => "deltarep_prelogging_files_promise_log",
+         create        => "true",
+         classes       => if_notkept( "delete_promise_log" ),
+         edit_defaults => dr_empty,
+         edit_line     => append_if_no_line( "BEGIN ${efl_c.udate}" );
+
+      delete_promise_log::
+         "${promise_log}" -> { "deltarep Evolve Thinking" }
+            handle  => "deltarep_prelogging_files_delete_promise_log",
+            comment => "Delete log if edit_line promise fails",
+            delete  => tidy;
 
       am_policy_hub::
          "${client_logs_dir}/." -> { "deltarep Evolve Thinking" }
@@ -42,33 +48,38 @@ bundle agent deltarep_prelogging( ref )
             action       => if_elapsed( "60" ),
             file_select  => plain,
             delete       => tidy;
-
-   reports:
-      "BEGIN ${efl_c.udate}" -> { "deltarep Evolve Thinking" }
-         depends_on     => { "deltarep_prelogging_files_tidy_client_raw_logs" },
-         report_to_file => "${promise_log}";
 }
 
 bundle agent deltarep_postlogging( ref )
 {
    vars:
-      "classes" slist => classesmatching( ".*" );
-      "classes_log_lines" slist => {
+      "logdir"            string => "${efl_c.logdir}";
+      "class_log"         string => "${logdir}/classes";
+      "classes"            slist => classesmatching( ".*" );
+      "classes_log_lines"  slist => {
          "BEGIN ${efl_c.udate}",
          "@{classes}"
       };
 
    files:
-      "${deltarep_prelogging.class_log}"
+      "${class_log}"
          handle        => "deltarep_postlogging_files_class_log",
          create        => 'true',
+         classes       => if_notkept( "delete_class_log" ),
+         edit_defaults => dr_empty,
          edit_line     => insert_lines( @{classes_log_lines} );
+
+      delete_class_log::
+         "${class_log}"
+            handle  => "deltarep_postlogging_files_delete_class_log",
+            comment => "Delete class log if edit_line failes",
+            delete  => tidy;
 
    commands:
       "/opt/delta_reporting/bin/dhlogmaker"
          depends_on => { "deltarep_postlogging_files_class_log" },
          comment    => "Make final log",
-         contain    => in_shell;
+         contain    => silent;
 }
 
 bundle agent deltarep_client_get ( ref )
@@ -98,10 +109,17 @@ bundle agent bg_deltarep_get( download_dir, clients )
          copy_from   => remote_dcp( "${final_log}", "$(clients)");
 
    commands:
-# TODO change to app/scripts/load
    "/opt/delta_reporting/app/script/load '${download_dir}/${clients}.log'" -> { "deltarep" }
          comment    => "Insert data into database",
          handle     => "deltarep_client_get_commands_insert",
          contain    => silent,
          ifvarclass => canonify( "insert_deltarep_data_for_${clients}" );
 }
+
+body edit_defaults dr_empty
+{
+   empty_file_before_editing => "true";
+   edit_backup               => "false";
+   max_file_size             => "2M";
+}
+

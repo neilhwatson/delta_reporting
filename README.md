@@ -50,6 +50,8 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 
 1. Copy bin/delta\_reporting script to /etc/init.d. This is your start script. Run it.
 
+1. Create a user 'deltar', home /opt/delta\_reporting, shell /bin/false.
+
 1. Go to http://localhost:8080/initialize\_database.
 
 1. You can DR run as is, or proxy behind Apache:

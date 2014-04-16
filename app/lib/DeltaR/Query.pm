@@ -62,11 +62,37 @@ sub delete_records
 sub reduce_records
 {
    my $self = shift;
-   my $query = <<END;
-END
-   say $query;
-   my $sth = $dbh->prepare( $query );
-   $sth->execute;
+
+   my @queries = (
+"SELECT * INTO TEMP tmp_agent_log FROM agent_log
+   WHERE timestamp < now() - interval '$reduce_age days';",
+
+"DELETE FROM agent_log WHERE timestamp < now() - interval '$reduce_age days';",
+
+'INSERT INTO agent_log SELECT 
+   class, hostname, ip_address, promise_handle, promiser,
+   promisee, policy_server, "rowId", timestamp, promise_outcome
+   FROM (
+      SELECT *, row_number() OVER w
+      FROM tmp_agent_log
+      WINDOW w AS (
+         PARTITION BY class, ip_address, hostname, promiser, date_trunc(\'day\', timestamp)
+         ORDER BY timestamp DESC
+         )   
+      ) t1
+   WHERE row_number = 1;'
+);
+
+   foreach my $q ( @queries )
+   {
+      say $q;
+
+      my $sth = $dbh->prepare( $q )
+         or die "Can't prepare $q", $dbh->errstr;
+
+      $sth->execute
+         or die "Can't execute $q", $dbh->errstr;
+   }
 }
 
 sub count_records
