@@ -139,6 +139,7 @@ AND t2.hostname=t1.hostname
 AND t2.ip_address=t1.ip_address
 ORDER by t1.class,t1.timestamp DESC;
 */
+/*
 DELETE FROM agent_log
 WHERE "rowId" IN (
    SELECT "rowId" FROM (
@@ -153,6 +154,7 @@ WHERE "rowId" IN (
    WHERE row_number > 1
    ORDER BY "rowId" DESC
 );
+*/
 /*
 SELECT "rowId" FROM agent_log t1
 WHERE timestamp < now() - interval '7 days' 
@@ -204,3 +206,25 @@ REINDEX TABLE agent_log;
 
 -- Count all records
 -- SELECT count(*) FROM agent_log WHERE timestamp > now() - interval '7 days'
+
+-- Reduce old data
+-- select old records to temp tables
+SELECT * INTO TEMP tmp_agent_log FROM agent_log WHERE timestamp < now() - interval '7 days';
+-- delete old records in agent_table
+DELETE FROM agent_log WHERE timestamp < now() - interval '7 days';
+-- select top records per day from temp table to agent_table
+INSERT INTO agent_log SELECT 
+   class, hostname, ip_address, promise_handle, promiser,
+   promisee, policy_server, "rowId", timestamp, promise_outcome
+   FROM (
+         SELECT *, row_number() OVER w
+         FROM tmp_agent_log
+         WINDOW w AS (
+            PARTITION BY class, ip_address, hostname, promiser, date_trunc('day', timestamp)
+            ORDER BY timestamp DESC
+            )   
+         ) t1
+   WHERE row_number > 1
+   ORDER BY "rowId" DESC;
+vacuum agent_log;
+REINDEX TABLE agent_log;
