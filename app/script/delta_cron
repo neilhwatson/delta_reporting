@@ -1,0 +1,9 @@
+#!/bin/sh
+
+BASE=/opt/delta_reporting/app/script
+
+for c in prune reduce trends
+do
+   ${BASE}/$c
+done
+

@@ -39,6 +39,7 @@ sub startup
       my $self = shift;
       my $dq = DeltaR::Query->new( 
          agent_table     => $config->{agent_table},
+         promise_counts  => $config->{promise_counts},
          inventory_table => $config->{inventory_table},
          inventory_limit => $config->{inventory_limit},
          db_user         => $config->{db_user},

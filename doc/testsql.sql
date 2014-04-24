@@ -209,6 +209,7 @@ REINDEX TABLE agent_log;
 
 -- Reduce old data
 -- select old records to temp tables
+/*
 SELECT * INTO TEMP tmp_agent_log FROM agent_log WHERE timestamp < now() - interval '7 days';
 -- delete old records in agent_table
 DELETE FROM agent_log WHERE timestamp < now() - interval '7 days';
@@ -228,3 +229,80 @@ INSERT INTO agent_log SELECT
    ORDER BY "rowId" DESC;
 vacuum agent_log;
 REINDEX TABLE agent_log;
+*/
+
+-- Create summary table
+/*
+DROP TABLE promise_counts;
+DROP INDEX promise_counts_idx;
+CREATE TABLE promise_counts
+(
+   rowid serial NOT NULL,
+   datestamp date, 
+   hosts integer,
+   kept integer,
+   notkept integer,
+   repaired integer
+)
+WITH ( OIDS=FALSE );
+
+CREATE INDEX promise_counts_idx ON promise_counts USING btree( datestamp);
+*/
+
+-- Populate summary table
+INSERT INTO promise_counts ( datestamp, hosts, kept, notkept, repaired )
+   (
+   SELECT
+     date_trunc('day', timestamp) AS timestamp,
+     COUNT(DISTINCT CASE WHEN class = 'any' THEN ip_address ELSE NULL END) AS hosts,
+     COUNT(CASE promise_outcome WHEN 'kept' THEN 1 END) AS kept,
+     COUNT(CASE promise_outcome WHEN 'notkept' THEN 1 END) AS notkept,
+     COUNT(CASE promise_outcome WHEN 'repaired' THEN 1 END) AS repaired
+   FROM agent_log
+   WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
+     AND timestamp  < CURRENT_DATE 
+     AND NOT EXISTS (
+        SELECT 1 FROM promise_counts WHERE datestamp = datestamp
+     )
+   GROUP BY date_trunc('day', timestamp)
+   )
+;
+SELECT * FROM promise_counts;
+
+/*
+SELECT
+  date_trunc('day', timestamp) AS timestamp,
+  COUNT(DISTINCT CASE WHEN class = 'any' THEN ip_address ELSE NULL END) AS hosts,
+  COUNT(CASE promise_outcome WHEN 'kept' THEN 1 END) AS kept,
+  COUNT(CASE promise_outcome WHEN 'notkept' THEN 1 END) AS notkept,
+  COUNT(CASE promise_outcome WHEN 'repaired' THEN 1 END) AS repaired
+FROM agent_log
+WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
+  AND timestamp  < CURRENT_DATE 
+GROUP BY date_trunc('day', timestamp)
+;
+
+SELECT promise_outcome, COUNT(*)
+FROM agent_log
+WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
+  AND timestamp  < CURRENT_DATE 
+  AND (
+   promise_outcome = 'kept'
+   OR promise_outcome = 'notkept'
+   OR promise_outcome = 'repaired'
+)
+GROUP BY promise_outcome
+;
+--UNION
+SELECT class, COUNT( class ) as hosts
+FROM(
+   SELECT class,ip_address FROM agent_log
+      WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
+        AND timestamp  < CURRENT_DATE 
+        AND class = 'any'
+   GROUP BY class,ip_address
+)
+AS hosts
+GROUP BY class
+;
+*/

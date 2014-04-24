@@ -9,6 +9,7 @@ use Sys::Hostname::Long 'hostname_long';
 our $dbh;
 our $record_limit;
 our $agent_table;
+our $promise_counts;
 our $inventory_table;
 our $inventory_limit;
 our $db_user;
@@ -22,6 +23,7 @@ sub new
    my %param = @_;
    $record_limit    = $param{'record_limit'};
    $agent_table     = $param{'agent_table'};
+   $promise_counts  = $param{'promise_counts'};
    $inventory_table = $param{'inventory_table'};
    $inventory_limit = $param{'inventory_limit'};
    $db_user         = $param{'db_user'};
@@ -255,6 +257,42 @@ END
    return $sth->fetchall_arrayref();
 }
 
+sub insert_yesterdays_promise_counts
+{
+   my $self = shift;
+   my $query = <<END;
+INSERT INTO $promise_counts ( datestamp, hosts, kept, notkept, repaired )
+   SELECT
+     date_trunc('day', timestamp) AS timestamp,
+     COUNT(DISTINCT CASE WHEN class = 'any' THEN ip_address ELSE NULL END) AS hosts,
+     COUNT(CASE promise_outcome WHEN 'kept' THEN 1 END) AS kept,
+     COUNT(CASE promise_outcome WHEN 'notkept' THEN 1 END) AS notkept,
+     COUNT(CASE promise_outcome WHEN 'repaired' THEN 1 END) AS repaired
+   FROM $agent_table
+   WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
+     AND timestamp  < CURRENT_DATE 
+     AND NOT EXISTS (
+        SELECT 1 FROM $promise_counts WHERE datestamp = datestamp
+     )
+   GROUP BY date_trunc('day', timestamp)
+;
+END
+
+   my $sth = $dbh->prepare( $query );
+   $sth->execute;
+}
+
+sub query_promise_counts
+{
+   my $self = shift;
+   my $query = <<END;
+SELECT datestamp, hosts, kept, notkept, repaired FROM $promise_counts;
+END
+   my $sth = $dbh->prepare( $query );
+   $sth->execute;
+   return $sth->fetchall_hashref('datestamp');
+}
+
 sub query_classes
 {
    my $self = shift;
@@ -415,7 +453,24 @@ COMMENT ON COLUMN $inventory_table.\"rowId\" IS 'auto generated row id';",
 ('vmware%'),
 ('xen%'),
 ('zone_%');
-"
+",
+
+# Seven
+"CREATE TABLE $promise_counts
+(
+   rowid serial NOT NULL,
+   datestamp date,
+   hosts integer,
+   kept integer,
+   notkept integer,
+   repaired integer
+)
+WITH ( OIDS=FALSE );
+",
+
+# Eight
+"CREATE INDEX promise_counts_idx ON $promise_counts USING btree( datestamp );",
+
 );
 
    foreach my $query ( @queries )
