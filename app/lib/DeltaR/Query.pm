@@ -272,14 +272,16 @@ INSERT INTO $promise_counts ( datestamp, hosts, kept, notkept, repaired )
    WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
      AND timestamp  < CURRENT_DATE 
      AND NOT EXISTS (
-        SELECT 1 FROM $promise_counts WHERE datestamp = datestamp
+        SELECT 1 FROM $promise_counts WHERE datestamp = timestamp 
      )
    GROUP BY date_trunc('day', timestamp)
 ;
 END
 
-   my $sth = $dbh->prepare( $query );
-   $sth->execute;
+   my $sth = $dbh->prepare( $query )
+      or die "$dbh->errstr Cannot prepare $query";
+   $sth->execute
+      or die "$dbh->errstr Cannot execute $query";
 }
 
 sub query_promise_counts

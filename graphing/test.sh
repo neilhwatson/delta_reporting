@@ -7,8 +7,8 @@ set ylabel "Count"
 set rmargin 7
 
 set border linewidth 2
-set style line 1 linecolor rgb 'red'   linetype 1 linewidth 2
-set style line 2 linecolor rgb 'green' linetype 1 linewidth 2
+set style line 1 linecolor rgb 'blue' linetype 1 linewidth 2
+set style line 2 linecolor rgb 'black' linetype 1 linewidth 2
 set style fill solid
 
 set xdata time
@@ -25,7 +25,7 @@ h(x) = m2 * x/1e8 +b2
 fit h(x) 'test.dat' using 1:3 via m2,b2
 
 set terminal png enhanced size 1024,768
-plot 'test.dat' using 1:2 notitle with boxes lc rgb "blue", \
+plot 'test.dat' using 1:2 title 'Promises not kept' with boxes lc rgb "orange", \
 p(x) title 'Promise Trend' with lines linestyle 1, \
 h(x) title 'Host Trend' with lines linestyle 2
 

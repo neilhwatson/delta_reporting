@@ -250,6 +250,7 @@ CREATE INDEX promise_counts_idx ON promise_counts USING btree( datestamp);
 */
 
 -- Populate summary table
+/*
 INSERT INTO promise_counts ( datestamp, hosts, kept, notkept, repaired )
    (
    SELECT
@@ -262,12 +263,13 @@ INSERT INTO promise_counts ( datestamp, hosts, kept, notkept, repaired )
    WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
      AND timestamp  < CURRENT_DATE 
      AND NOT EXISTS (
-        SELECT 1 FROM promise_counts WHERE datestamp = datestamp
+        SELECT 1 FROM promise_counts WHERE datestamp = timestamp
      )
    GROUP BY date_trunc('day', timestamp)
    )
 ;
-SELECT * FROM promise_counts;
+*/
+SELECT datestamp, hosts, kept, notkept, repaired FROM promise_counts;
 
 /*
 SELECT
@@ -281,7 +283,9 @@ WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
   AND timestamp  < CURRENT_DATE 
 GROUP BY date_trunc('day', timestamp)
 ;
+*/
 
+/*
 SELECT promise_outcome, COUNT(*)
 FROM agent_log
 WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
