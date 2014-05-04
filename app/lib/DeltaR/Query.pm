@@ -284,15 +284,14 @@ END
       or die "$dbh->errstr Cannot execute $query";
 }
 
-sub query_promise_counts
+sub query_hosts_trend
 {
    my $self = shift;
-   my $query = <<END;
-SELECT datestamp, hosts, kept, notkept, repaired FROM $promise_counts;
-END
+   my @fields = @_;
+   my $query = "SELECT datestamp, @fields FROM $promise_counts";
    my $sth = $dbh->prepare( $query );
    $sth->execute;
-   return $sth->fetchall_hashref('datestamp');
+   return $sth->fetchall_arrayref();
 }
 
 sub query_classes

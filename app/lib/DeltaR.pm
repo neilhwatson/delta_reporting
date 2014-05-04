@@ -4,6 +4,7 @@ use Mojo::Base qw( Mojolicious );
 use strict;
 use warnings;
 use DeltaR::Query;
+use DeltaR::Graph;
 use POSIX qw( strftime );
 use DBI;
 
@@ -72,6 +73,27 @@ sub startup
          number_of_records => $number_of_records );
       
    } => 'about');
+
+   $r->get( '/trend/hosts' => sub
+   {
+      my $self = shift;
+      my $dq = $self->app->dr;
+      my @columns = qw/Date Hosts/;
+      my $rows = $dq->query_hosts_trend( 'hosts' );
+   
+      my $gr = DeltaR::Graph->new();
+      $gr->trends( 
+         keys => \@columns,
+         data => $rows
+      );
+
+      print Dumper( @columns );
+      $self->stash(
+         title   => "Hosts count and trend",
+         rows    => $rows,
+         columns => \@columns 
+      );
+   } => 'trend');
 
    $r->get( '/missing' => sub
    {

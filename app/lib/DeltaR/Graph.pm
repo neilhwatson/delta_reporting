@@ -2,6 +2,7 @@ package DeltaR::Graph;
 
 use strict;
 use warnings;
+use Statistics::LineFit;
 use Data::Dumper; # TODO remove for production
 
 our $gnuplot;
@@ -9,26 +10,33 @@ our $gnuplot;
 sub new
 {
    my $self = shift;
-   $gnuplot = "/usr/bin/gnuplot";
-   die "Cannot file $gnuplot" unless (-e $gnuplot );
-
    bless{};
 }
 
 sub trends
 {
-   my ( $self, $data ) = @_;
-   my $title = 'Promises Kept';
+   my ( $self, %params ) = @_;
 
-   my @graphs = qw/kept notkept repaired/;
+=pod
+Need:
+key
+table data
+=cut
 
-   foreach my $g ( @graphs )
+   print Dumper( \%params );
+   my @data = @{$params{data}};
+   for my $r ( @data )
    {
-      $self->graph(
-         string => $g,
-         data   => $data,
-      );
+      print "date = ".$r->[0]."\n";
+      print "count = ".$r->[1]."\n";
    }
+=pod
+Return data as array of docs including
+key
+slope
+intercept
+array of x:, y: pairs. (date in epoch).
+=cut
 }
 
 sub graph
