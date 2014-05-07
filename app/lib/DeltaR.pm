@@ -6,6 +6,7 @@ use warnings;
 use DeltaR::Query;
 use DeltaR::Graph;
 use POSIX qw( strftime );
+use Data::Dumper; # TODO remove for production;
 use DBI;
 
 sub startup
@@ -74,24 +75,39 @@ sub startup
       
    } => 'about');
 
-   $r->get( '/trend/hosts' => sub
+   $r->get( '/trend/kept' => sub
    {
       my $self = shift;
       my $dq = $self->app->dr;
-      my @columns = qw/Date Hosts/;
-      my $rows = $dq->query_hosts_trend( 'hosts' );
+      my @columns = ( 'Date', 'Hosts', 'Kept' );
+      my $rows = $dq->query_promise_count( 'hosts', 'kept' );
    
       my $gr = DeltaR::Graph->new();
-      $gr->trends( 
-         keys => \@columns,
-         data => $rows
+      my ( $hosts_series, $hosts_stats ) = $gr->nvd3_series( 
+         key => 'Hosts',
+         column => 1,
+         rows => $rows
       );
 
-      print Dumper( @columns );
+      my ( $promise_series, $promise_stats ) = $gr->nvd3_series( 
+         key => 'Kept',
+         column => 2,
+         rows => $rows
+      );
+      my @json_data_series = ( %$hosts_series, %$promise_series );
+      my $json_data_series = $gr->encode_to_json( \@json_data_series );
+
+      print Dumper( \$promise_series );
+      print Dumper( \$promise_stats );
+      print Dumper( \$hosts_stats );
+
       $self->stash(
-         title   => "Hosts count and trend",
-         rows    => $rows,
-         columns => \@columns 
+         title         => "Promises kept trend",
+         rows          => $rows,
+         dr_data       => $json_data_series,
+         hosts_stats   => $hosts_stats,
+         promise_stats => $promise_stats,
+         columns       => \@columns 
       );
    } => 'trend');
 

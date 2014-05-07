@@ -8,13 +8,15 @@
             <h3 class="panel-title">
                <a data-toggle="collapse" href="#collapseOne">
                   <span class="glyphicon glyphicon-chevron-down"></span>
-                  Graphs
+                  Graph
                </a>
             </h3>
          </div> <!-- panel-heading -->
          <div id="collapseOne" class="panel-collapse collapse in">
             <div class="panel-body">
-               Pretty graph here
+               <div id="chart">
+                     <svg></svg>
+               </div>
             </div> <!-- panel-body -->
          </div> <!-- collapseOne -->
       </div> <! -- panal-#class -->
@@ -30,10 +32,37 @@
          </div> <!-- panel-heading -->
          <div id="collapseTwo" class="panel-collapse collapse out">
             <div class="panel-body">
-               Slope, Sigma, Intercept.
+               <table class="table">
+                  <thead>
+                     <tr>
+                        <th>Promises</th>
+                        <th>Value</th>
+                     </tr>
+                  </thead>
+               % for my $key ( sort keys %$promise_stats ) {
+                     <tr>
+                        <td> <%= $key %> </td>
+                        <td> <%= $promise_stats->{$key} %> </td>
+                     </tr>
+               % }
+                  <thead>
+                     <tr>
+                        <th>Hosts</th>
+                        <th>Value</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+               % for my $key ( sort keys %$hosts_stats ) {
+                     <tr>
+                        <td> <%= $key %> </td>
+                        <td> <%= $hosts_stats->{$key} %> </td>
+                     </tr>
+               % }
+                  </tbody>
+               </table>
             </div> <!-- panel-body -->
          </div> <!-- collapseTwo -->
-      </div> <! -- panal-#class -->
+      </div> <!-- panal-#class -->
 
       <div class="panel panel-primary">
          <div class="panel-heading">
@@ -66,7 +95,51 @@
                Describe graph and stats here.
             </div> <!-- panel-body -->
          </div> <!-- collapseFour -->
-      </div> <! -- panal-#class -->
+      </div> <!-- panal-#class -->
 
    </div> <!-- panel-default -->
 </div> <!-- panel-group -->
+
+<script type="text/javascript">
+var dr_data = <%= $dr_data %>;
+
+nv.addGraph(function() {
+   var chart = nv.models.scatterPlusLineChart()
+
+   .margin(
+      {top: 30},
+      {right: 50},
+      {left: 70},
+      {bottom: 50}
+   )
+   .color(d3.scale.category10().range());
+   
+   chart.scatter.onlyCircles(false);
+   chart.tooltipContent(function(key) {
+      return '<h2>' + key + '</h2>';
+   });
+
+   chart.xAxis
+      .ticks(10)
+      .staggerLabels(true)
+      .tickFormat(function(d) {
+         return d3.time.format('%Y-%m-%d')(new Date(d*1000));
+   })
+   ;
+
+   chart.yAxis
+      .ticks(7)
+      .axisLabel("Count")
+      .tickFormat(d3.format("d"))
+   ;
+
+   d3.select("#chart svg")
+      .datum(dr_data)
+      .call(chart);
+
+   nv.utils.windowResize( chart.update );
+
+   return chart;
+   });
+</script>
+

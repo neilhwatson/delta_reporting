@@ -11,7 +11,7 @@
 
    % foreach my $row ( @$rows )
    % {
-      </tr>
+      <tr>
         % foreach my $column (@$row ) {
             <td><%= $column %></td>
         % }
