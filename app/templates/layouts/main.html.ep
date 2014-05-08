@@ -56,7 +56,6 @@
                <li class="dropdown">
                   <a class="dropdown-toggle" data-toggle="dropdown" href="#">Trends</a>
                   <ul class="dropdown-menu">
-                     <li><a href="/trend/hosts">Host count</a></li>
                      <li><a href="/trend/kept">Promises kept</a></li>
                      <li><a href="/trend/notkept">Promises not kept</a></li>
                      <li><a href="/trend/repaired">Promises repaired</a></li>

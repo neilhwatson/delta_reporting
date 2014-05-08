@@ -1,5 +1,9 @@
 % layout 'main';
 
+<style>
+#chart { height: 500px; }
+</style>
+
 <div class="panel-group">
    <div class="panel panel-default">
 
@@ -14,7 +18,7 @@
          </div> <!-- panel-heading -->
          <div id="collapseOne" class="panel-collapse collapse in">
             <div class="panel-body">
-               <div id="chart">
+               <div id="chart" class="with-3d-shadow with-transitions">
                      <svg></svg>
                </div>
             </div> <!-- panel-body -->
@@ -78,7 +82,7 @@
                %= include 'table'
             </div> <!-- panel-body -->
          </div> <!-- collapseThree -->
-      </div> <! -- panal-#class -->
+      </div> <!-- panal-#class -->
 
       <div class="panel panel-primary">
          <div class="panel-heading">
@@ -86,13 +90,17 @@
                <a data-toggle="collapse" href="#collapseFour">
                   <span class="glyphicon glyphicon-chevron-down"></span>
                   <span class="glyphicon glyphicon-question-sign"></span>
-                  Explanation of this graph
+                  Explanation of this graph.
                </a>
             </h3>
          </div> <!-- panel-heading -->
          <div id="collapseFour" class="panel-collapse collapse out">
             <div class="panel-body">
-               Describe graph and stats here.
+
+                  <p>This graph shows two scatter plots and a trend line for each. The plots are for the total count of promises, including repeats, for each day, either kept, repaired, or unkept, depending on what you selected, and the total number of CFEngine agent hosts at the same time.</p>
+
+                  <p>The trends can reveal interesting things. Is the count of promises repaired rising along with hosts? How many hosts will you have sixty days from now? How many promises will not be kept thirty days from now?</p>
+
             </div> <!-- panel-body -->
          </div> <!-- collapseFour -->
       </div> <!-- panal-#class -->
@@ -101,18 +109,36 @@
 </div> <!-- panel-group -->
 
 <script type="text/javascript">
-var dr_data = <%= $dr_data %>;
+var dr_data = <%== $dr_data %>;
 
 nv.addGraph(function() {
    var chart = nv.models.scatterPlusLineChart()
 
-   .margin(
+   var project_days   = 60*60*1440; // Project graph (x axis) 60 future days.
+   var project_counts = 2; // Increase y axis by this factor for projections.
+
+   chart.margin(
       {top: 30},
       {right: 50},
       {left: 70},
       {bottom: 50}
-   )
-   .color(d3.scale.category10().range());
+   );
+   chart.color(d3.scale.category10().range());
+
+   // Get maximum x and y from all series.
+   var dr_dataMax = dr_data.reduce(function(memo, series) {
+       return series.values.reduce(function(m, v) {
+           m.x = Math.max(m.x, v.x);
+           m.y = Math.max(m.y, v.y);
+           return m;
+       }, memo);
+   }, {x: Number.MIN_VALUE, y: Number.MIN_VALUE});
+   
+   // Expand axis to future for visual trending.
+   var future_date = dr_dataMax.x + project_days;
+   var top_count   = parseInt( dr_dataMax.y * project_counts );
+   chart.forceX([ future_date ]);
+   chart.forceY([ top_count ]);
    
    chart.scatter.onlyCircles(false);
    chart.tooltipContent(function(key) {
@@ -128,7 +154,7 @@ nv.addGraph(function() {
    ;
 
    chart.yAxis
-      .ticks(7)
+      .ticks(10)
       .axisLabel("Count")
       .tickFormat(d3.format("d"))
    ;

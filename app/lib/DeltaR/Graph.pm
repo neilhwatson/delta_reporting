@@ -5,7 +5,7 @@ use warnings;
 use Statistics::LineFit;
 use Time::Local;
 use POSIX 'strftime';
-use JSON -convert_blessed_universally;
+use Mojo::JSON qw(decode_json encode_json);
 use Data::Dumper; # TODO remove for production
 
 sub new
@@ -42,9 +42,7 @@ sub nvd3_series
    for my $k ( qw/Slope Intercept/ )
    {
       $series{ lc $k } = $stats{$k};
-      delete $stats{$k};
    }
-   print Dumper( \%stats );
 
    return ( \%series, \%stats );
 }
@@ -53,9 +51,10 @@ sub encode_to_json
 {
    my $self = shift;
    my @data = @_;
-
-   my $json = JSON->new;
-   my $json_data = $json->allow_blessed->convert_blessed->pretty->encode( @data );
+   my $json = Mojo::JSON->new;
+   my $json_data = $json->encode( @data );
+   my $err = $json->error;
+   say $err if ( $err );
 
    return $json_data;
 }

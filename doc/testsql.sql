@@ -269,7 +269,8 @@ INSERT INTO promise_counts ( datestamp, hosts, kept, notkept, repaired )
    )
 ;
 */
-SELECT datestamp, hosts, kept, notkept, repaired FROM promise_counts;
+-- DELETE FROM promise_counts WHERE datestamp = '2014-04-22' OR datestamp = '2014-04-23';
+-- SELECT datestamp, hosts, kept, notkept, repaired FROM promise_counts;
 
 /*
 SELECT
