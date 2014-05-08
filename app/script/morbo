@@ -4,7 +4,7 @@
 
 base=/opt/delta_reporting/
 
-if [[ $1 ]]
+if [ $1 ]
 then
    listen="-l $1"
 fi
