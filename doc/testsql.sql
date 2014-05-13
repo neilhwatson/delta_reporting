@@ -232,9 +232,9 @@ REINDEX TABLE agent_log;
 */
 
 -- Create summary table
+--DROP TABLE promise_counts;
+--DROP INDEX promise_counts_idx;
 /*
-DROP TABLE promise_counts;
-DROP INDEX promise_counts_idx;
 CREATE TABLE promise_counts
 (
    rowid serial NOT NULL,
@@ -271,6 +271,7 @@ INSERT INTO promise_counts ( datestamp, hosts, kept, notkept, repaired )
 */
 -- DELETE FROM promise_counts WHERE datestamp = '2014-04-22' OR datestamp = '2014-04-23';
 -- SELECT datestamp, hosts, kept, notkept, repaired FROM promise_counts;
+SELECT * FROM promise_counts;
 
 /*
 SELECT

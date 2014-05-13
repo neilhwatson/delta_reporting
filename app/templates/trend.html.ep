@@ -23,7 +23,7 @@
                </div>
             </div> <!-- panel-body -->
          </div> <!-- collapseOne -->
-      </div> <! -- panal-#class -->
+      </div> <!-- panal-#class -->
 
       <div class="panel panel-primary">
          <div class="panel-heading">
@@ -112,15 +112,15 @@
 var dr_data = <%== $dr_data %>;
 
 nv.addGraph(function() {
-   var chart = nv.models.scatterPlusLineChart()
+   var chart = nv.models.scatterPlusLineChart();
 
    var project_days   = 60*60*1440; // Project graph (x axis) 60 future days.
    var project_counts = 2; // Increase y axis by this factor for projections.
 
    chart.margin(
-      {top: 30},
-      {right: 50},
-      {left: 70},
+      {top:    30},
+      {right:  50},
+      {left:   70},
       {bottom: 50}
    );
    chart.color(d3.scale.category10().range());
@@ -148,6 +148,7 @@ nv.addGraph(function() {
    chart.xAxis
       .ticks(10)
       .staggerLabels(true)
+      .showMaxMin(false)
       .tickFormat(function(d) {
          return d3.time.format('%Y-%m-%d')(new Date(d*1000));
    })

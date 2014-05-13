@@ -27,7 +27,7 @@
   <script src="/js/TableTools.js"></script>
   <script src="/js/ZeroClipboard.js"></script>
   <script src="/js/dataTables.bootstrap.js"></script>
-  <script src="/js/d3.v3.min.js"></script>
+  <script src="/js/d3.min.js"></script>
   <script src="/js/nv.d3.min.js"></script>
   
 </head>

@@ -16,11 +16,7 @@ sub run
    else
    {
       $dq->insert_yesterdays_promise_counts;
-      my $data = $dq->query_promise_counts;
-      $ret = $gr->trends( $data );
    }
-
-   return $ret;
 }
 
 sub usage
@@ -29,7 +25,7 @@ sub usage
 USAGE:
 trends
 
-Populates trending table and build trend graphs.
+Populates trending table.
 
 END
 }
