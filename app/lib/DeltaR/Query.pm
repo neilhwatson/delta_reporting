@@ -175,8 +175,8 @@ sub validate
 		timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
 		delta_minutes   => '^[+-]{0,1}\d{1,4}$',
 		gmt_offset      => '^[+-]{0,1}\d{1,4}$',
-		promiser        => '.',
-		promisee        => '.',
+		promiser        => '^[%\w/\s\d\.\-\\:]+$',
+		promisee        => '^[%\w/\s\d\.\-\\:]+$',
 		promise_handle  => '^[%\w]+$',
 		promise_outcome => '^%|kept|repaired|notkept$',
       latest_record   => '0|1'
@@ -185,8 +185,8 @@ sub validate
    foreach my $p ( keys %query_params )
    {
       if (
-         not $query_params{"$p"} =~ m/$valid_inputs{"$p"}/
-         or $query_params{"$p"}  =~ m/;/
+         $query_params{$p} !~ m/$valid_inputs{$p}/
+         or $query_params{$p}  =~ m/;/
          )
       {
          push @errors, "$p '$query_params{$p}' not allowed. Permitted format: $valid_inputs{$p}";
