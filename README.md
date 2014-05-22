@@ -12,6 +12,7 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 - Use you existing database infrastructure.
 - Sort and filter your report results.
 - Save your reports in multiple formats.
+- Command line report tool that outputs multiple formats.
 
 ## Demo ##
 

@@ -4,11 +4,34 @@
 
 <p>The database settings are in DeltaR.conf. Create the database, start this application, and load the URL <a href="/initialize_database">/initialize_database</a>. If your tables are previously created or partially created then expect initialization errors. You can drop the database and try again.</p>
 
+<h3>Command line tools</h3>
+
+<p>These are located under app/script/</p>
+
+<dl class="dl-horizontal">
+   <dt>delta-cron</dt>
+   <dd>Runs database functions to prune, reduce, and aggregate data.</dd>
+   <dt>load</dt>
+   <dd>Run by cf-agent to load client host logs into the database.</dd>
+   <dt>morbo</dt>
+   <dd>Runs the morbo http server for development.</dd>
+   <dt>prune</dt>
+   <dd>Run by delta-cron.</dd>
+   <dt>query</dt>
+   <dd>Command line reporting tools. Query -? for brief help. Full help with perldoc app/lib/DeltaR/Command/query.pm.</dd>
+   <dt>reduce</dt>
+   <dd>Run by delta-cron.
+   <dt>trends</dt>
+   <dd>Run by delta-cron.</dd>
+</dl>
+
 <h3>Further help</h3>
 
-<dt>Commercial support</dt>
-<dd><a href="http://evolvethinking.com">Evolve Thinking</a> is the creator of Delta Reporting. They offer commercial support for Delta reporting, as well as custom development for that feature you've always wanted, and other UNIX and Linux related services.</dd>
+<dl class="dl-horizontal">
+   <dt>Commercial support</dt>
+   <dd><a href="http://evolvethinking.com">Evolve Thinking</a> is the creator of Delta Reporting. They offer commercial support for Delta reporting, custom development for that feature you've always wanted, and other UNIX and Linux related services.</dd>
 
-<dt>Documentation</dt>
-<dd>The <a href="https://github.com/evolvethinking/delta_reporting">source code</a> contains helpful documentation.</dd>
+   <dt>Documentation</dt>
+   <dd>The <a href="https://github.com/evolvethinking/delta_reporting">source code</a> contains helpful documentation.</dd>
+</dl>
 

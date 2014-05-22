@@ -45,7 +45,7 @@ sub table_cleanup
 
    foreach my $q ( @queries )
    {
-      say $q;
+      #say $q;
       my $sth = $dbh->prepare( $q );
       $sth->execute;
    }
@@ -56,7 +56,7 @@ sub delete_records
    my $self = shift;
    my $query =
       "DELETE FROM agent_log WHERE timestamp < now() - interval '$delete_age days'";
-   say $query;
+   #say $query;
    my $sth = $dbh->prepare( $query );
    $sth->execute;
 }
@@ -87,7 +87,7 @@ sub reduce_records
 
    foreach my $q ( @queries )
    {
-      say $q;
+      #say $q;
 
       my $sth = $dbh->prepare( $q )
          or die "Can't prepare $q", $dbh->errstr;
@@ -154,8 +154,9 @@ FROM(
 )
 AS class_count
 GROUP BY class
+ORDER BY class
 END
-   say $query;
+   #say $query;
    $sth = $dbh->prepare( $query ) || die "Could not prepare class query" ;
    $sth->execute;
    return $sth->fetchall_arrayref()
@@ -169,31 +170,36 @@ sub validate
    my %query_params = @_;
 	my %valid_inputs = (
 		class           => '^[%\w]+$',
-		hostname        => '^[%\w\-\.]+$',
-      policy_server   => '^([%\d\.:a-fA-F]+)|([%\w\-\.]+)$',
-		ip_address      => '^[%\d\.:a-fA-F]+$',
-		timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
 		delta_minutes   => '^[+-]{0,1}\d{1,4}$',
 		gmt_offset      => '^[+-]{0,1}\d{1,4}$',
-		promiser        => '^[%\w/\s\d\.\-\\:]+$',
-		promisee        => '^[%\w/\s\d\.\-\\:]+$',
+		hostname        => '^[%\w\-\.]+$',
+		ip_address      => '^[%\d\.:a-fA-F]+$',
+      policy_server   => '^([%\d\.:a-fA-F]+)|([%\w\-\.]+)$',
 		promise_handle  => '^[%\w]+$',
 		promise_outcome => '^%|kept|repaired|notkept$',
-      latest_record   => '0|1'
+		promisee        => '^[%\w/\s\d\.\-\\:]+$',
+		promiser        => '^[%\w/\s\d\.\-\\:]+$',
+		timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
+      latest_record   => '0|1',
 	);
 
    foreach my $p ( keys %query_params )
    {
-      if (
-         $query_params{$p} !~ m/$valid_inputs{$p}/
-         or $query_params{$p}  =~ m/;/
-         )
+      if ( $valid_inputs{$p} )
       {
-         push @errors, "$p '$query_params{$p}' not allowed. Permitted format: $valid_inputs{$p}";
-      }
-      elsif ( length( $query_params{"$p"} ) > $max_length )
-      {
-         push @errors, "Error $p too long. Maximum length is $max_length.";
+
+         if (
+            $query_params{$p} !~ m/$valid_inputs{$p}/
+            or $query_params{$p}  =~ m/;/
+            )
+         {
+            push @errors, "$p '$query_params{$p}' not allowed. Permitted format: $valid_inputs{$p}";
+         }
+         elsif ( length( $query_params{"$p"} ) > $max_length )
+         {
+            push @errors, "Error $p too long. Maximum length is $max_length.";
+         }
+
       }
    }
 
@@ -251,7 +257,7 @@ LIMIT $record_limit
 END
    }
 
-   say $query;
+   #say $query;
 	my $sth = $dbh->prepare( "$query" );
    $sth->execute();
    return $sth->fetchall_arrayref();
@@ -335,7 +341,7 @@ LIMIT $record_limit
 END
    }
 
-   say $query;
+   #say $query;
 	my $sth = $dbh->prepare( "$query" );
    $sth->execute();
    return $sth->fetchall_arrayref();
