@@ -26,11 +26,23 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 1. Perl 5.10+
 
 ### Server ###
-1. Perl Module NET::DNS
-1. Perl Module DBI
-1. Perl Module DBD::Pg
+
+1. Tested on Debian and RHEL 6. May work on others if requirements are met.
 1. Postgresql 8.3+
 1. Apache recommended for proxy front end.
+1. Perl Modules
+  1. Mojolicious framework, included.
+  1. Statistics::LineFit, included.
+  1. Local::lib, included.
+  1. Data::Dumper, for development only, not required for production.
+  1. POSIX
+  1. Getopt::Long
+  1. Time::Local
+  1. feature 'say', comes perl 5.10+
+  1. Net::DNS
+  1. Sys::Hostname::Long 
+  1. DBI
+  1. DBD::Pg
 
 ## Support ##
 
@@ -93,3 +105,4 @@ Delta Reporting is free software: you can redistribute it and/or modify it under
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with this program. If not, see [http://www.gnu.org/licenses/](http://www.gnu.org/licenses/).
+
