@@ -6,12 +6,12 @@ PATH=/usr/bin
 export PATH=$PATH
 
 log=$1
-base=/opt/delta_reporting/
+base=$(dirname $0)
 
 if [ -e "$log" ]
 then
-   cd ${base}/app
-   perl -I${base}/perl5/lib/perl5 -Mlocal::lib DeltaR.pl load "$log"
+   cd ${base}/..
+   perl -I${base}/../../perl5/lib/perl5 -Mlocal::lib DeltaR.pl load "$log"
 else
    exit 4
 fi
