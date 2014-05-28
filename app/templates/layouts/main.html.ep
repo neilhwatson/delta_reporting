@@ -50,6 +50,7 @@
                   <ul class="dropdown-menu">
                      <li><a href="/inventory">Inventory</a></li>
                      <li><a href="/missing">Missing</a></li>
+                     <li><a href="/pps">Promise percent summary</a></li>
                   </ul>
                </li>
 

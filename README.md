@@ -38,7 +38,7 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
   1. POSIX
   1. Getopt::Long
   1. Time::Local
-  1. feature 'say', comes perl 5.10+
+  1. feature 'say', comes with perl 5.10+
   1. Net::DNS
   1. Sys::Hostname::Long 
   1. DBI
