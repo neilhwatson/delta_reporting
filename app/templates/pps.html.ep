@@ -1,0 +1,175 @@
+% layout 'main';
+
+<style>
+#pps svg
+{
+   height: 400px;
+}
+#hosts svg
+{
+   height: 400px;
+}
+</style>
+
+<div class="panel-group">
+   <div class="panel panel-default">
+
+      <div class="panel panel-primary">
+         <div class="panel-heading">
+            <h3 class="panel-title">
+               <a data-toggle="collapse" href="#collapseOne">
+                  <span class="glyphicon glyphicon-chevron-down"></span>
+                  Promise percent summary graph.
+               </a>
+            </h3>
+         </div> <!-- panel-heading -->
+         <div id="collapseOne" class="panel-collapse collapse in">
+            <div class="panel-body">
+               <div id="pps" class="with-3d-shadow with-transitions">
+                     <svg></svg>
+               </div>
+            </div> <!-- panel-body -->
+         </div> <!-- collapseOne -->
+      </div> <!-- panal-#class -->
+
+      <div class="panel panel-primary">
+         <div class="panel-heading">
+            <h3 class="panel-title">
+               <a data-toggle="collapse" href="#collapseTwo">
+                  <span class="glyphicon glyphicon-chevron-down"></span>
+                  Host count graph.
+               </a>
+            </h3>
+         </div> <!-- panel-heading -->
+         <div id="collapseTwo" class="panel-collapse collapse in">
+            <div class="panel-body">
+               <div id="hosts" class="with-3d-shadow with-transitions">
+                     <svg></svg>
+               </div>
+            </div> <!-- panel-body -->
+         </div> <!-- collapseTwo-->
+      </div> <!-- panal-#class -->
+
+
+      <div class="panel panel-primary">
+         <div class="panel-heading">
+            <h3 class="panel-title">
+               <a data-toggle="collapse" href="#collapseThree">
+                  <span class="glyphicon glyphicon-chevron-down"></span>
+                  Raw data
+               </a>
+            </h3>
+         </div> <!-- panel-heading -->
+         <div id="collapseThree" class="panel-collapse collapse out">
+            <div class="panel-body">
+               %= include 'table'
+            </div> <!-- panel-body -->
+         </div> <!-- collapseThree -->
+      </div> <!-- panal-#class -->
+
+      <div class="panel panel-primary">
+         <div class="panel-heading">
+            <h3 class="panel-title">
+               <a data-toggle="collapse" href="#collapseFour">
+                  <span class="glyphicon glyphicon-chevron-down"></span>
+                  <span class="glyphicon glyphicon-question-sign"></span>
+                  Explanation of this graph.
+               </a>
+            </h3>
+         </div> <!-- panel-heading -->
+         <div id="collapseFour" class="panel-collapse collapse out">
+            <div class="panel-body">
+
+               <p>The first graph shows the percentage of promises that are kept, repaired, or not kept.</p>
+
+               <p>The second graph shows the number or agent hosts over time.</p>
+
+            </div> <!-- panel-body -->
+         </div> <!-- collapseFour -->
+      </div> <!-- panal-#class -->
+
+   </div> <!-- panel-default -->
+</div> <!-- panel-group -->
+
+<script type="text/javascript">
+var pps_data = <%== $percent_series %>;
+
+nv.addGraph(function() {
+   var chart = nv.models.multiBarChart()
+      .transitionDuration(350)
+      .reduceXTicks(true)   //If 'false', every single x-axis tick label will be rendered.
+      .rotateLabels(0)      //Angle to rotate x-axis labels.
+      .groupSpacing(0.1)    //Distance between each group of bars.
+      .color([ 'royalblue', 'orange', 'crimson' ])
+      .margin({top: 30, right: 30, left: 85, bottom: 50})
+    ;
+
+   chart.multibar.stacked(true); // default to stacked
+   chart.showControls(false); // do not allow to change to normal bars.
+
+   chart.xAxis
+      .ticks(10)
+      .staggerLabels(true)
+      .showMaxMin(false)
+      .tickFormat(function(d) {
+         return d3.time.format('%Y-%m-%d')(new Date(d*1000));
+   })
+   ;
+
+   chart.yAxis
+      .ticks(10)
+      .axisLabel("Percent")
+      .tickFormat(d3.format("d"))
+   ;
+
+   d3.select("#pps svg")
+      .datum(pps_data)
+      .call(chart);
+
+   //Update the chart when window resizes.
+   nv.utils.windowResize(function() { chart.update() });
+   return chart;
+   });
+
+var host_data = [ <%== $host_series %> ];
+
+nv.addGraph(function() {
+  var chart = nv.models.lineChart()
+   .margin({left: 100})  //Adjust chart margins to give the x-axis some breathing room.
+   .useInteractiveGuideline(true)  //We want nice looking tooltips and a guideline!
+   .transitionDuration(350)  //how fast do you want the lines to transition?
+   .showLegend(true)       //Show the legend, allowing users to turn on/off line series.
+   .margin({top: 30, right: 30, left: 85, bottom: 50})
+   .showYAxis(true)        //Show the y-axis
+   .showXAxis(true)        //Show the x-axis
+  ;
+
+   chart.xAxis
+      .ticks(10)
+      .staggerLabels(true)
+      .showMaxMin(false)
+      .tickFormat(function(d) {
+         return d3.time.format('%Y-%m-%d')(new Date(d*1000));
+   })
+   ;
+
+   chart.yAxis
+      .ticks(10)
+      .axisLabel("Count")
+      .tickFormat(d3.format("d"))
+   ;
+
+  d3.select('#hosts svg')    //Select the <svg> element you want to render the chart in.   
+      .datum(host_data)      //Populate the <svg> element with chart data...
+      .call(chart);          //Finally, render the chart!
+
+  //Update the chart when window resizes.
+  nv.utils.windowResize(function() { chart.update() });
+  return chart;
+});
+</script>
+
+	</body>
+</html>
+</script>
+
