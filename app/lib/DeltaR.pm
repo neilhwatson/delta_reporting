@@ -1,24 +1,21 @@
 package DeltaR;
-use Mojo::Base qw( Mojolicious );
 
-use strict;
-use warnings;
-use DeltaR::Query;
+use Mojo::Base qw( Mojolicious );
 use DeltaR::Graph;
-use POSIX qw( strftime );
-use Data::Dumper; # TODO remove for production;
+use DeltaR::Query;
 use DBI;
 
 sub startup
 {
    my $self = shift;
    my $config = $self->plugin('config', file => 'DeltaR.conf' );
-   my $gmt_offset   = strftime "%z", localtime;
    my $record_limit = $config->{record_limit};
    my $inventory_limit = $config->{inventory_limit};
 
+   # use commands from DeltaR::Command namespace
    push @{$self->commands->namespaces}, 'DeltaR::Command';
 
+## Helpers
    $self->helper( dbh => sub
    {
       my $self = shift;
@@ -54,6 +51,7 @@ sub startup
       return $dq
    });
 
+## Routes
    my $r = $self->routes;
 
    $r->any( '/' => 'home' );
@@ -72,161 +70,15 @@ sub startup
       $self->stash(
          title => "About Delta Reporting",
          number_of_records => $number_of_records );
-      
    } => 'about');
  
-   $r->get( '/missing' => sub
-   {
-      my $self = shift;
-      my $dq = $self->app->dr;
-      my $rows = $dq->query_missing();
+   $r->get( '/form/promises')->to('form#class_or_promise', template => 'form/promises', record_limit => $record_limit );
+   $r->get( '/form/classes' )->to('form#class_or_promise', template => 'form/classes', record_limit => $record_limit );
 
-      $self->stash(
-         title        => "Missings host from the past 24 hours",
-         record_limit => $record_limit,
-         rows         => $rows,
-         columns      => [ 'Hostname', 'IP Address', 'Policy server' ]
-      );
-   } => 'rtable');
-
-
-   $r->get( '/inventory' => sub
-   {
-      my $self = shift;
-      my $dq = $self->app->dr;
-      my $rows = $dq->query_inventory();
-
-      $self->stash(
-         title        => "Inventory report",
-         record_limit => $record_limit,
-         rows         => $rows,
-         columns      => [ 'Class','Count' ]
-      );
-   } => 'rtable');
-
-   $r->get( '/promises' => sub
-   {
-      my $self = shift;
-      my $timestamp    = strftime "%F %T", localtime;
-      $self->stash(
-         record_limit => $record_limit,
-         timestamp    => $timestamp,
-         gmt_offset   => $gmt_offset
-      );
-   } => 'promises');
-
-   $r->post( '/report_promises' => sub
-   {
-      my $self = shift;
-      my $dq = $self->app->dr;
-      my %query_params;
-      my $latest_record = 0;
-
-      if ( $self->param('latest_record') )
-      {
-         $latest_record = $self->param('latest_record');
-      }
-      else
-      {
-         %query_params = (
-            timestamp     => $self->param('timestamp'),
-            gmt_offset    => $self->param('gmt_offset'),
-            delta_minutes => $self->param('delta_minutes'),
-         );
-      }
-
-      %query_params = (
-         %query_params,
-         promiser        => $self->param('promiser'),
-         promisee        => $self->param('promisee'),
-         promise_handle  => $self->param('promise_handle'),
-         promise_outcome => $self->param('promise_outcome'),
-         hostname        => $self->param('hostname'),
-         ip_address      => $self->param('ip_address'),
-         policy_server   => $self->param('policy_server'),
-         latest_record   => $latest_record,
-      );
-
-      my @errors = $dq->validate( %query_params );
-      if ( @errors )
-      {
-         $self->stash(
-            title  => $self->param('report_title'),
-            errors => \@errors
-         );
-         return $self->render( template => 'error', format => 'html' );
-      }
-
-      my $rows = $dq->query_promises( %query_params );
-      
-      $self->stash(
-         title        => $self->param('report_title'),
-         record_limit => $record_limit,
-         rows         => $rows,
-         columns      => [ 'Promiser', 'Promisee', 'Promise handle', 'Promise outcome',
-            'Timestamp', 'Hostname','IP Address','Policy Server' ]
-      );
-   } => "rtable");
-
-   $r->get( '/classes' => sub
-   {
-      my $self = shift;
-      my $timestamp    = strftime "%F %T", localtime;
-      $self->stash(
-         record_limit => $record_limit,
-         timestamp    => $timestamp,
-         gmt_offset   => $gmt_offset
-      );
-   } => 'classes');
-
-   $r->post( '/report_classes' => sub
-   {
-      my $self = shift;
-      my $dq = $self->app->dr;
-      my %query_params;
-      my $latest_record = 0;
-
-      if ( $self->param('latest_record') )
-      {
-         $latest_record = $self->param('latest_record');
-      }
-      else
-      {
-         %query_params = (
-            timestamp     => $self->param('timestamp'),
-            gmt_offset    => $self->param('gmt_offset'),
-            delta_minutes => $self->param('delta_minutes'),
-         );
-      }
-
-      %query_params = (
-         %query_params,
-         class         => $self->param('class'),
-         hostname      => $self->param('hostname'),
-         ip_address    => $self->param('ip_address'),
-         policy_server => $self->param('policy_server'),
-         latest_record => $latest_record,
-      );
-
-      my @errors = $dq->validate( %query_params );
-      if ( @errors )
-      {
-         $self->stash(
-            title  => $self->param('report_title'),
-            errors => \@errors
-         );
-         return $self->render( template => 'error', format => 'html' );
-      }
-
-      my $rows = $dq->query_classes( %query_params );
-      
-      $self->stash(
-         title        => $self->param('report_title'),
-         record_limit => $record_limit,
-         rows         => $rows,
-         columns      => [ 'Class','Timestamp','Hostname','IP Address','Policy Server' ]
-      );
-   } => "rtable");
+   $r->get('/report/missing'  )->to('report#missing',   record_limit => $record_limit );
+   $r->get('/report/inventory')->to('report#inventory', record_limit => $record_limit );
+   $r->post('/report/classes' )->to('report#classes',   record_limit => $record_limit );
+   $r->post('/report/promises')->to('report#promises',  record_limit => $record_limit );
 
    $r->get( '/initialize_database' => sub
    {
@@ -313,3 +165,11 @@ sub trend
 }
 
 1;
+
+=pod
+
+=head1 SYNOPSIS
+
+This is the main Delta Reporting module. Start up and routing are controlled here.
+
+=cut

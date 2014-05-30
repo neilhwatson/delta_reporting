@@ -2,4 +2,4 @@
 
 <p class="alert alert-info"><span class="glyphicon glyphicon-info-sign"></span> limited to <%= $record_limit %> entries.</p>
 
-%= include 'table'
+%= include 'report/table'
