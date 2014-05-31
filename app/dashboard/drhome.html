@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delta Reporting</title>
+
+  <!-- Bootstrap -->
+  <link href="drhome_files/bootstrap.css" rel="stylesheet">
+  <link href="drhome_files/bootstrap-datetimepicker.css" rel="stylesheet">
+  <link href="drhome_files/dataTables.css" rel="stylesheet">
+  <link href="drhome_files/nv.css" rel="stylesheet">
+
+  <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+  <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+  <![endif]-->
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="drhome_files/jquery.js"></script>
+  <!-- Include all compiled plugins (below), or include individual files as needed -->
+  <script src="drhome_files/bootstrap.js"></script>
+  <script src="drhome_files/bootstrap-datetimepicker.js"></script>
+  <script src="drhome_files/jquery_002.js"></script>
+  <script src="drhome_files/TableTools.js"></script>
+  <script src="drhome_files/ZeroClipboard.js"></script>
+  <script src="drhome_files/dataTables.js"></script>
+  <script src="drhome_files/d3.js"></script>
+  <script src="drhome_files/nv.js"></script>
+  
+</head>
+<body>
+   <style type="text/css">
+      body { padding-top: 35px }
+   </style>
+
+   <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+      <div class="container-fluid ">
+         <div class="navbar-inner">
+            <ul class="nav navbar-nav">
+               <li><a class="navbar-brand" href="http://evolvethinking.com/products/delta-reporting">Delta Reporting</a></li>
+               <li><a href="http://frodo:8080/">Home</a></li>
+               <li><a href="http://frodo:8080/form/classes">Classes</a></li>
+               <li><a href="http://frodo:8080/form/promises">Promises</a></li>
+
+               <li class="dropdown">
+                  <a class="dropdown-toggle" data-toggle="dropdown" href="#">Reports</a>
+                  <ul class="dropdown-menu">
+                     <li><a href="http://frodo:8080/report/inventory">Inventory</a></li>
+                     <li><a href="http://frodo:8080/report/missing">Missing</a></li>
+                     <li><a href="http://frodo:8080/pps">Promise percent summary</a></li>
+                  </ul>
+               </li>
+
+               <li class="dropdown">
+                  <a class="dropdown-toggle" data-toggle="dropdown" href="#">Trends</a>
+                  <ul class="dropdown-menu">
+                     <li><a href="http://frodo:8080/trend/kept">Promises kept</a></li>
+                     <li><a href="http://frodo:8080/trend/notkept">Promises not kept</a></li>
+                     <li><a href="http://frodo:8080/trend/repaired">Promises repaired</a></li>
+                  </ul>
+               </li>
+
+               <li class="dropdown">
+                  <a class="dropdown-toggle" data-toggle="dropdown" href="#">Help</a>
+                  <ul class="dropdown-menu">
+                     <li><a href="http://frodo:8080/help">Help</a></li>
+                     <li><a href="http://evolvethinking.com/services/">Support</a></li>
+                     <li><a href="https://github.com/evolvethinking/delta_reporting">Source code</a></li>
+                     <li><a href="http://frodo:8080/about">About</a></li>
+                  </ul>
+               </li>
+            </ul> <!-- nav -->
+         </div> <!-- navbar-inner -->
+      </div> <!-- container-fluid -->
+   </nav> <!-- navbar -->
+
+   <div class="container-fluid">
+
+      <div class="row">
+         <div class="col-md-7">
+            <div class="thumbnail">
+               <h4>Missing hosts</h4>
+               <table class="table table-hover table-condensed table-striped">
+                  <thead>
+                     <tr>
+                        <th>Hostname</th>
+                        <th>IP address</th>
+                        <th>Policy server</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     <tr>
+                        <td>frodo.watson-wilson.ca</td>
+                        <td>192.168.0.2</td>
+                        <td>frodo.watson-wilson.ca</td>
+                     </tr>
+                     <tr>
+                        <td>thorin.watson-wilson.ca</td>
+                        <td>192.168.0.4</td>
+                        <td>frodo.watson-wilson.ca</td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div> <!-- div thumbnail -->
+         </div> <!-- div col -->
+      </div> <!-- row -->
+
+      <div class="row">
+         <div class="col-md-4">
+            <h1>Delta Reporting</h1>
+                  
+            <p>Welcome to Delta Reporting, a promise and class reporting tool for
+          CFEngine. With Delta Reporting you'll be able to query agent knowledge 
+         of classes and promise outcomes, both past and present.</p>
+
+            <h2>Getting started</h2>
+
+            <p>The menu at the top lead to:</p>
+
+            <dl class="dl-horizontal">
+               <dt>Classes</dt>
+               <dd>Query current and past classes for some or all hosts.</dd>
+               <dt>Promises</dt>
+               <dd>Query current and past promise outcomes for some or all hosts.</dd>
+               <dt>Reports</dt>
+               <dd>Canned reports including inventory and missing hosts.
+            </dd></dl>
+
+         </div> <!-- div col -->
+
+         <div class="col-md-3">
+            <div class="thumbnail">
+               <h4>Inventory</h4>
+
+               <table id="dr-results-table" class="table table-hover table-condensed table-striped">
+                  <thead>
+                     <tr>
+                        <th data-toggle="tooltip" title="sort"><span class="glyphicon glyphicon-sort"></span>
+                        Class</th>
+                        <th data-toggle="tooltip" title="sort"><span class="glyphicon glyphicon-sort"></span>
+                        Count</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+
+                     <tr>
+                           <td>am_policy_hub</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>any</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>centos</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>centos_6</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>centos_6_5</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>cfengine_3</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>cfengine_3_6</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>cfengine_3_6_0</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>community_edition</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_127</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_127_0</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_127_0_0</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_127_0_0_1</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_172</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_172_16</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_172_16_100</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>ipv4_172_16_100_11</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>linux</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>policy_server</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>redhat</td>
+                           <td>1</td>
+                     </tr>
+                     <tr>
+                           <td>redhat_derived</td>
+                           <td>1</td>
+                     </tr>
+                  </tbody>
+                  <tfoot>
+                     <tr>
+                        <th>Class</th>
+                        <th>Count</th>
+                     </tr>
+                  </tfoot>
+               </table>
+
+            </div> <!-- div thumbnail -->
+         </div> <!-- div col -->
+      </div> <!-- row -->
+
+   </div> <!-- container-fluid -->
+      
+   <style type="text/css">
+      #footer { 
+         background-color: #ddd;
+         padding-top: 10px;
+         padding-bottom: 10px
+      }
+   </style>
+   <div class="container-fluid" id="footer">
+      <div class="page-footer">
+         <div class="row">
+            <!--<div class="col-md-2"><img height="100" src="/media/dr-logo.png"></div>-->
+            <div class="col-sm-offset-7 col-md-offset-9 col-md-2"><a href="http://evolvethinking.com/"><img src="drhome_files/et-logo.png" alt="Evolve Thinking Limited" height="100"></a></div>
+         </div>
+         <div class="col-sm-offset-7 col-md-offset-9 col-sm-3 col-md-3">Copyright 2012</div>
+      </div>
+   </div>
+
+
+</body></html>
