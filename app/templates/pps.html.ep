@@ -62,7 +62,7 @@
          </div> <!-- panel-heading -->
          <div id="collapseThree" class="panel-collapse collapse out">
             <div class="panel-body">
-               %= include 'table'
+               %= include 'report/table'
             </div> <!-- panel-body -->
          </div> <!-- collapseThree -->
       </div> <!-- panal-#class -->
