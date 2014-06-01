@@ -6,92 +6,92 @@ Delta Reporting is an MVC application powered by the Mojolicous framework.
 
 Here is the tree layout for the the app directory.
 
-├── DeltaR.conf
-├── DeltaR.pl
+    ├── DeltaR.conf
+    ├── DeltaR.pl
 
 DeltaR.conf is the application config file.  DeltaR.pl is the Mojolicious appliation start file.
 
-├── lib
+    ├── lib
 
 Lib contains the Delta Reporting application custom Perl modules. 
 
-│   ├── DeltaR
-│   │   ├── Command
-│   │   │   ├── load.pm
-│   │   │   ├── prune.pm
-│   │   │   ├── query.pm
-│   │   │   └── trends.pm
+    │   ├── DeltaR
+    │   │   ├── Command
+    │   │   │   ├── load.pm
+    │   │   │   ├── prune.pm
+    │   │   │   ├── query.pm
+    │   │   │   └── trends.pm
 
 Command modules are use by command line utilities.
 
-│   │   ├── Form.pm
+    │   │   ├── Form.pm
 
 Form produces web forms.
 
-│   │   ├── Graph.pm
+    │   │   ├── Graph.pm
 
 Graph produces trend and other graphs.
 
-│   │   ├── Query.pm
+    │   │   ├── Query.pm
 
 Query contains database related subroutines.
 
-│   │   └── Report.pm
+    │   │   └── Report.pm
 
 Report produces report table pages.
 
-│   └── DeltaR.pm
+    │   └── DeltaR.pm
 
 DeltaR.pm is the main Mojolicious controller and router.
 
-├── public
+    ├── public
 
 Public contains static files like css, js, and images.
 
-├── script
+    ├── script
 
 Script contains the command line utilities. Technically they are shell wrappers for Perl scripts.
 
-│   ├── delta-cron
+    │   ├── delta-cron
 
 Used for database chores.
 
-│   ├── load
+    │   ├── load
 
 Used to load agent logs in to the database.
 
-│   ├── morbo
+    │   ├── morbo
 
 Use this to start a webserver for developing.
 
-│   ├── prune
+    │   ├── prune
 
 Called by delta-cron.
 
-│   ├── query
+    │   ├── query
 
 Called by delta-cron.
 
-│   ├── reduce
+    │   ├── reduce
 
 Called by delta-cron.
 
-│   └── trends
+    │   └── trends
 
 Called by delta-cron.
 
-└── templates
+    └── templates
 
 Contains templates to produce web pages.
 
-    ├── form
+        ├── form
 
 Contains web form templates.
 
-    ├── layouts
+        ├── layouts
 
 Contains the top level layouts for all templates.
 
-    ├── report
+        ├── report
 
 Contains report templates.
