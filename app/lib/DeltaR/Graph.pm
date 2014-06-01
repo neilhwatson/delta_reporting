@@ -1,24 +1,98 @@
 package DeltaR::Graph;
 
-use strict;
-use warnings;
+use Mojo::Base 'Mojolicious::Controller';
+use Mojo::JSON 'encode_json';
 use feature 'say';
 use Statistics::LineFit;
 use Time::Local;
-use POSIX 'strftime';
-use Mojo::JSON qw(decode_json encode_json);
-use Data::Dumper; # TODO remove for production
 
-sub new
+sub trend
 {
    my $self = shift;
-   bless{};
+   my $subject = $self->param('subject');
+   my $column = lc $subject;
+   $subject = 'Not Kept' if ( $subject eq 'NotKept' );
+   my $dq = $self->app->dr;
+   my @columns = ( 'Date', 'Hosts', $subject );
+   my $rows = $dq->query_promise_count( 'hosts', $column );
+
+   my ( $hosts_series, $hosts_stats ) = nvd3_scatter_series( 
+      key => 'Hosts',
+      column => 1,
+      rows => $rows
+   );
+   my ( $promise_series, $promise_stats ) = nvd3_scatter_series( 
+      key => $subject,
+      column => 2,
+      rows => $rows
+   );
+   my @json_data_series = ( \%$hosts_series, \%$promise_series );
+   my $json_data_series = encode_json( \@json_data_series );
+
+   $self->render(
+      template      => 'report/trend',
+      title         => "Promises $subject trend",
+      rows          => $rows,
+      dr_data       => $json_data_series,
+      hosts_stats   => $hosts_stats,
+      promise_stats => $promise_stats,
+      columns       => \@columns 
+   );
+}
+
+sub percent_promise_summary
+{
+   my $self = shift;
+   my @columns = ( 'Date', 'Hosts', 'Kept', 'Repaired', 'Not kept' );
+   my $dq = $self->app->dr;
+   my $rows = $dq->query_promise_count( 'hosts', 'kept', 'repaired', 'notkept' );
+
+   my $host_series = nvd3_2column_timeseries(
+      key => "Hosts",
+      x_column => 0,
+      y_column => 1,
+      rows => $rows
+      );
+   my $json_host_series = encode_json( \%$host_series );
+
+   my $percent_series = nvd3_percent_promise_series( rows => $rows );
+   my $json_percent_series = encode_json( \@$percent_series );
+
+   $self->render(
+      template       => 'report/pps',
+      title          => "Promise percent summary",
+      rows           => $rows,
+      percent_series => $json_percent_series,
+      host_series    => $json_host_series,
+      columns        => \@columns 
+   );
+}
+
+sub nvd3_2column_timeseries
+# Build nvd3 data series
+{
+   my %params = @_;
+   my %series;
+
+   $series{key} = $params{key};
+   
+   for my $r ( @{$params{rows}} )
+   {
+      my $epoch = convert_to_epoch( $r->[$params{x_column}] );
+      my $y = $r->[$params{y_column}];
+
+      my $rec = {};
+      $rec->{x} = $epoch;
+      $rec->{y} = $y;
+      push @{ $series{values} }, $rec;
+   } 
+   return \%series;
 }
 
 sub nvd3_percent_promise_series
 # Build nvd3 data series for percent bar graph
 {
-   my ( $self, %params ) = @_;
+   my %params = @_;
    my ( @series, $rec );
 
    $series[0]{key} = "Kept";
@@ -68,32 +142,10 @@ sub calc_percent
    return \%percent;
 }
 
-sub nvd3_2column_timeseries
-# Build nvd3 data series
-{
-   my ( $self, %params ) = @_;
-   my %series;
-
-   $series{key} = $params{key};
-   
-   for my $r ( @{$params{rows}} )
-   {
-      my $epoch = convert_to_epoch( $r->[$params{x_column}] );
-      my $y = $r->[$params{y_column}];
-
-      my $rec = {};
-      $rec->{x} = $epoch;
-      $rec->{y} = $y;
-      push @{ $series{values} }, $rec;
-   } 
-   return \%series;
-}
-
-
 sub nvd3_scatter_series
 # Build nvd3 data series for scatter plus line graph.
 {
-   my ( $self, %params ) = @_;
+   my %params = @_;
    my ( @x_axis, @y_axis );
    my %series;
    $series{key} = $params{key};
@@ -123,18 +175,6 @@ sub nvd3_scatter_series
    return ( \%series, \%stats );
 }
 
-sub encode_to_json
-{
-   my $self = shift;
-   my @data = @_;
-   my $json = Mojo::JSON->new;
-   my $json_data = $json->encode( @data );
-   my $err = $json->error;
-   say $err if ( $err );
-
-   return $json_data;
-}
-
 sub regression
 {
    my %params = @_;
@@ -159,18 +199,11 @@ sub convert_to_epoch
 }
 
 =pod
-Need:
-key
-table data
-=cut
 
-=pod
-Return data as array of docs including
-key
-slope
-intercept
-array of x:, y: pairs. (date in epoch).
-=cut
+=head1 SYNOPSIS
 
+This module holds subs used for generating graph pages.
+
+=cut
 
 1;

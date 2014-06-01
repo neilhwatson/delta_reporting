@@ -1,3 +1,97 @@
 # Architecture #
 
-Delta Reporting is an MVC application powered by the Mojolicous framework. The controller is DeltaR.pl, the model, though not that advanced, is DeltaR.pm. Templates are in, templates. The perl5 directory contains a local install of Mojolicious and supporting modules. Public contains css, js, and similar files. 
+Delta Reporting is an MVC application powered by the Mojolicous framework.
+
+## Layout ##
+
+Here is the tree layout for the the app directory.
+
+├── DeltaR.conf
+├── DeltaR.pl
+
+DeltaR.conf is the application config file.  DeltaR.pl is the Mojolicious appliation start file.
+
+├── lib
+
+Lib contains the Delta Reporting application custom Perl modules. 
+
+│   ├── DeltaR
+│   │   ├── Command
+│   │   │   ├── load.pm
+│   │   │   ├── prune.pm
+│   │   │   ├── query.pm
+│   │   │   └── trends.pm
+
+Command modules are use by command line utilities.
+
+│   │   ├── Form.pm
+
+Form produces web forms.
+
+│   │   ├── Graph.pm
+
+Graph produces trend and other graphs.
+
+│   │   ├── Query.pm
+
+Query contains database related subroutines.
+
+│   │   └── Report.pm
+
+Report produces report table pages.
+
+│   └── DeltaR.pm
+
+DeltaR.pm is the main Mojolicious controller and router.
+
+├── public
+
+Public contains static files like css, js, and images.
+
+├── script
+
+Script contains the command line utilities. Technically they are shell wrappers for Perl scripts.
+
+│   ├── delta-cron
+
+Used for database chores.
+
+│   ├── load
+
+Used to load agent logs in to the database.
+
+│   ├── morbo
+
+Use this to start a webserver for developing.
+
+│   ├── prune
+
+Called by delta-cron.
+
+│   ├── query
+
+Called by delta-cron.
+
+│   ├── reduce
+
+Called by delta-cron.
+
+│   └── trends
+
+Called by delta-cron.
+
+└── templates
+
+Contains templates to produce web pages.
+
+    ├── form
+
+Contains web form templates.
+
+    ├── layouts
+
+Contains the top level layouts for all templates.
+
+    ├── report
+
+Contains report templates.
