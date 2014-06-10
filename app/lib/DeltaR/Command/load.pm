@@ -17,7 +17,7 @@ sub run
    }
    else
    {
-      say "cannot read $client_log";
+      warn "cannot read $client_log, $!";
       $ret = 2
    }
 

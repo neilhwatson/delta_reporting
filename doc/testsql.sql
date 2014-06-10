@@ -271,7 +271,8 @@ INSERT INTO promise_counts ( datestamp, hosts, kept, notkept, repaired )
 */
 -- DELETE FROM promise_counts WHERE datestamp = '2014-04-22' OR datestamp = '2014-04-23';
 -- SELECT datestamp, hosts, kept, notkept, repaired FROM promise_counts;
-SELECT * FROM promise_counts;
+-- SELECT * FROM promise_counts;
+SELECT * FROM agent_log ORDER BY timestamp DESC LIMIT 5;
 
 /*
 SELECT

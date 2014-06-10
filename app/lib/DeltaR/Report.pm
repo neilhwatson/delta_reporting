@@ -59,17 +59,17 @@ sub classes
       latest_record => $latest_record,
    );
 
-   my @errors = $dq->validate( %query_params );
-   if ( @errors )
+   my $errors = $dq->validate_form_inputs( \%query_params );
+   if ( @{ $errors } )
    {
       $self->stash(
          title  => $self->param('report_title'),
-         errors => \@errors
+         errors => $errors
       );
       return $self->render( template => 'error', format => 'html' );
    }
 
-   my $rows = $dq->query_classes( %query_params );
+   my $rows = $dq->query_classes( \%query_params );
    
    $self->render(
       title    => $self->param('report_title'),
@@ -111,17 +111,17 @@ sub promises
       latest_record   => $latest_record,
    );
 
-   my @errors = $dq->validate( %query_params );
-   if ( @errors )
+   my $errors = $dq->validate_form_inputs( \%query_params );
+   if ( @{ $errors } )
    {
       $self->stash(
          title  => $self->param('report_title'),
-         errors => \@errors
+         errors => $errors
       );
       return $self->render( template => 'error', format => 'html' );
    }
 
-   my $rows = $dq->query_promises( %query_params );
+   my $rows = $dq->query_promises( \%query_params );
    
    $self->render(
       title    => $self->param('report_title'),

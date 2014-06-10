@@ -127,11 +127,11 @@ sub run
       return;
    }
 
-   my @errors = $dq->validate( %query_params );
+   my $errors = $dq->validate_form_inputs( \%query_params );
 
-   if ( @errors )
+   if ( @{ $errors } )
    {
-      my $errors = "\nError: ".join "\n", @errors;
+      my $errors = "\nError: ".join "\n", @{ $errors };
       usage( $self, $errors );
       return;
    }
@@ -147,12 +147,12 @@ sub run
    elsif ( $query_params{class} )
    {
       $report_type = 'class';
-      $rows = $dq->query_classes( %query_params );
+      $rows = $dq->query_classes( \%query_params );
    }
    else
    {
       $report_type = 'promise';
-      $rows = $dq->query_promises( %query_params );
+      $rows = $dq->query_promises( \%query_params );
    }
 
    #

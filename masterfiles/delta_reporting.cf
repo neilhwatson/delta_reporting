@@ -86,7 +86,11 @@ bundle agent deltarep_client_get ( ref )
 {
     vars:
          "download_dir" string => "${deltarep_prelogging.client_logs_dir}";
-         'clients'       slist => { hostsseen( "2", "lastseen", "address" ) };
+# Work around because last seen does not include policy hub.
+         'lastseen'      slist => { hostsseen( "2", "lastseen", "address" ) };
+         'clients'       slist => { "${sys.policy_hub}", "@{lastseen}" };
+
+
 
     methods:
        "deltarep"

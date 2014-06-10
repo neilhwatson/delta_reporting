@@ -67,11 +67,23 @@ sub reduce_records
 
    my @queries = (
 "SELECT * INTO TEMP tmp_agent_log FROM agent_log
-   WHERE timestamp < now() - interval '$reduce_age days';",
+   WHERE timestamp < now() - ?::interval ;",
 
-"DELETE FROM agent_log WHERE timestamp < now() - interval '$reduce_age days';",
+"DELETE FROM agent_log WHERE timestamp < now() - ?::interval ;",
+);
 
-'INSERT INTO agent_log SELECT 
+   foreach my $q ( @queries )
+   {
+      #say $q;
+      my $sth = $dbh->prepare( $q )
+         or die "Can't prepare $q", $dbh->errstr;
+
+      $sth->execute( "$reduce_age days" )
+         or die "Can't execute $q", $dbh->errstr;
+   }
+
+   my $sth = $dbh->prepare( <<END )
+INSERT INTO agent_log SELECT 
    class, hostname, ip_address, promise_handle, promiser,
    promisee, policy_server, "rowId", timestamp, promise_outcome
    FROM (
@@ -82,28 +94,21 @@ sub reduce_records
          ORDER BY timestamp DESC
          )   
       ) t1
-   WHERE row_number = 1;'
-);
+   WHERE row_number = 1;
+END
+      or die "Can't prepare insert statement", $dbh->errstr;
 
-   foreach my $q ( @queries )
-   {
-      #say $q;
-
-      my $sth = $dbh->prepare( $q )
-         or die "Can't prepare $q", $dbh->errstr;
-
-      $sth->execute
-         or die "Can't execute $q", $dbh->errstr;
-   }
+      $sth->execute()
+         or die "Can't execute insert statement", $dbh->errstr;
 }
 
 sub count_records
 {
    my $self = shift;
-   my $query = "SELECT reltuples FROM pg_class WHERE relname = '$agent_table'";
+   my $query = "SELECT reltuples FROM pg_class WHERE relname = ?";
 
    my $sth = $dbh->prepare( $query );
-   $sth->execute;
+   $sth->execute( $agent_table );
    my $array_ref = $sth->fetchall_arrayref();
 
    return $array_ref->[0][0];
@@ -117,14 +122,14 @@ sub query_missing
 WHERE class = 'any'
 	AND timestamp < ( now() - interval '24' hour )
    AND timestamp > ( now() - interval '48' hour )
-   LIMIT $record_limit)
+   LIMIT ? )
 EXCEPT
 (SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table
 WHERE class = 'any'
    AND timestamp > ( now() - interval '24' hour )
-   LIMIT $record_limit)
+   LIMIT ? )
    ");
-   $sth->execute;
+   $sth->execute( $record_limit, $record_limit );
    return $sth->fetchall_arrayref()
 }
 
@@ -162,12 +167,43 @@ END
    return $sth->fetchall_arrayref()
 };
 
-sub validate
+sub validate_load_inputs
+# Valid inputs for loading client logs
 {
    my $self = shift;
-	my $max_length = 24;
-   my @errors;
-   my %query_params = @_;
+   my $record = shift;
+	my $max_length = 72;
+	my %valid_inputs = (
+		class           => '^[%\w]+$',
+		hostname        => '^[\w\-\.]+$',
+		ip_address      => '^[\d\.:a-fA-F]+$',
+      policy_server   => '^([\d\.:a-fA-F]+)|([\w\-\.]+)$',
+		promise_handle  => '^[\w]+$',
+		promise_outcome => '^kept|repaired|notkept|empty$',
+		promisee        => '^[\w/\s\d\.\-\\:]+$',
+		promiser        => '^[\w/\s\d\.\-\\:]+$',
+		timestamp       => '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[-+]{1}\d{4}$',
+	);
+
+   my $errors = test_for_invalid_data(
+      valid_inputs      => \%valid_inputs,
+      max_record_length => $max_length,
+      inputs            => $record
+   );
+   return $errors;
+}
+
+sub validate_form_inputs
+{
+   my $self = shift;
+   my $query_params = shift; 
+
+   my $errors = test_for_invalid_data( inputs => $query_params );
+   return $errors;
+}
+
+sub test_for_invalid_data
+{
 	my %valid_inputs = (
 		class           => '^[%\w]+$',
 		delta_minutes   => '^[+-]{0,1}\d{1,4}$',
@@ -182,56 +218,57 @@ sub validate
 		timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
       latest_record   => '0|1',
 	);
+   my %params = @_;
+   my $inputs = $params{inputs};
+   my $max_record_length = $params{record_length} // 24;
+   my $valid_inputs = $params{valid_inputs} // \%valid_inputs;
 
-   foreach my $p ( keys %query_params )
+   my @errors;
+
+   foreach my $p ( keys %{ $inputs } )
    {
-      if ( $valid_inputs{$p} )
+      if ( $valid_inputs->{$p} )
       {
 
          if (
-            $query_params{$p} !~ m/$valid_inputs{$p}/
-            or $query_params{$p}  =~ m/;/
+            $inputs->{$p} !~ m/$valid_inputs->{$p}/
+            or $inputs->{$p}  =~ m/;/
             )
          {
-            push @errors, "$p '$query_params{$p}' not allowed. Permitted format: $valid_inputs{$p}";
+            push @errors, "$p '$inputs->{$p}' not allowed. Permitted format: $valid_inputs->{$p}";
          }
-         elsif ( length( $query_params{"$p"} ) > $max_length )
+         elsif ( length( $inputs->{$p} ) > $max_record_length )
          {
-            push @errors, "Error $p too long. Maximum length is $max_length.";
+            push @errors, "Error $p too long. Maximum length is $max_record_length.";
          }
 
       }
    }
-
-   if ( @errors )
-   {
-      return @errors;
-   }
-   return @errors;
+   return \@errors;
 }
 
 sub query_promises
 {
    my $self = shift;
-   my %query_params = @_;
+   my $query_params = shift;
    my $query;
    my $delta_sign;
    my $first_time_limit;
    my $second_time_limit;
    my $common_query_section = <<END;
 FROM $agent_table WHERE 
-lower(promiser) LIKE lower('$query_params{promiser}') ESCAPE '!'
-AND lower(promisee) LIKE lower('$query_params{promisee}') ESCAPE '!'
-AND lower(promise_handle) LIKE lower('$query_params{promise_handle}') ESCAPE '!'
-AND promise_outcome LIKE '$query_params{promise_outcome}' ESCAPE '!'
-AND lower(hostname) LIKE lower('$query_params{hostname}') ESCAPE '!'
-AND lower(ip_address) LIKE lower('$query_params{ip_address}') ESCAPE '!'
-AND lower(policy_server) LIKE lower('$query_params{policy_server}') ESCAPE '!'
+lower(promiser) LIKE lower(?) ESCAPE '!'
+AND lower(promisee) LIKE lower(?) ESCAPE '!'
+AND lower(promise_handle) LIKE lower(?) ESCAPE '!'
+AND promise_outcome LIKE ? ESCAPE '!'
+AND lower(hostname) LIKE lower(?) ESCAPE '!'
+AND lower(ip_address) LIKE lower(?) ESCAPE '!'
+AND lower(policy_server) LIKE lower(?) ESCAPE '!'
 END
-# TODO remove % from result field
-# TODO fix db table to match query_params keys
 
-   if ( $query_params{'latest_record'} == 1 )
+   my @bind_params = qw/ promiser promisee promise_handle promise_outcome hostname ip_address policy_server/;
+
+   if ( $query_params->{'latest_record'} == 1 )
    {
       $query = <<END;
 SELECT promiser,promisee,promise_handle,promise_outcome,max(timestamp)
@@ -243,9 +280,9 @@ LIMIT $record_limit
 END
 
    }
-   elsif ( $query_params{'latest_record'} == 0 )
+   elsif ( $query_params->{'latest_record'} == 0 )
    {
-      my $timestamp_clause = get_timestamp_clause( %query_params );
+      my $timestamp_clause = get_timestamp_clause( $query_params );
 
       $query = <<END;
 SELECT promiser,promisee,promise_handle,promise_outcome,timestamp,
@@ -257,10 +294,12 @@ LIMIT $record_limit
 END
    }
 
-   #say $query;
-	my $sth = $dbh->prepare( "$query" );
-   $sth->execute();
-   return $sth->fetchall_arrayref();
+   my $rows = execute_query(
+      query => $query,
+      bind_params => \@bind_params,
+      query_params => $query_params,
+   );
+   return $rows
 }
 
 sub insert_yesterdays_promise_counts
@@ -304,19 +343,20 @@ sub query_promise_count
 sub query_classes
 {
    my $self = shift;
-   my %query_params = @_;
+   my $query_params = shift;
    my $query;
    my $delta_sign;
    my $first_time_limit;
    my $second_time_limit;
+   my @bind_params = qw/ class hostname ip_address policy_server/;
    my $common_query_section = <<END;
-FROM $agent_table WHERE lower(class) LIKE lower('$query_params{class}') ESCAPE '!'
-AND lower(hostname) LIKE lower('$query_params{hostname}') ESCAPE '!'
-AND lower(ip_address) LIKE lower('$query_params{ip_address}') ESCAPE '!'
-AND lower(policy_server) LIKE lower('$query_params{policy_server}') ESCAPE '!'
+FROM $agent_table WHERE lower(class) LIKE lower(?) ESCAPE '!'
+AND lower(hostname) LIKE lower(?) ESCAPE '!'
+AND lower(ip_address) LIKE lower(?) ESCAPE '!'
+AND lower(policy_server) LIKE lower(?) ESCAPE '!'
 END
 
-   if ( $query_params{'latest_record'} == 1 )
+   if ( $query_params->{'latest_record'} == 1 )
    {
       $query = <<END;
 SELECT class,max(timestamp)
@@ -328,9 +368,9 @@ LIMIT $record_limit
 END
 
    }
-   elsif ( $query_params{'latest_record'} == 0 )
+   elsif ( $query_params->{'latest_record'} == 0 )
    {
-      my $timestamp_clause = get_timestamp_clause( %query_params );
+      my $timestamp_clause = get_timestamp_clause( $query_params );
 
       $query = <<END;
 SELECT class,timestamp,hostname,ip_address,policy_server
@@ -341,34 +381,58 @@ LIMIT $record_limit
 END
    }
 
-   #say $query;
-	my $sth = $dbh->prepare( "$query" );
-   $sth->execute();
+   my $rows = execute_query(
+      query => $query,
+      bind_params => \@bind_params,
+      query_params => $query_params,
+   );
+   return $rows
+}
+
+sub execute_query
+{
+   my %params = @_;
+   my $query = $params{query};
+   my $bind_params = $params{bind_params};
+   my $query_params = $params{query_params};
+
+   my $sth;
+   $sth = $dbh->prepare( $query ) or warn "Can't prepare query". $sth->errstr;
+
+   if ( $bind_params )
+   {
+      my $param_count = 1;
+      foreach my $qp ( @{ $bind_params } )
+      {
+         $sth->bind_param( $param_count, $query_params->{$qp} ) or warn "bind error ". $sth->errstr;
+         $param_count++;
+      }
+   }
+   $sth->execute() or warn "bind error ". $sth->errstr;
    return $sth->fetchall_arrayref();
 }
 
 sub get_timestamp_clause
 {
-   #my $self = shift;
-   my %query_params = @_;
+   my $query_params = shift;
    my $delta_sign;
    my $first_time_limit;
    my $second_time_limit;
-   
+
    my @integers = qw/ delta_minutes gmt_offset /;
    foreach my $i ( @integers )
    {
-      if ( $query_params{$i} !~ m/^[-+]/ )
+      if ( $query_params->{$i} !~ m/^[-+]/ )
       {
-         $query_params{$i} = '+'.$query_params{$i};
+         $query_params->{$i} = '+'.$query_params->{$i};
       }
    }
-   $query_params{timestamp} = $query_params{timestamp}.$query_params{gmt_offset};
-   delete $query_params{gmt_offset};
-   if ( $query_params{delta_minutes} =~ m/^([-+])(\d{1,4})/ )
+   $query_params->{timestamp} = $query_params->{timestamp}.$query_params->{gmt_offset};
+   delete $query_params->{gmt_offset};
+   if ( $query_params->{delta_minutes} =~ m/^([-+])(\d{1,4})/ )
    {
       $delta_sign = $1;
-      $query_params{delta_minutes} = $2;
+      $query_params->{delta_minutes} = $2;
 
       if ( $delta_sign eq '-' )
       {
@@ -383,9 +447,9 @@ sub get_timestamp_clause
    }
 
   return <<END
-AND timestamp $first_time_limit '$query_params{timestamp}'::timestamp
-AND timestamp $second_time_limit ( '$query_params{timestamp}'::timestamp
-$delta_sign interval '$query_params{delta_minutes} minute' )
+AND timestamp $first_time_limit '$query_params->{timestamp}'::timestamp
+AND timestamp $second_time_limit ( '$query_params->{timestamp}'::timestamp
+$delta_sign $query_params->{delta_minutes} * interval '1 minute' )
 END
 }
 
@@ -540,25 +604,31 @@ END
             $record{promisee}
          )  = split /\s*;;\s*/;
 
-      $sth->bind_param( 1, $record{class} );
-      $sth->bind_param( 2, $record{timestamp} );
-      $sth->bind_param( 3, $record{hostname} );
-      $sth->bind_param( 4, $record{ip_address} );
-      $sth->bind_param( 5, $record{promise_handle} );
-      $sth->bind_param( 6, $record{promiser} );
-      $sth->bind_param( 7, $record{promise_outcome} );
-      $sth->bind_param( 8, $record{promisee} );
-      $sth->bind_param( 9, $record{policy_server} );
-      $sth->bind_param( 10, $record{class} );
-      $sth->bind_param( 11, $record{timestamp} );
-      $sth->bind_param( 12, $record{hostname} );
-      $sth->bind_param( 13, $record{ip_address} );
-      $sth->bind_param( 14, $record{promise_handle} );
-      $sth->bind_param( 15, $record{promiser} );
-      $sth->bind_param( 16, $record{promise_outcome} );
-      $sth->bind_param( 17, $record{promisee} );
-      $sth->bind_param( 18, $record{policy_server} );
-      $sth->execute;
+         my $errors = validate_load_inputs( \%record );
+         if ( $#{ $errors } > 0 ){
+            foreach my $err ( @{ $errors } ) { warn  $err };
+            next;
+         };
+
+         $sth->bind_param( 1, $record{class} );
+         $sth->bind_param( 2, $record{timestamp} );
+         $sth->bind_param( 3, $record{hostname} );
+         $sth->bind_param( 4, $record{ip_address} );
+         $sth->bind_param( 5, $record{promise_handle} );
+         $sth->bind_param( 6, $record{promiser} );
+         $sth->bind_param( 7, $record{promise_outcome} );
+         $sth->bind_param( 8, $record{promisee} );
+         $sth->bind_param( 9, $record{policy_server} );
+         $sth->bind_param( 10, $record{class} );
+         $sth->bind_param( 11, $record{timestamp} );
+         $sth->bind_param( 12, $record{hostname} );
+         $sth->bind_param( 13, $record{ip_address} );
+         $sth->bind_param( 14, $record{promise_handle} );
+         $sth->bind_param( 15, $record{promiser} );
+         $sth->bind_param( 16, $record{promise_outcome} );
+         $sth->bind_param( 17, $record{promisee} );
+         $sth->bind_param( 18, $record{policy_server} );
+         $sth->execute;
       }
    }
    else
