@@ -32,7 +32,7 @@ sub new
    $reduce_age      = $param{'reduce_age'};
    $dbh             = $param{'dbh'};
 
-   bless{};
+   bless{} => __PACKAGE__;
 };
 
 sub table_cleanup
@@ -578,7 +578,8 @@ AND policy_server = ?
    );
 END
 
-   if ( open( FH, "<", "$client_log" ) )
+   my $fh;
+   if ( open( $fh, "<", "$client_log" ) )
    {
       my $sth = $dbh->prepare( $query )
          || die "Cannot prepare insert query";
@@ -592,7 +593,7 @@ END
 
       $record{policy_server} = hostname_long();
       
-      while (<FH>)
+      while (<$fh>)
       {
          chomp;
          (
@@ -635,7 +636,7 @@ END
    {
       return 0;
    }
-   close FH;
+   close $fh;
    return 1;
 }
 

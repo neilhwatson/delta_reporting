@@ -1,7 +1,6 @@
 package DeltaR;
 
 use Mojo::Base qw( Mojolicious );
-#use DeltaR::Graph;
 use DeltaR::Query;
 use DBI;
 

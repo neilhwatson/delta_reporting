@@ -5,27 +5,6 @@
 #use warnings;
 #use Data::Dumper;
 
-=pod
-Requirements
-
-1. classes log will be in the format of:
-
-BEGIN 2014-03-17T22:03:56-0400
-_var_cache_cfengine__etc_ssh_sshd_config_handle_efl_service_svc_cache_kept
-_etc_rsyslog_conf_handle_efl_service_files_config_kept
-
-2. promises log will be in the format of:
-
-BEGIN 2014-03-17T22:03:56-0400
-efl_command_commands ;; /bin/echo =lsb_release=$(lsb_release -cs) ;; environment
-efl_delete_files_files_isdir ;; /var/tmp ;; Neil Watson
-
-3. Both class and promise files are new on each run. The timestamps should be the same.
-
-4. The final log is appended. CFEngine deletes it.
-
-=cut
-
 my $cf_workdir = '/var/cfengine/delta_reporting/log';
 my $classes = "$cf_workdir/classes";
 my $promises = "$cf_workdir/promises";
@@ -43,8 +22,8 @@ sub readfile {
 	my $file = shift;
 	my ( @file, %remove_duplicates);
 
-	open(FH, "<", $file) || die "Cannot open $file, $!";
-	while (<FH>){
+	open( my $fh, "<", $file) || die "Cannot open $file, $!";
+	while (<$fh>){
 		chomp;
       if ( m/$timestamp/ ){
          $ts = $1;
@@ -52,7 +31,7 @@ sub readfile {
       }
 		$remove_duplicates{$_} = '';
 	}
-	close FH;
+	close $fh;
 
 	@file = keys %remove_duplicates;
    unshift( @file, $ts);
@@ -78,8 +57,8 @@ else
    die ( "Timestamps $timestamp{classes} and $timestamp{promsises} not the same.");
 }
 
-open (FINAL, ">>", $final_log) || die "Cannot open $final_log, $!";
-foreach $class ( @classes )
+open ( my $final, ">>", $final_log) || die "Cannot open $final_log, $!";
+foreach my $class ( @classes )
 {
    $promise_handle  = 'empty';
    $promiser        = 'empty';
@@ -109,7 +88,7 @@ foreach $class ( @classes )
          {
             splice @promises, $i, 1; # Shrink to shorten next loop;
             # Write promise line
-            write FINAL;
+            write $final;
             last;
          }
       }
@@ -117,8 +96,39 @@ foreach $class ( @classes )
    else
    {
       # Write class line.
-      write FINAL;
+      write $final;
    }
 }
 
-close FINAL;
+close $final;
+
+=pod
+
+=head1 SYNOPSIS
+
+The program reads the raw output that CFEngine and EFL create and builds a
+final log ready for download and input by Delta Reporting. This is called by
+the delta_reporting.cf policy file.
+
+=head1 DEV NOTES
+
+Requirements
+
+1. classes log will be in the format of:
+
+BEGIN 2014-03-17T22:03:56-0400
+_var_cache_cfengine__etc_ssh_sshd_config_handle_efl_service_svc_cache_kept
+_etc_rsyslog_conf_handle_efl_service_files_config_kept
+
+2. promises log will be in the format of:
+
+BEGIN 2014-03-17T22:03:56-0400
+efl_command_commands ;; /bin/echo =lsb_release=$(lsb_release -cs) ;; environment
+efl_delete_files_files_isdir ;; /var/tmp ;; Neil Watson
+
+3. Both class and promise files are new on each run. The timestamps should be the same.
+
+4. The final log is appended. CFEngine deletes it.
+
+=cut
+
