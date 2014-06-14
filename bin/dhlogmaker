@@ -57,8 +57,8 @@ else
    die ( "Timestamps $timestamp{classes} and $timestamp{promsises} not the same.");
 }
 
-open ( my $final, ">>", $final_log) || die "Cannot open $final_log, $!";
-foreach my $class ( @classes )
+open ( FINAL, ">>", $final_log) || die "Cannot open $final_log, $!";
+foreach $class ( @classes )
 {
    $promise_handle  = 'empty';
    $promiser        = 'empty';
@@ -79,8 +79,6 @@ foreach my $class ( @classes )
          
          (my $promises_canonized_promiser = $promiser) =~ s/[\W\s]/_/g;
 
-            print "$promises_canonized_promiser eq $class_canonizied_promiser\n";
-            print "$tmp_handle eq $promise_handle\n";
          if (
             $promises_canonized_promiser eq $class_canonizied_promiser &&
             $tmp_handle eq $promise_handle
@@ -88,19 +86,13 @@ foreach my $class ( @classes )
          {
             splice @promises, $i, 1; # Shrink to shorten next loop;
             # Write promise line
-            write $final;
             last;
          }
       }
    }
-   else
-   {
-      # Write class line.
-      write $final;
-   }
+   write FINAL;
 }
-
-close $final;
+close FINAL;
 
 =pod
 

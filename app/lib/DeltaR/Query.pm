@@ -5,6 +5,7 @@ use warnings;
 use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
+use Data::Dumper; # TODO remove
 
 our $dbh;
 our $record_limit;
@@ -76,10 +77,10 @@ sub reduce_records
    {
       #say $q;
       my $sth = $dbh->prepare( $q )
-         or die "Can't prepare $q", $dbh->errstr;
+         or die "Can't prepare $q". $dbh->errstr;
 
       $sth->execute( "$reduce_age days" )
-         or die "Can't execute $q", $dbh->errstr;
+         or die "Can't execute $q". $dbh->errstr;
    }
 
    my $sth = $dbh->prepare( <<END )
@@ -96,10 +97,10 @@ INSERT INTO agent_log SELECT
       ) t1
    WHERE row_number = 1;
 END
-      or die "Can't prepare insert statement", $dbh->errstr;
+      or die "Can't prepare insert statement". $dbh->errstr;
 
       $sth->execute()
-         or die "Can't execute insert statement", $dbh->errstr;
+         or die "Can't execute insert statement". $dbh->errstr;
 }
 
 sub count_records
@@ -582,7 +583,7 @@ END
    if ( open( $fh, "<", "$client_log" ) )
    {
       my $sth = $dbh->prepare( $query )
-         || die "Cannot prepare insert query";
+         || die "Cannot prepare insert query ". $dbh->errstr;
 
       undef %record;
       if ( $client_log =~ m:([^/]+)\.log$: )
@@ -607,10 +608,11 @@ END
 
          my $errors = validate_load_inputs( \%record );
          if ( $#{ $errors } > 0 ){
-            foreach my $err ( @{ $errors } ) { warn  $err };
+            foreach my $err ( @{ $errors } ) { warn "validation error ". $err };
             next;
          };
 
+         print Dumper( \%record );
          $sth->bind_param( 1, $record{class} );
          $sth->bind_param( 2, $record{timestamp} );
          $sth->bind_param( 3, $record{hostname} );
@@ -629,7 +631,7 @@ END
          $sth->bind_param( 16, $record{promise_outcome} );
          $sth->bind_param( 17, $record{promisee} );
          $sth->bind_param( 18, $record{policy_server} );
-         $sth->execute;
+         $sth->execute || warn "cannot execute load ". $dbh->errstr;
       }
    }
    else
