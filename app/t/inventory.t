@@ -1,6 +1,34 @@
-#!/usr/bin/perl 
+use Test::More;
+use Test::Mojo;
+
+my $t = Test::Mojo->new('DeltaR');
+
+$t->ua->max_redirects(1);
+
+$t->get_ok('/report/inventory')
+ ->status_is(200)
+
+ ->element_exists( 'html head title' => 'Inventory Report',
+    '/report/inventory has wrong title' )
+
+ ->content_like( qr(
+    <td>any</td>
+    \s*
+    <td>\d+</td>
+    )msix, 'Inventory tables has no any class' )
+
+ ->text_like( 'html body div script' => qr/dataTable/, 'Missing dataTable script' );
+
+done_testing();
 
 =pod
+
+=head1 SYNOPSIS
+
+This is for testing the inventory report.
+
+=head1 LICENSE
+
 Delta Reporting is a central server compliance log that uses CFEngine.
 
 Copyright (C) 2013 Evolve Thinking http://evolvethinking.com
@@ -18,11 +46,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 =cut
-
-use strict;
-use warnings;
-
-use lib qw(lib ../perl5/lib/perl5/);
-use Mojolicious::Commands;
-
-Mojolicious::Commands->start_app('DeltaR');

@@ -102,7 +102,7 @@ sub startup
 
 This is the main Delta Reporting module. Start up and routing are controlled here.
 
-=head LICENSE
+=head1 LICENSE
 
 Delta Reporting is a central server compliance log that uses CFEngine.
 

@@ -1,6 +1,25 @@
-#!/usr/bin/perl 
+use Test::More;
+use Test::Mojo;
+
+my $t = Test::Mojo->new('DeltaR');
+
+$t->ua->max_redirects(1);
+
+$t->get_ok('/')
+ ->status_is(200)
+ ->text_is( 'html head title' => 'Delta Reporting', '/ title is wrong' )
+ ->text_is( 'html body div div ul li a', 'Delta Reporting', 'First menu item is wrong' );
+
+done_testing();
 
 =pod
+
+=head1 SYNOPSIS
+
+This is for testing the home page.
+
+=head1 LICENSE
+
 Delta Reporting is a central server compliance log that uses CFEngine.
 
 Copyright (C) 2013 Evolve Thinking http://evolvethinking.com
@@ -18,11 +37,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 =cut
-
-use strict;
-use warnings;
-
-use lib qw(lib ../perl5/lib/perl5/);
-use Mojolicious::Commands;
-
-Mojolicious::Commands->start_app('DeltaR');
