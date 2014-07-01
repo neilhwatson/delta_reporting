@@ -612,7 +612,6 @@ END
             next;
          };
 
-         print Dumper( \%record );
          $sth->bind_param( 1, $record{class} );
          $sth->bind_param( 2, $record{timestamp} );
          $sth->bind_param( 3, $record{hostname} );
@@ -645,7 +644,7 @@ END
 sub get_ptr
 {
    my $ip = shift;
-   my $hostname;
+   my $hostname = 'unknown';
    my $res = Net::DNS::Resolver->new;
    my $query= $res->query( $ip, "PTR" );
 

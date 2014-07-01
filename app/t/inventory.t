@@ -2,7 +2,6 @@ use Test::More;
 use Test::Mojo;
 
 my $t = Test::Mojo->new('DeltaR');
-
 $t->ua->max_redirects(1);
 
 $t->get_ok('/report/inventory')
