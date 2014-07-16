@@ -182,7 +182,7 @@ sub validate_load_inputs
 		promise_handle  => '^[\w]+$',
 		promise_outcome => '^kept|repaired|notkept|empty$',
 		promisee        => '^[\w/\s\d\.\-\\:]+$',
-		promiser        => '^[\w/\s\d\.\-\\:]+$',
+		promiser        => '^[\w/\s\d\.\-\\:=]+$',
 		timestamp       => '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[-+]{1}\d{4}$',
 	);
 
@@ -215,7 +215,7 @@ sub test_for_invalid_data
 		promise_handle  => '^[%\w]+$',
 		promise_outcome => '^%|kept|repaired|notkept$',
 		promisee        => '^[%\w/\s\d\.\-\\:]+$',
-		promiser        => '^[%\w/\s\d\.\-\\:]+$',
+		promiser        => '^[%\w/\s\d\.\-\\:=]+$',
 		timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
       latest_record   => '0|1',
 	);
@@ -596,6 +596,12 @@ END
       
       while (<$fh>)
       {
+         foreach my $k ( qw/ timestamp class promise_handle promiser
+            promise_outcome promisee / )
+         {
+            $record{$k} = '';
+         }
+
          chomp;
          (
             $record{timestamp},
