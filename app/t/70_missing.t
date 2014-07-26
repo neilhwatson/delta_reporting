@@ -1,20 +1,22 @@
 use Test::More;
 use Test::Mojo;
+use Storable;
+
+$data_file = '/tmp/delta_reporting_test_data';
+my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
 my $t = Test::Mojo->new('DeltaR');
 $t->ua->max_redirects(1);
 
-$t->get_ok('/report/inventory')
+$t->get_ok('/report/missing')
    ->status_is(200)
 
-   ->element_exists( 'html head title' => 'Inventory Report',
-      '/report/inventory has wrong title' )
+   ->element_exists( 'html head title' => 'Missing hosts from the past',
+      '/report/missing has wrong title' )
 
    ->content_like( qr(
-      <td>cfengine_3_dr_test</td>
-      \s*
-      <td>\d+</td>
-   )msix, '/report/inventory page' )
+      <td>$stored->{data}{ip_address}</td>
+   )misx, '/report/missing page' )
 
    ->text_like( 'html body div script' => qr/dataTable/,
       '/report/inventory dataTable script' );
@@ -25,7 +27,7 @@ done_testing();
 
 =head1 SYNOPSIS
 
-This is for testing the inventory report.
+This is for testing the missing report.
 
 =head2 Requirements
 

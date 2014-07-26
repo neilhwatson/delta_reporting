@@ -9,7 +9,7 @@ sub missing
    my $rows = $dq->query_missing();
 
    $self->render(
-      title    => "Missings host from the past 24 hours",
+      title    => "Missing hosts from the past 24 hours",
       rows     => $rows,
       columns  => [ 'Hostname', 'IP Address', 'Policy server' ],
       template => 'report/rtable',

@@ -1,6 +1,5 @@
 use Test::More;
 use Test::Mojo;
-use POSIX( 'strftime' );
 use Storable;
 
 my %test_params = (
@@ -34,6 +33,9 @@ $t->post_ok( '/report/classes' =>
    })
    ->status_is(200)
 
+   ->text_like( 'html body div script' => qr/dataTable/,
+      '/report/classes last minute dataTable script' )
+
    ->content_like( $content, '/report/classes dr_test_class last minute' );
 
 $t->post_ok( '/report/classes' =>
@@ -46,6 +48,9 @@ $t->post_ok( '/report/classes' =>
       latest_record => 1,
    })
    ->status_is(200)
+
+   ->text_like( 'html body div script' => qr/dataTable/,
+      '/report/classes latest record dataTable script' )
 
    ->content_like( $content, '/report/classes dr_test_class latest record' );
 

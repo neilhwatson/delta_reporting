@@ -23,7 +23,16 @@ sub build_client_log
       
    foreach my $line (<DATA>)
    {
-      $line = $timestamp. ' ;; '. $line;
+      if ( $line =~ m/^any/  )
+      {
+         # TODO For missing report, change timestamp on any to now minus 36 hours.
+         my $missing_timestamp = strftime "%Y-%m-%dT%H:%M:%S%z", localtime( time - 60**2 * 36 );
+         $line = $missing_timestamp. ' ;; '. $line;
+      }
+      else
+      {
+         $line = $timestamp. ' ;; '. $line;
+      }
       print FH $line or do
       {
          warn "Cannot write [$line] to [$log_file], [$!]";
@@ -78,5 +87,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # Insert timestamp dynamically
 
 __DATA__
+any ;; empty ;; empty ;; empty ;; empty
 dr_test_class ;; empty ;; empty ;; empty ;; empty
+cfengine_3_dr_test ;; empty ;; empty ;; empty ;; empty
 dr_test_kept ;; handle_dr_test ;; /etc/dr_test ;; kept ;; mojolicious
