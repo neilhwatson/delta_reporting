@@ -6,6 +6,8 @@ Run all tests with 'DeltaR.pl test'.
 
 =head2 Prerequisites
 
+=over
+
 =item Working database
 
 Some test insert into, or query the Delta Reporting database. Be sure that
