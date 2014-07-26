@@ -1,30 +1,37 @@
 use Test::More;
 use Test::Mojo;
 use POSIX( 'strftime' );
-use Data::Dumper;
+use Storable;
 
-my $log_file = '/tmp/2001:db8::2.log';
-my $timestamp = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
+my $shared    = retrieve( '/tmp/delta_reporting_test_data' );
+my $log_file  = "/tmp/$shared->{data}{ip_address}.log";
+my $timestamp = $shared->{data}{log_timestamp};
+
+ok( defined $shared, 'Load shared data' );
+ok( build_client_log(), 'Build client log' );
+ok( insert_data_from_client_log(), 'Insert client log' );
+
+done_testing();
 
 sub build_client_log
 {
    open( FH, ">", $log_file ) or do
       { 
-         warn "Cannot open [$log_file], [$!]";
-         return 1;
+         warn "Cannot open log file [$log_file], [$!]";
+         return;
       };
       
    foreach my $line (<DATA>)
    {
       $line = $timestamp. ' ;; '. $line;
       print FH $line or do
-         {
-            warn "Cannot write log, [$!]";
-            return 2;
-         };
+      {
+         warn "Cannot write [$line] to [$log_file], [$!]";
+         return;
+      };
    }
    close FH;
-   return 0;
+   return 1;
 }
 
 sub insert_data_from_client_log
@@ -34,21 +41,17 @@ sub insert_data_from_client_log
    unlink $log_file or warn "Cannot unlink  [$log_file]";
    if ( $return != 0 )
    {
-      warn "Error $load_cmd return status [$return]"
+      warn "Error [$load_cmd] return status [$return]";
+      return;
    }
-   return $return;
+   return 1;
 }
-
-ok( build_client_log()             == 0, 'Build client log' );
-ok( insert_data_from_client_log()  == 0, 'Insert client log' );
-
-done_testing();
 
 =pod
 
 =head1 SYNOPSIS
 
-This is for testing the loading of client data.
+This is loads test data for later query tests.
 
 =head1 LICENSE
 

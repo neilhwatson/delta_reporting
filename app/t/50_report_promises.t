@@ -1,15 +1,7 @@
 use Test::More;
 use Test::Mojo;
 use POSIX( 'strftime' );
-use Data::Dumper;
-
-=pod
-The problem is that the regex is trying to match to the second, but
-this timestamp is not the same as the timestamp from the load data
-test. Must find a way to share the timestamp.
-=cut
-
-my $timestamp = strftime "%Y-%m-%dT%H:%M:%S%z", localtime;
+use Storable;
 
 my %test_params = (
    # A copy of the test data that was inserted.
@@ -19,17 +11,20 @@ my %test_params = (
    promise_handle  => 'handle_dr_test',
 );
 
-if ( $timestamp =~ m/ \A
-   ( \d{4}-\d{2}-\d{2} ) # Date
-   T
-   ( \d{2}:\d{2}:\d{2} ) # hh:mm:ss
-   ( [-+]{1}\d{4} )      # GMT offset
-   \Z
-   /x )
-{
-   $test_params{timestamp}    = "$1 $2";
-   $test_params{gmt_offset}   = $3;
-}
+$data_file = '/tmp/delta_reporting_test_data';
+my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
+
+my $content = qr(
+      <td>$test_params{promiser}</td>
+      .*
+      <td>$test_params{promisee}</td>
+      .*
+      <td>$test_params{promise_handle}</td>
+      .*
+      <td>$test_params{promise_outcome}</td>
+      .*
+      <td>$stored->{data}{timestamp_regex}</td>
+)msix;
 
 my $t = Test::Mojo->new( 'DeltaR' );
 $t->ua->max_redirects(1);
@@ -39,40 +34,26 @@ $t->post_ok( '/report/promises' =>
       report_title    => 'DR test suite',
       promiser        => $test_params{promiser},
       hostname        => '%',
-      ip_address      => '%',
+      ip_address      => $stored->{data}{ip_address},
       policy_server   => '%',
       promise_outcome => $test_params{promise_outcome},
       promisee        => $test_params{promisee},
       promise_handle  => $test_params{promise_handle},
       latest_record   => 0,
-      timestamp       => $test_params{timestamp},
-      gmt_offset      => $test_params{gmt_offset},
-      delta_minutes   => -2
+      timestamp       => $stored->{data}{query_timestamp},
+      gmt_offset      => $stored->{data}{gmt_offset},
+      delta_minutes   => -1
    })
    ->status_is(200)
 
-   ->content_like( qr(
-      <td>$test_params{promiser}</td>
-      .*
-      <td>$test_params{promisee}</td>
-      .*
-      <td>$test_params{promise_handle}</td>
-      .*
-      <td>$test_params{promise_outcome}</td>
-      .*
-      <td>
-         $test_params{timestamp}
-         [-+]{1}\d{2,4}
-      </td>
-      )msix
-   , '/report/promises dr_test last minute' );
+   ->content_like( $content, '/report/promises dr_test last minute' ); 
 
 $t->post_ok( '/report/promises' =>
    form => {
       report_title    => 'DR test suite',
       promiser        => $test_params{promiser},
       hostname        => '%',
-      ip_address      => '%',
+      ip_address      => $stored->{data}{ip_address},
       policy_server   => '%',
       promise_outcome => $test_params{promise_outcome},
       promisee        => $test_params{promisee},
@@ -81,21 +62,7 @@ $t->post_ok( '/report/promises' =>
    })
    ->status_is(200)
 
-   ->content_like( qr(
-      <td>$test_params{promiser}</td>
-      .*
-      <td>$test_params{promisee}</td>
-      .*
-      <td>$test_params{promise_handle}</td>
-      .*
-      <td>$test_params{promise_outcome}</td>
-      .*
-      <td>
-         $test_params{timestamp}
-         [-+]{1}\d{2,4}
-      </td>
-      )msix
-   , '/report/promises dr_test latest record' );
+   ->content_like( $content, '/report/promises dr_test latest record' );
 
 done_testing();
 

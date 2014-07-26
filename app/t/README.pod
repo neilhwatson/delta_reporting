@@ -1,0 +1,16 @@
+=head1 Delta Reporting developer testing
+
+=head2 SYNOPSIS
+
+Run all tests with 'DeltaR.pl test'.
+
+=head2 Prerequisites
+
+=item Working database
+
+Some test insert into, or query the Delta Reporting database. Be sure that
+your's is initialized.
+
+=back
+
+=cut

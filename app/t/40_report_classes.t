@@ -1,28 +1,21 @@
 use Test::More;
 use Test::Mojo;
 use POSIX( 'strftime' );
-use Data::Dumper;
-
-# TODO new plan. Set time plus random minutes per test.
-my $timestamp = strftime "%Y-%m-%dT11:11:11%z", localtime;
+use Storable;
 
 my %test_params = (
    # duplicate of test data from load test
    class => 'dr_test_class'
 );
 
-if ( $timestamp =~ m/ \A
-   ( \d{4}-\d{2}-\d{2} ) # Date
-   T
-   ( \d{2}:\d{2}:\d{2} ) # hh:mm:ss
-   ( [-+]{1}\d{4} )      # GMT offset
-   \Z
-   /x )
-{
-   $test_params{timestamp}    = "$1 $2";
-   $test_params{gmt_offset}   = $3;
-}
+$data_file = '/tmp/delta_reporting_test_data';
+my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
+my $content = qr(
+   <td>$test_params{class}</td>
+   .*
+   <td>$stored->{data}{timestamp_regex}</td>
+)msix;
 
 my $t = Test::Mojo->new( 'DeltaR' );
 $t->ua->max_redirects(1);
@@ -32,51 +25,29 @@ $t->post_ok( '/report/classes' =>
       report_title  => 'DR test suite',
       class         => $test_params{class},
       hostname      => '%',
-      ip_address    => '%',
+      ip_address    => $stored->{data}{ip_address},
       policy_server => '%',
       latest_record => 0,
-      timestamp     => $test_params{timestamp},
-      gmt_offset    => $test_params{gmt_offset},
+      timestamp     => $stored->{data}{query_timestamp},
+      gmt_offset    => $stored->{data}{gmt_offset},
       delta_minutes => -1
    })
    ->status_is(200)
 
-   ->content_like( qr(
-      <td>$test_params{class}</td>
-      .*
-      <td>
-         $test_params{date}
-         \s+
-         $test_params{timestamp}
-         [-+]{1}\d{2,4}
-      </td>
-
-      )msix
-   , '/report/classes dr_test_class last minute' );
+   ->content_like( $content, '/report/classes dr_test_class last minute' );
 
 $t->post_ok( '/report/classes' =>
    form => {
       report_title  => 'DR test suite',
       class         => $test_params{class},
       hostname      => '%',
-      ip_address    => '%',
+      ip_address    => $stored->{data}{ip_address},
       policy_server => '%',
       latest_record => 1,
    })
    ->status_is(200)
 
-   ->content_like( qr(
-      <td>$test_params{class}</td>
-      .*
-      <td>
-         $test_params{date}
-         \s+
-         $test_params{timestamp}
-         [-+]{1}\d{2,4}
-      </td>
-
-      )msix
-   , '/report/classes dr_test_class latest record' );
+   ->content_like( $content, '/report/classes dr_test_class latest record' );
 
 done_testing();
 
