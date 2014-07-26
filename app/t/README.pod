@@ -10,7 +10,7 @@ Run all tests with 'DeltaR.pl test'.
 
 =item Working database
 
-Some test insert into, or query the Delta Reporting database. Be sure that
+Some tests insert into, or query the Delta Reporting database. Be sure that
 your's is initialized.
 
 =back
