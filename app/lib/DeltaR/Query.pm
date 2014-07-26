@@ -437,13 +437,13 @@ sub get_timestamp_clause
 
       if ( $delta_sign eq '-' )
       {
-         $first_time_limit = '<';
-         $second_time_limit = '>';
+         $first_time_limit = '<=';
+         $second_time_limit = '>=';
       }
       elsif ( $delta_sign eq '+' )
       {
-         $first_time_limit = '>';
-         $second_time_limit = '<';
+         $first_time_limit = '=>';
+         $second_time_limit = '=<';
       }
    }
 

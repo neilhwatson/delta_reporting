@@ -3,23 +3,8 @@ use Test::Mojo;
 use POSIX( 'strftime' );
 use Data::Dumper;
 
-my %test_params;
 my $log_file = '/tmp/2001:db8::2.log';
 my $timestamp = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
-
-# TODO set query time ahead a few seconds?
-if ( $timestamp =~ m/ \A
-   ( \d{4}-\d{2}-\d{2} ) # Date
-   T
-   ( \d{2}:\d{2}:\d{2} ) # Timestamp
-   ( [-+]{1}\d{4} )      # GMT offset
-   \Z
-   /x )
-{
-   $test_params{timestamp} = "$1 $2";
-   $test_params{gmt_offset} = $3;
-}
-print STDERR Dumper( %test_params );
 
 sub build_client_log
 {
@@ -39,14 +24,14 @@ sub build_client_log
          };
    }
    close FH;
-
    return 0;
 }
 
-sub insert_data
+sub insert_data_from_client_log
 {
    my $load_cmd = "./script/load '$log_file'";
    my $return = system( $load_cmd );
+   unlink $log_file or warn "Cannot unlink  [$log_file]";
    if ( $return != 0 )
    {
       warn "Error $load_cmd return status [$return]"
@@ -54,32 +39,8 @@ sub insert_data
    return $return;
 }
 
-ok( build_client_log() == 0, 'Build client log' );
-ok( insert_data() == 0, 'Insert client log' );
-
-my $t = Test::Mojo->new( 'DeltaR' );
-$t->ua->max_redirects(1);
-
-$t->post_ok( '/report/classes' =>
-   form => {
-      report_title  => 'DR test suite',
-      class         => 'dr_test_class',
-      hostname      => '%',
-      ip_address    => '%',
-      policy_server => '%',
-      latest_record => 0,
-      timestamp     => $test_params{timestamp},
-      gmt_offset    => $test_params{gmt_offset},
-      delta_minutes => -2
-   })
-   ->status_is(200)
-
-   ->content_like( qr(
-      <td>dr_test_class</td>
-      \s*
-      <td>$test_params{timestamp}.*?</td>
-      )msix
-   , '/report/classes dr_test_class ' );
+ok( build_client_log()             == 0, 'Build client log' );
+ok( insert_data_from_client_log()  == 0, 'Insert client log' );
 
 done_testing();
 
