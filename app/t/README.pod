@@ -8,10 +8,15 @@ Run all tests with 'DeltaR.pl test'.
 
 =over
 
+=item Backup database
+
+Backup any database that your testing may touch, defined in DeltaR.conf.
+
 =item Working database
 
-Some tests insert into, or query the Delta Reporting database. Be sure that
-your's is initialized.
+Some tests insert into, or query the Delta Reporting database. Be sure the
+database defined in prerequisites has been created. Test suite will setup and
+remove tables automatically.
 
 =back
 

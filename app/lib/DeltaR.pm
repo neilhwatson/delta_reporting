@@ -77,8 +77,15 @@ sub startup
       my $dq = $self->app->dr;
       $dq->create_tables;
    } => '/database_initialized');
+   $r->get( '/database_initialized' => 'database_initialized' );
 
-   $r->get( '/database_initialized' => 'database_initialized');
+   $r->get( '/drop_tables' => sub
+   {
+      my $self = shift;
+      my $dq = $self->app->dr;
+      $dq->drop_tables;
+   } => '/tables_dropped');
+   $r->get( '/tables_dropped' => 'tables_dropped' );
 
    $r->get( '/form/promises')->to('form#class_or_promise', template => 'form/promises', record_limit => $record_limit );
    $r->get( '/form/classes' )->to('form#class_or_promise', template => 'form/classes', record_limit => $record_limit );

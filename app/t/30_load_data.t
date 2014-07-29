@@ -16,10 +16,10 @@ done_testing();
 sub build_client_log
 {
    open( FH, ">", $log_file ) or do
-      { 
-         warn "Cannot open log file [$log_file], [$!]";
-         return;
-      };
+   { 
+      warn "Cannot open log file [$log_file], [$!]";
+      return;
+   };
       
    foreach my $line (<DATA>)
    {

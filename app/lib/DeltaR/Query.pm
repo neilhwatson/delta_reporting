@@ -454,6 +454,32 @@ $delta_sign $query_params->{delta_minutes} * interval '1 minute' )
 END
 }
 
+sub drop_tables
+{
+   my $self = shift;
+   my $return = 1;
+   my @tables = (
+      "$agent_table",
+      "$inventory_table",
+      # "client_by_timestamp ", # dropped by default?
+      "$promise_counts",
+      # "promise_counts_idx ", # dropped by default?
+   );
+
+   my $sth;
+
+   foreach my $table ( @tables )
+   {
+      $sth = $dbh->prepare( "DROP TABLE IF EXISTS $table CASCADE" );
+      $sth->execute or do
+      {
+         warn "cannot execute drop [$dbh->errstr]";
+         $return = 0;
+      }
+   }
+   return $return;
+}
+
 sub create_tables
 {
    my $self = shift;

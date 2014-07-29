@@ -1,10 +1,27 @@
 use Test::More;
 use Test::Mojo;
-use POSIX( 'strftime' );
+use File::Copy 'copy';
+use Storable;
 
-my $log_file = unlink '/tmp/delta_reporting_test_data';
+my $shared  = retrieve( '/tmp/delta_reporting_test_data' );
 
-ok( $log_file == 1, "Clean up log file" );
+my $t = Test::Mojo->new( 'DeltaR' );
+
+my $config = $t->app->plugin( 'config', file => 'DeltaR.conf' );
+ok( $config->{db_name} eq 'delta_reporting_test', 'Confirm config test database' )
+   or BAIL_OUT( "Config test failed" );
+
+$t->ua->max_redirects(1);
+$t->get_ok( '/drop_tables' ) ->status_is(200);
+
+my $config = copy( $shared->{data}{config}.'.backup', $shared->{data}{config} )
+   or do
+   {
+      warn "Cannot restore [$shared->{data}{config}], [$!]. Do it by hand.";
+   };
+ok( $config == 1, 'Config file restore' );
+
+ok( unlink '/tmp/delta_reporting_test_data', 'Clean up log file' );
 
 done_testing();
 
