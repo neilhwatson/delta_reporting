@@ -7,12 +7,11 @@ my $shared  = retrieve( '/tmp/delta_reporting_test_data' );
 
 my $t = Test::Mojo->new( 'DeltaR' );
 
-my $config = $t->app->plugin( 'config', file => 'DeltaR.conf' );
-ok( $config->{db_name} eq 'delta_reporting_test', 'Confirm config test database' )
+my $db_name = $t->app->config( 'db_name' );
+ok( $db_name eq 'delta_reporting_test', 'Confirm config test database' )
    or BAIL_OUT( "Config test failed" );
 
-$t->ua->max_redirects(1);
-$t->get_ok( '/drop_tables' ) ->status_is(200);
+ok( $t->app->dr->drop_tables, 'Drop tables in test database' );
 
 my $config = copy( $shared->{data}{config}.'.backup', $shared->{data}{config} )
    or do

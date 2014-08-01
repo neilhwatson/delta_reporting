@@ -18,6 +18,8 @@ Some tests insert into, or query the Delta Reporting database. Be sure the
 database defined in prerequisites has been created. Test suite will setup and
 remove tables automatically.
 
+The tests can be time consuming depending on the power of your database host.
+
 =back
 
 =cut

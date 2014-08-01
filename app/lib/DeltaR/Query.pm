@@ -5,7 +5,6 @@ use warnings;
 use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
-use Data::Dumper; # TODO remove
 
 our $dbh;
 our $record_limit;
@@ -303,6 +302,40 @@ END
    return $rows
 }
 
+sub insert_promise_counts
+# This is not used in production, but in testing to insert sample historical data.
+{
+   my $self = shift;
+   my $AoH = shift;
+   my $return = 1;
+   
+   my $sth = $dbh->prepare( <<END
+   INSERT INTO $promise_counts ( datestamp, hosts, kept, notkept, repaired )
+   VALUES ( ?, ?, ?, ?, ? )
+END
+   ) or do
+   {
+      warn "Cannot prepare historical trend data [$dbh->errstr]";
+      $return = 0;
+   };
+
+   foreach my $row ( @{ $AoH } )
+   {
+      $sth->execute( 
+         $row->{datestamp},
+         $row->{hosts},
+         $row->{kept},
+         $row->{notkept},
+         $row->{repaired}
+      ) or do
+      {
+         warn "cannot insert historical trend data [$dbh->errstr]";
+         $return = 0;
+      };
+   }
+   return $return;
+}
+
 sub insert_yesterdays_promise_counts
 {
    my $self = shift;
@@ -455,6 +488,7 @@ END
 }
 
 sub drop_tables
+# This is not used in production, but in testing.
 {
    my $self = shift;
    my $return = 1;

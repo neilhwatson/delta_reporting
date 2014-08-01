@@ -183,7 +183,7 @@ sub regression
    my %stats;
 
    my $lineFit = Statistics::LineFit->new( 0, 1 );
-   $lineFit->setData( \@x, \@y ) or die "Invalid regression data\n";
+   $lineFit->setData( \@x, \@y ) or warn "Invalid regression data\n";
    ( $stats{Intercept}, $stats{Slope} ) = $lineFit->coefficients();
    $stats{Stderr} = $lineFit->sigma();
    $stats{Correlation} = $lineFit->rSquared();

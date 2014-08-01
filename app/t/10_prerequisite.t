@@ -4,14 +4,18 @@ use POSIX( 'strftime' );
 use Storable;
 use File::Copy 'copy';
 
-my $timestamp = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
+my $timestamp           = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
+my $datestamp_yesterday = strftime "%Y-%m-%d", localtime( time - 60**2 *24 );
+
 my %stored = (
    file => '/tmp/delta_reporting_test_data',
    data =>
    {
-      log_timestamp => $timestamp,
-      ip_address    => '2001:db8::2',
-      config        => 'DeltaR.conf',
+      log_timestamp       => $timestamp,
+      datestamp_yesterday => $datestamp_yesterday,
+      subnet              => '2001:db8::',
+      ip_address          => '2001:db8::1',
+      config              => 'DeltaR.conf',
    }
 );
 
@@ -68,6 +72,7 @@ if ( $timestamp =~ m/ \A
    /x )
 {
    $stored{data}{query_timestamp} = "$1 $2";
+   $stored{data}{datestamp}       = "$1";
    $stored{data}{timestamp_regex} = $1.'\s'.$2.'[-+]{1}\d{2,4}';
    $stored{data}{gmt_offset}      = $3;
 }
