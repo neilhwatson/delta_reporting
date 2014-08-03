@@ -21,9 +21,13 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 ## Requirements ##
 
 ### Client and Server ###
-1. CFEngine 3.5.2+
+1. CFEngine 3.5.2. CFEngine 3.6 has outstanding bugs that prevent required Delta Reporting, and possibly your own, policies from working reliably. Stick with CFEngine 3.5.2 for now.
 1. [EFL](https://github.com/evolvethinking/evolve\_cfengine\_freelib/), the Evolve Thinking free promise library. It very important that you know how to use this.
 1. Perl 5.10+
+
+#### Note about EFL ####
+
+[EFL](https://github.com/evolvethinking/evolve\_cfengine\_freelib/) contains logging action and classes attributes that log promise outcomes for Delta Reporting to gather and process. EFL's promise bundles use these automatically. To use your own promises you will need to use these EFL action and classes attributes. See EFL bundles efl\_rkn, efl\_delta\_reporting, and the Delta Reporting architecture docs.
 
 ### Server ###
 
