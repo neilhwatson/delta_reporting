@@ -5,8 +5,7 @@ use Mojo::Base 'Mojolicious::Controller';
 sub missing
 {
    my $self = shift;
-   my $dq = $self->app->dr;
-   my $rows = $dq->query_missing();
+   my $rows = $self->app->dr->query_missing();
 
    $self->render(
       title    => "Missing hosts from the past 24 hours",
@@ -19,8 +18,7 @@ sub missing
 sub inventory
 {
    my $self = shift;
-   my $dq = $self->app->dr;
-   my $rows = $dq->query_inventory();
+   my $rows = $self->app->dr->query_inventory();
 
    $self->render(
       title    => "Inventory report",
@@ -33,7 +31,6 @@ sub inventory
 sub classes
 {
    my $self = shift;
-   my $dq = $self->app->dr;
    my %query_params;
    my $latest_record = 0;
 
@@ -59,7 +56,8 @@ sub classes
       latest_record => $latest_record,
    );
 
-   my $errors = $dq->validate_form_inputs( \%query_params );
+   my $errors = 
+      $self->app->dr->validate_form_inputs( \%query_params );
    if ( @{ $errors } )
    {
       $self->stash(
@@ -69,7 +67,7 @@ sub classes
       return $self->render( template => 'error', format => 'html' );
    }
 
-   my $rows = $dq->query_classes( \%query_params );
+   my $rows = $self->app->dr->query_classes( \%query_params );
    
    $self->render(
       title    => $self->param('report_title'),
@@ -82,7 +80,6 @@ sub classes
 sub promises
 {
    my $self = shift;
-   my $dq = $self->app->dr;
    my %query_params;
    my $latest_record = 0;
 
@@ -111,7 +108,8 @@ sub promises
       latest_record   => $latest_record,
    );
 
-   my $errors = $dq->validate_form_inputs( \%query_params );
+   my $errors =
+      $self->app->dr->validate_form_inputs( \%query_params );
    if ( @{ $errors } )
    {
       $self->stash(
@@ -121,7 +119,7 @@ sub promises
       return $self->render( template => 'error', format => 'html' );
    }
 
-   my $rows = $dq->query_promises( \%query_params );
+   my $rows = $self->app->dr->query_promises( \%query_params );
    
    $self->render(
       title    => $self->param('report_title'),

@@ -53,7 +53,16 @@ sub startup
 ## Routes
    my $r = $self->routes;
 
-   $r->any( '/' => 'home' );
+   $r->any( '/' => sub
+   {
+      use Data::Dumper;
+      my $self = shift;
+      my $active  = $self->app->dr->query_inventory( 'cfengine' );
+      my $missing = $self->app->dr->query_missing();
+      warn "active  ".Dumper( \$active );
+      warn "missing ".Dumper( \$missing );
+
+   } => 'home' );
 
    $r->any( '/help' => sub
    {

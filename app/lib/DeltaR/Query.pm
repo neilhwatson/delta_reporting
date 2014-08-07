@@ -5,6 +5,7 @@ use warnings;
 use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
+use Data::Dumper; # TODO remove
 
 our $dbh;
 our $record_limit;
@@ -136,18 +137,27 @@ WHERE class = 'any'
 sub query_inventory
 {
    my $self = shift;
-   my $like_clauses;
-   my $sth = $dbh->prepare( "SELECT class FROM $inventory_table" )
-      || die "Could not prepare inventory query" ;
-   my $class_arrayref = $dbh->selectall_arrayref( $sth ) 
-      || die "Could not execute inventory query" ;
+   my $class = shift;
+   my ( $like_clauses, $sth );
 
-   foreach my $row ( @$class_arrayref )
+   if ( not defined $class or $class eq '' )
    {
-      my ( $bind_class ) = @$row;
-      $like_clauses .= " OR lower(class) LIKE lower('$bind_class') ESCAPE '!'";
+      my $sth = $dbh->prepare( "SELECT class FROM $inventory_table" )
+         || die "Could not prepare inventory query [$dbh->errstr]" ;
+      my $class_arrayref = $dbh->selectall_arrayref( $sth ) 
+         || die "Could not execute inventory query [$dbh->errstr]" ;
+
+      foreach my $row ( @$class_arrayref )
+      {
+         my ( $bind_class ) = @$row;
+         $like_clauses .= " OR lower(class) LIKE lower('$bind_class') ESCAPE '!'";
+      }
+      $like_clauses =~ s/^ OR//;
    }
-   $like_clauses =~ s/^ OR//;
+   else
+   {
+      $like_clauses = "class = lower('$class')";
+   }
 
    my $query = <<END;
 SELECT class,COUNT( class )
@@ -161,10 +171,12 @@ AS class_count
 GROUP BY class
 ORDER BY class
 END
-   #say $query;
-   $sth = $dbh->prepare( $query ) || die "Could not prepare class query" ;
-   $sth->execute;
-   return $sth->fetchall_arrayref()
+   $sth = $dbh->prepare( $query ) || die "Could not prepare class query [$dbh->errstr]";
+   $sth->execute || die "Could not execute class query [$dbh->errstr]";
+   warn "executed inventory query for [$query]";
+   my $rows = $sth->fetchall_arrayref();
+   warn Dumper( \$rows );
+   return $rows;
 };
 
 sub validate_load_inputs

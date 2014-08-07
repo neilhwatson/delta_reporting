@@ -195,7 +195,7 @@ sub get_output_format
 sub usage
 {
    my ( $self, $msg ) = @_;
-   say $msg;
+   say $msg if ( defined $msg );
    say $self->extract_usage;
 }
 

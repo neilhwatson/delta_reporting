@@ -3,7 +3,8 @@ use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
 
-my $hosts = 1;
+my $hosts = 2;
+my @log_data;
 
 my $missing_timestamp =
    strftime "%Y-%m-%dT%H:%M:%S%z", localtime( time - 60**2 * 36 );
@@ -36,15 +37,48 @@ ok( $t->app->dr->insert_promise_counts( \@historical_trends ),
 my $shared = retrieve( '/tmp/delta_reporting_test_data' );
 ok( defined $shared, 'Load shared data' );
 
+foreach my $line (<DATA>)
+{
+   chomp $line;
+   push @log_data, $line;
+}
+
 foreach my $i ( 1..$hosts )
 {
    my $hex = sprintf( "%x", $i );
    my $log_file = "/tmp/$shared->{data}{subnet}$hex.log";
+   my @timestamps;
+   
+   if ( $i == 1 )
+   {
+      @timestamps = ( $missing_timestamp );
+   }
+   else
+   {
+      @timestamps = ( $trend_timestamp, $shared->{data}{log_timestamp} );
+   }
 
-   ok( build_client_log( $log_file ), 'Build client log' );
+   foreach my $ts ( @timestamps )
+   {
+      ok( build_client_log(
+            log_file  => $log_file,
+            timestamp => $ts,
+            log_data  => \@log_data
+         ),
+         'build log data for hosts'
+      );
+   }
+
    ok( run_command( "./script/load $log_file" ), 'Insert client log' );
    unlink $log_file or warn "Cannot unlink  [$log_file]";
 }
+
+my $test = qx( /opt/delta_reporting/app/script/query -c 'any' -d -5 );
+warn 'test query is '. $test;
+my $classes = qx( ./script/query -c '%' -d -5 );
+warn "classes are ". $classes;
+my $promises = qx( ./script/query -pr '%' -d -5 );
+warn "classes are ". $promises;
 
 ok( run_command( './script/prune'  ), 'Run command prune'  );
 ok( run_command( './script/reduce' ), 'Run command reduce' );
@@ -54,38 +88,23 @@ done_testing();
 
 sub build_client_log
 {
-   my $log_file = shift;
-   open( FH, ">", $log_file ) or do
+   my %params = @_;
+   open( my $fh, ">", $params{log_file} ) or do
    { 
-      warn "Cannot open log file [$log_file], [$!]";
+      warn "Cannot open log file [$params{log_file}], [$!]";
       return;
    };
-      
-   my $data_pos = tell DATA;
-   foreach my $line (<DATA>)
-   {
-      if ( $line =~ m/^any/ and $log_file =~ m/::1\Z/ )
-      {
-         $ts = $missing_timestamp;
-      }
-      elsif ( $line =~ m/^\w*dr_test/ )
-      {
-         $ts = $shared->{data}{log_timestamp};
-      }
-      else 
-      {
-         $ts = $trend_timestamp;
-      }
 
-      $line = $ts . ' ;; '. $line;
-      print FH $line or do
+   foreach my $data ( @{ $params{log_data} } )
+   {
+      $line = $params{timestamp} . ' ;; '. $data."\n";
+      print $fh $line or do
       {
-         warn "Cannot write [$line] to [$log_file], [$!]";
+         warn "Cannot write [$line] to [$params{log_file}], [$!]";
          return;
       };
    }
-   seek DATA, $data_pos, 0;
-   close FH;
+   close $fh;
    return 1;
 }
 
