@@ -15,7 +15,7 @@ $t->get_ok('/report/missing')
       '/report/missing has wrong title' )
 
    ->content_like( qr(
-      <td>$stored->{data}{ip_address}</td>
+      <td>$stored->{data}{missing_ip_address}</td>
    )misx, '/report/missing page' )
 
    ->text_like( 'html body div script' => qr/dataTable/,

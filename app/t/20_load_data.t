@@ -49,7 +49,7 @@ foreach my $i ( 1..$hosts )
    my $log_file = "/tmp/$shared->{data}{subnet}$hex.log";
    my @timestamps;
    
-   if ( $i == 1 )
+   if ( "$shared->{data}{subnet}$hex" eq $shared->{data}{missing_ip_address} )
    {
       @timestamps = ( $missing_timestamp );
    }
@@ -67,18 +67,11 @@ foreach my $i ( 1..$hosts )
          ),
          'build log data for hosts'
       );
+
+      ok( run_command( "./script/load $log_file" ), 'Insert client log' );
+      unlink $log_file or warn "Cannot unlink  [$log_file]";
    }
-
-   ok( run_command( "./script/load $log_file" ), 'Insert client log' );
-   unlink $log_file or warn "Cannot unlink  [$log_file]";
 }
-
-my $test = qx( /opt/delta_reporting/app/script/query -c 'any' -d -5 );
-warn 'test query is '. $test;
-my $classes = qx( ./script/query -c '%' -d -5 );
-warn "classes are ". $classes;
-my $promises = qx( ./script/query -pr '%' -d -5 );
-warn "classes are ". $promises;
 
 ok( run_command( './script/prune'  ), 'Run command prune'  );
 ok( run_command( './script/reduce' ), 'Run command reduce' );

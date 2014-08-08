@@ -5,7 +5,7 @@ use warnings;
 use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
-use Data::Dumper; # TODO remove
+# use Data::Dumper; # TODO remove
 
 our $dbh;
 our $record_limit;
@@ -173,10 +173,7 @@ ORDER BY class
 END
    $sth = $dbh->prepare( $query ) || die "Could not prepare class query [$dbh->errstr]";
    $sth->execute || die "Could not execute class query [$dbh->errstr]";
-   warn "executed inventory query for [$query]";
-   my $rows = $sth->fetchall_arrayref();
-   warn Dumper( \$rows );
-   return $rows;
+   return $sth->fetchall_arrayref();
 };
 
 sub validate_load_inputs
@@ -433,6 +430,24 @@ END
       query_params => $query_params,
    );
    return $rows
+}
+
+sub query_latest_record
+{
+   my $query = <<END;
+SELECT timestamp FROM $agent_table 
+ORDER BY timestamp desc LIMIT 1
+END
+
+   my $sth = $dbh->prepare( $query )
+      or warn "Can't prepare query [$query]";
+
+   $sth->execute()
+      or warn "Can't execute query [$query] [$sth->errstr]";
+
+   my $array_ref = $sth->fetchall_arrayref();
+
+   return $array_ref->[0][0];
 }
 
 sub execute_query

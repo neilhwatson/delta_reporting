@@ -14,7 +14,8 @@ my %stored = (
       log_timestamp       => $timestamp,
       datestamp_yesterday => $datestamp_yesterday,
       subnet              => '2001:db8::',
-      ip_address          => '2001:db8::1',
+      missing_ip_address  => '2001:db8::1',
+      ip_address          => '2001:db8::2',
       config              => 'DeltaR.conf',
    }
 );

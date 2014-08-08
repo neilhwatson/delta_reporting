@@ -5,23 +5,29 @@ use Storable;
 $data_file = '/tmp/delta_reporting_test_data';
 my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
-my $stats_regex = qr(-{0,1}[\d\.]+);
+# This regex is taken from Regexp::Common::number
+my $real_number = qr/
+   (?:(?i)(?:[-+]?)(?:(?=[.]?[0123456789])(?:[0123456789]*)(?:(?:[.])
+   (?:[0123456789]{0,}))?)(?:(?:[E])(?:(?:[-+]?)(?:[0123456789]+))|))
+/x;
+#$real_number = qr/./;
+
 my $stats_table_body_regex = qr(
    <td>\s*Correlation\s*</td>
    .*
-   <td>\s*$stats_regex\s*</td>
+   <td>\s*$real_number\s*</td>
    .*
    <td>\s*Intercept\s*</td>
    .*
-   <td>\s*$stats_regex\s*</td>
+   <td>\s*$real_number\s*</td>
    .*
    <td>\s*Slope\s*</td>
    .*
-   <td>\s*$stats_regex\s*</td>
+   <td>\s*$real_number\s*</td>
    .*
    <td>\s*Stderr\s*</td>
    .*
-   <td>\s*$stats_regex\s*</td>
+   <td>\s*$real_number\s*</td>
 )misx;
 
 my $t = Test::Mojo->new('DeltaR');
@@ -64,7 +70,7 @@ foreach my $report ( 'kept', 'repaired' )
       ->text_like( 'html body div script' => qr/dataTable/,
          "/trend/$report dataTable script" )
 
-      ->content_like( qr(var\s+dr_data\s+=\s+\[\{\S*"slope":$stats_regex)msix,
+      ->content_like( qr(var\s+dr_data\s+=\s+\[\{\S*"slope":$real_number)msix,
          "trend/$report dr_data javascript variable");
 }
 

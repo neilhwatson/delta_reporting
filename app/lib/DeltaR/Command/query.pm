@@ -80,7 +80,7 @@ sub run
    $query_params{hostname} = '%';
    $query_params{ip_address} = '%';
    $query_params{gmt_offset} = strftime "%z", localtime;
-   $query_params{timestamp} = strftime "%Y-%m-%d %H:%m:%S", localtime;
+   $query_params{timestamp} = strftime "%Y-%m-%d %H:%M:%S", localtime;
    $query_params{latest_record} = 0;
    $query_params{delta_minutes} = -30;
    $query_params{policy_server} = '%';

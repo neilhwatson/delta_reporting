@@ -55,13 +55,18 @@ sub startup
 
    $r->any( '/' => sub
    {
-      use Data::Dumper;
       my $self = shift;
       my $active  = $self->app->dr->query_inventory( 'cfengine' );
       my $missing = $self->app->dr->query_missing();
-      warn "active  ".Dumper( \$active );
-      warn "missing ".Dumper( \$missing );
+      my $latest  = $self->app->dr->query_latest_record();
+      # TODO pass to home template.
+      # in home template 'include' widgets.
 
+      $self->stash(
+         active  => $active,
+         missing => $missing,
+         latest  => $latest
+      );
    } => 'home' );
 
    $r->any( '/help' => sub
@@ -73,8 +78,7 @@ sub startup
    $r->any( '/about' => sub 
    {
       my $self = shift;
-      my $dq = $self->app->dr;
-      my $number_of_records = $dq->count_records;
+      my $number_of_records = $self->app->dr->count_records;
       $self->stash(
          title => "About Delta Reporting",
          number_of_records => $number_of_records );
@@ -83,8 +87,7 @@ sub startup
    $r->get( '/initialize_database' => sub
    {
       my $self = shift;
-      my $dq = $self->app->dr;
-      $dq->create_tables;
+      $self->app->dr->create_tables;
    } => '/database_initialized');
    $r->get( '/database_initialized' => 'database_initialized' );
 
