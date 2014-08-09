@@ -30,17 +30,15 @@
 
 <div class="row">
    <div class="col-md-4">
-      <h4>Last client data capture: <%= $latest_date %> <%= $latest_time %></h4>
+      <h4>Last data capture: <%= $latest_date %> <%= $latest_time %></h4>
    </div> <!-- col-md-4 -->
 </div> <!-- row -->
 
 <hr>
 
-   <p>Welcome to Delta Reporting, a promise and class reporting tool for CFEngine. With Delta Reporting you'll be able to query agent knowledge of classes and promise outcomes, both past and present.</p>
-
    <h2>Getting started</h2>
 
-   <p>The menu at the top leads to:</p>
+   <p>Welcome to Delta Reporting, a promise and class reporting tool for CFEngine. With Delta Reporting you'll be able to query agent knowledge of classes and promise outcomes, both past and present. The top menu leads to:</p>
 
    <dl class="dl-horizontal">
       <dt>Classes</dt>
@@ -50,7 +48,6 @@
       <dt>Reports</dt>
       <dd>Canned reports including inventory and missing hosts.
    </dl>
-
 
 <script type="text/javascript">
    var host_data = <%== $active_missing %>;
@@ -66,33 +63,30 @@
       .showLegend(false)
       .showLabels(false)
       .color([ 'royalblue', 'crimson', 'orange' ])
-      .tooltipContent(function(key, y, e, graph)
-      { 
-         return '<h4>' + key + ': ' + parseInt(y) + '</h4>';
-      })
       ;
+
    var num_gauge = gauge_components;
 
-nv.addGraph(function () 
-{
-   d3.select("#hosts svg")
-      .datum( host_data )
-      .transition().duration(100)
-      .call( num_gauge );
+   nv.addGraph(function () 
+   {
+      d3.select("#hosts svg")
+         .datum( host_data )
+         .transition().duration(100)
+         .call( num_gauge );
 
    return num_gauge;
-});
+   });
 
-nv.addGraph(function () 
-{
-   d3.select("#promises svg")
-      .datum( promise_data )
-      .transition().duration(100)
-      .call( num_gauge );
+   nv.addGraph(function () 
+   {
+      d3.select("#promises svg")
+         .datum( promise_data )
+         .transition().duration(100)
+         .call( num_gauge );
 
    return num_gauge;
+   });
 
-});
 </script>
 
 	</body>
