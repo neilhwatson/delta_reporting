@@ -7,20 +7,23 @@ $t->ua->max_redirects(1);
 
 $t->get_ok('/')
  ->status_is(200)
- ->text_is( 'html head title' => 'Delta Reporting', '/ title is wrong' )
  ->text_is( 'html body div div ul li a', 'Delta Reporting', 'First menu item is wrong' )
 
- ->content_like( qr(
-    var\s+dr_hosts\s+=\s+\[\s*\{\S*
-       "label":"Active",
-       \s*
-       "value":\d+
-       .*
-       "label":"Missing",
-       \s*
-       "value":\d+
-    )msix,
-    '/home host count');
+ ->content_like( qr/
+    var\s+host_data\s+=\s+\[\s*\{\S*
+      ( ("value":"\d+")|("label":"(Active|Missing)") )
+      |
+      ( ("label":"(Active|Missing)")|("value":"\d+") )
+    /msix,
+    '/home host count')
+
+ ->content_like( qr/
+    var\s+host_data\s+=\s+\[\s*\{\S*
+      ( ("value":"\d+")|("label":"(kept|notkept|repaired)") )
+      |
+      ( ("label":"(kept|notkept|repaired)")|("value":"\d+") )
+    /msix,
+    '/home promise count');
 
 done_testing();
 

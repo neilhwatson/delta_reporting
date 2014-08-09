@@ -147,7 +147,8 @@ __DATA__
 any ;; empty ;; empty ;; empty ;; empty
 dr_test_class ;; empty ;; empty ;; empty ;; empty
 cfengine_3_dr_test ;; empty ;; empty ;; empty ;; empty
-dr_test_kept ;; handle_dr_test ;; /etc/dr_test ;; kept ;; mojolicious
+dr_test_kept ;; handle_dr_test ;; /etc/dr_test_kept ;; kept ;; mojolicious
+dr_test_notkept ;; handle_dr_test ;; /etc/dr_test_notkept ;; notkept ;; mojolicious
 127_0_0_1 ;; empty ;; empty ;; empty ;; empty
 172_16_100_1 ;; empty ;; empty ;; empty ;; empty
 2001_470_1d_a2f__2 ;; empty ;; empty ;; empty ;; empty

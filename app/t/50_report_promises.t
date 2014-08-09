@@ -4,7 +4,7 @@ use Storable;
 
 my %test_params = (
    # A copy of the test data that was inserted.
-   promiser        => '/etc/dr_test',
+   promiser        => '/etc/dr_test_kept',
    promise_outcome => 'kept',
    promisee        => 'mojolicious',
    promise_handle  => 'handle_dr_test',

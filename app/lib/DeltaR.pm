@@ -2,6 +2,7 @@ package DeltaR;
 
 use Mojo::Base qw( Mojolicious );
 use DeltaR::Query;
+use Mojo::JSON 'encode_json';
 use DBI;
 
 sub startup
@@ -47,7 +48,7 @@ sub startup
          record_limit    => $record_limit,
          dbh             => $self->app->dbh,
       );
-      return $dq
+      return $dq;
    });
 
 ## Routes
@@ -56,16 +57,52 @@ sub startup
    $r->any( '/' => sub
    {
       my $self = shift;
-      my $active  = $self->app->dr->query_inventory( 'cfengine' );
-      my $missing = $self->app->dr->query_missing();
-      my $latest  = $self->app->dr->query_latest_record();
-      # TODO pass to home template.
-      # in home template 'include' widgets.
+
+      # Get datestamp for latest log entry
+      my $latest = $self->dr->query_latest_record();
+      my ( $latest_date, $latest_time ) = split /\s/, $latest;
+
+      # Get active host count
+      my $active = $self->dr->query_inventory( 'cfengine' );
+      $active    = $active->[0][1];
+
+      # Get missing host count
+      my $missing = $self->dr->query_missing();
+      $missing    = @{$missing};
+
+      # Combine missing and active host counts as JSON
+      my @active_missing = (
+         {
+            label => "Active",
+            value => $active
+         },
+         {
+            label => "Missing",
+            value => $missing
+         }
+      );
+      my $active_missing_json = encode_json( \@active_missing  );
+
+      # Get latest counts of promise outcomes and convert to json
+      my $promise_count = $self->dr->query_recent_promise_counts( $inventory_limit );
+      my @promise_count;
+      foreach my $i  ( @{ $promise_count } )
+      {
+         push @promise_count,
+         {
+            label => $i->[0],
+            value => $i->[1]
+         };
+      }
+      my $promise_count_json = encode_json( \@promise_count );
+
+      # TODO home template 'include' widgets.
 
       $self->stash(
-         active  => $active,
-         missing => $missing,
-         latest  => $latest
+         latest_date    => $latest_date,
+         latest_time    => $latest_time,
+         active_missing => $active_missing_json,
+         promise_count  => $promise_count_json,
       );
    } => 'home' );
 
@@ -78,7 +115,7 @@ sub startup
    $r->any( '/about' => sub 
    {
       my $self = shift;
-      my $number_of_records = $self->app->dr->count_records;
+      my $number_of_records = $self->dr->count_records;
       $self->stash(
          title => "About Delta Reporting",
          number_of_records => $number_of_records );
@@ -87,7 +124,7 @@ sub startup
    $r->get( '/initialize_database' => sub
    {
       my $self = shift;
-      $self->app->dr->create_tables;
+      $self->dr->create_tables;
    } => '/database_initialized');
    $r->get( '/database_initialized' => 'database_initialized' );
 

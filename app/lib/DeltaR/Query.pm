@@ -134,6 +134,30 @@ WHERE class = 'any'
    return $sth->fetchall_arrayref()
 }
 
+sub query_recent_promise_counts
+{
+   my $self     = shift;
+   my $interval = shift;
+   my $query = <<END;
+SELECT promise_outcome, count( promise_outcome ) FROM
+(
+   SELECT promise_outcome FROM agent_log
+   WHERE timestamp >= ( now() - interval '$interval' minute )
+   AND promise_outcome != 'empty'
+)
+AS promise_count
+GROUP BY promise_outcome,promise_count;
+END
+
+   my $sth;
+   $sth = $dbh->prepare( $query )
+      or warn "Cannot prepare [$query], [$dbh->errstr]";
+   $sth->execute
+      or warn "Cannot execute [$query], [$dbh->errstr]";
+
+   return $sth->fetchall_arrayref();
+}
+
 sub query_inventory
 {
    my $self = shift;
@@ -270,6 +294,7 @@ lower(promiser) LIKE lower(?) ESCAPE '!'
 AND lower(promisee) LIKE lower(?) ESCAPE '!'
 AND lower(promise_handle) LIKE lower(?) ESCAPE '!'
 AND promise_outcome LIKE ? ESCAPE '!'
+AND promise_outcome != 'empty'
 AND lower(hostname) LIKE lower(?) ESCAPE '!'
 AND lower(ip_address) LIKE lower(?) ESCAPE '!'
 AND lower(policy_server) LIKE lower(?) ESCAPE '!'
@@ -458,18 +483,20 @@ sub execute_query
    my $query_params = $params{query_params};
 
    my $sth;
-   $sth = $dbh->prepare( $query ) or warn "Can't prepare query". $sth->errstr;
+   $sth = $dbh->prepare( $query )
+      or warn "Can't prepare query [$sth->errstr]";
 
    if ( $bind_params )
    {
       my $param_count = 1;
       foreach my $qp ( @{ $bind_params } )
       {
-         $sth->bind_param( $param_count, $query_params->{$qp} ) or warn "bind error ". $sth->errstr;
+         $sth->bind_param( $param_count, $query_params->{$qp} )
+            or warn "bind error [$sth->errstr]";
          $param_count++;
       }
    }
-   $sth->execute() or warn "bind error ". $sth->errstr;
+   $sth->execute() or warn "bind error [$sth->errstr]";
    return $sth->fetchall_arrayref();
 }
 
