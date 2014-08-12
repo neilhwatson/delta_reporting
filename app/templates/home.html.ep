@@ -11,27 +11,27 @@
 <div class="row">
 
    <div id="gauge" class="with-3d-shadow with-transitions">
-      <div class="col-md-2">
-         <div id="hosts" class="media-body with-3d-shadow with-transitions">
+      <div class="col-xs-3">
          <h4>Host count</h4>
-            <svg></svg>
+         <div id="hosts" class="with-3d-shadow with-transitions">
+               <svg></svg>
          </div> <!-- hosts -->
-      </div> <!-- col-md-2 -->
+      </div> <!-- col xs and md  -->
 
-      <div class="col-md-2">
-         <div id="promises" class="media-body with-3d-shadow with-transitions">
+      <div class="col-xs-3">
          <h4>Promise count</h4>
-            <svg></svg>
+         <div id="promises" class="with-3d-shadow with-transitions">
+               <svg></svg>
          </div> <!-- promises -->
-      </div> <!-- col-md-2 -->
+      </div> <!-- col xs and md  -->
    </div> <!-- gauge -->
 
 </div> <!-- row -->
 
 <div class="row">
-   <div class="col-md-4">
+   <div class="col-md-8">
       <h4>Last data capture: <%= $latest_date %> <%= $latest_time %></h4>
-   </div> <!-- col-md-4 -->
+   </div> <!-- col xs and md  -->
 </div> <!-- row -->
 
 <hr>

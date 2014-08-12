@@ -36,52 +36,52 @@
       body { padding-top: 35px }
    </style>
 
-   <div class="row">
-      <div class=<col-md-12">
+   <div class="container-fluid ">
+      <div class="row">
+         <div class="col-xs-12">
 
-         <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
-            <div class="container-fluid ">
-               <div class="navbar-inner">
-                  <ul class="nav navbar-nav">
-                     <li><a class="navbar-brand" href="http://evolvethinking.com/products/delta-reporting">Delta Reporting</a></li>
-                     <li><a href="/">Home</a></li>
-                     <li><a href="/form/classes">Classes</a></li>
-                     <li><a href="/form/promises">Promises</a></li>
+            <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+                  <div class="navbar-inner">
+                     <ul class="nav navbar-nav">
+                        <li><a class="navbar-brand" href="http://evolvethinking.com/products/delta-reporting">Delta Reporting</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/form/classes">Classes</a></li>
+                        <li><a href="/form/promises">Promises</a></li>
 
-                     <li class="dropdown">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Reports</a>
-                        <ul class="dropdown-menu">
-                           <li><a href="/report/inventory">Inventory</a></li>
-                           <li><a href="/report/missing">Missing</a></li>
-                           <li><a href="/report/pps">Promise percent summary</a></li>
-                        </ul>
-                     </li>
+                        <li class="dropdown">
+                           <a class="dropdown-toggle" data-toggle="dropdown" href="#">Reports</a>
+                           <ul class="dropdown-menu">
+                              <li><a href="/report/inventory">Inventory</a></li>
+                              <li><a href="/report/missing">Missing</a></li>
+                              <li><a href="/report/pps">Promise percent summary</a></li>
+                           </ul>
+                        </li>
 
-                     <li class="dropdown">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Trends</a>
-                        <ul class="dropdown-menu">
-                           <li><a href="/trend/kept">Promises kept</a></li>
-                           <li><a href="/trend/notkept">Promises not kept</a></li>
-                           <li><a href="/trend/repaired">Promises repaired</a></li>
-                        </ul>
-                     </li>
+                        <li class="dropdown">
+                           <a class="dropdown-toggle" data-toggle="dropdown" href="#">Trends</a>
+                           <ul class="dropdown-menu">
+                              <li><a href="/trend/kept">Promises kept</a></li>
+                              <li><a href="/trend/notkept">Promises not kept</a></li>
+                              <li><a href="/trend/repaired">Promises repaired</a></li>
+                           </ul>
+                        </li>
 
-                     <li class="dropdown">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Help</a>
-                        <ul class="dropdown-menu">
-                           <li><a href="/help">Help</a></li>
-                           <li><a href="http://evolvethinking.com/services/">Support</a></li>
-                           <li><a href="https://github.com/evolvethinking/delta_reporting">Source code</a></li>
-                           <li><a href="/about">About</a></li>
-                        </ul>
-                     </li>
-                  </ul> <!-- nav -->
-               </div> <!-- navbar-inner -->
-            </div> <!-- container-fluid -->
-         </nav> <!-- navbar -->
+                        <li class="dropdown">
+                           <a class="dropdown-toggle" data-toggle="dropdown" href="#">Help</a>
+                           <ul class="dropdown-menu">
+                              <li><a href="/help">Help</a></li>
+                              <li><a href="http://evolvethinking.com/services/">Support</a></li>
+                              <li><a href="https://github.com/evolvethinking/delta_reporting">Source code</a></li>
+                              <li><a href="/about">About</a></li>
+                           </ul>
+                        </li>
+                     </ul> <!-- nav -->
+                  </div> <!-- navbar-inner -->
+            </nav> <!-- navbar -->
 
-      </div> <!-- col-md-8 -->
-   </div> <!-- row -->
+         </div> <!-- col-xs-12 -->
+      </div> <!-- row -->
+   </div> <!-- container-fluid -->
 
    <div class="container-fluid">
          <h1><%= title %></h1>
@@ -98,6 +98,7 @@
    <div class="container-fluid" id="footer">
       <div class="page-footer">
          <div class="row">
+
             <div class="col-sm-offset-7 col-md-offset-9 col-md-2"><a href="http://evolvethinking.com"><img height="100" src="/media/et-logo.png" alt="Evolve Thinking Limited"></a></div>
          </div> <!-- row -->
          <div class="col-sm-offset-7 col-md-offset-9 col-sm-3 col-md-3">Copyright 2012</div>
