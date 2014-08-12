@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Asset::Memory 3"
-.TH Mojo::Asset::Memory 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Asset::Memory 3 "2014-07-25" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -186,7 +186,7 @@ automatically upgrade to a Mojo::Asset::File object.
 .PP
 Maximum size in bytes of data to keep in memory before automatically upgrading
 to a Mojo::Asset::File object, defaults to the value of the
-\&\s-1MOJO_MAX_MEMORY_SIZE\s0 environment variable or \f(CW262144\fR.
+\&\f(CW\*(C`MOJO_MAX_MEMORY_SIZE\*(C'\fR environment variable or \f(CW262144\fR (256KB).
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Asset::Memory inherits all methods from Mojo::Asset and implements
@@ -214,7 +214,7 @@ Check if asset contains a specific string.
 .Ve
 .PP
 Get chunk of data starting from a specific position, defaults to a maximum
-chunk size of \f(CW131072\fR bytes.
+chunk size of \f(CW131072\fR bytes (128KB).
 .SS "move_to"
 .IX Subsection "move_to"
 .Vb 1

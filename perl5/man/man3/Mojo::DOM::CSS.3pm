@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::DOM::CSS 3"
-.TH Mojo::DOM::CSS 3 "2014-03-02" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::DOM::CSS 3 "2014-08-05" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -317,18 +317,18 @@ An \f(CW\*(C`E\*(C'\fR element, only sibling of its type.
 .Ve
 .SS "E.warning"
 .IX Subsection "E.warning"
+An \f(CW\*(C`E\*(C'\fR element whose class is \*(L"warning\*(R".
+.PP
 .Vb 1
 \&  my $warning = $css\->select(\*(Aqdiv.warning\*(Aq);
 .Ve
-.PP
-An \f(CW\*(C`E\*(C'\fR element whose class is \*(L"warning\*(R".
 .SS "E#myid"
 .IX Subsection "E#myid"
+An \f(CW\*(C`E\*(C'\fR element with \f(CW\*(C`ID\*(C'\fR equal to \*(L"myid\*(R".
+.PP
 .Vb 1
 \&  my $foo = $css\->select(\*(Aqdiv#foo\*(Aq);
 .Ve
-.PP
-An \f(CW\*(C`E\*(C'\fR element with \f(CW\*(C`ID\*(C'\fR equal to \*(L"myid\*(R".
 .SS "E:not(s)"
 .IX Subsection "E:not(s)"
 An \f(CW\*(C`E\*(C'\fR element that does not match simple selector \f(CW\*(C`s\*(C'\fR.

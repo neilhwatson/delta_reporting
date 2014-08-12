@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Server::Hypnotoad 3"
-.TH Mojo::Server::Hypnotoad 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Server::Hypnotoad 3 "2014-07-31" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -136,8 +136,8 @@ Mojo::Server::Hypnotoad \- ALL GLORY TO THE HYPNOTOAD!
 .Vb 1
 \&  use Mojo::Server::Hypnotoad;
 \&
-\&  my $toad = Mojo::Server::Hypnotoad\->new;
-\&  $toad\->run(\*(Aq/home/sri/myapp.pl\*(Aq);
+\&  my $hypnotoad = Mojo::Server::Hypnotoad\->new;
+\&  $hypnotoad\->run(\*(Aq/home/sri/myapp.pl\*(Aq);
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -168,11 +168,12 @@ You can run the same command again for automatic hot deployment.
 This second invocation will load the application again, detect the process id
 file with it, and send a \*(L"\s-1USR2\s0\*(R" signal to the already running server.
 .PP
-For better scalability (epoll, kqueue) and to provide IPv6 as well as \s-1TLS\s0
-support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+) and
-IO::Socket::SSL (1.75+) will be used automatically by Mojo::IOLoop if
-they are installed. Individual features can also be disabled with the
-\&\s-1MOJO_NO_IPV6\s0 and \s-1MOJO_NO_TLS\s0 environment variables.
+For better scalability (epoll, kqueue) and to provide IPv6, \s-1SOCKS5\s0 as well as
+\&\s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+),
+IO::Socket::Socks (0.64+) and IO::Socket::SSL (1.84+) will be used
+automatically if they are installed. Individual features can also be disabled
+with the \f(CW\*(C`MOJO_NO_IPV6\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and \f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment
+variables.
 .PP
 See \*(L"\s-1DEPLOYMENT\s0\*(R" in Mojolicious::Guides::Cookbook for more.
 .SH "MANAGER SIGNALS"
@@ -231,9 +232,9 @@ Mojo::Server::Hypnotoad can be configured with the following settings, see
 \&  accept_interval => 0.5
 .Ve
 .PP
-Interval in seconds for trying to reacquire the accept mutex, defaults to
-\&\f(CW0.025\fR. Note that changing this value can affect performance and idle \s-1CPU\s0
-usage.
+Interval in seconds for trying to reacquire the accept mutex, defaults to the
+value of \*(L"accept_interval\*(R" in Mojo::IOLoop. Note that changing this value can
+affect performance and idle \s-1CPU\s0 usage.
 .SS "accepts"
 .IX Subsection "accepts"
 .Vb 1
@@ -241,17 +242,18 @@ usage.
 .Ve
 .PP
 Maximum number of connections a worker is allowed to accept before stopping
-gracefully, defaults to \f(CW1000\fR. Setting the value to \f(CW0\fR will allow workers
-to accept new connections indefinitely. Note that up to half of this value can
-be subtracted randomly to improve load balancing, and that worker processes
-will stop sending heartbeat messages once the limit has been reached.
+gracefully, defaults to the value of \*(L"accepts\*(R" in Mojo::Server::Prefork.
+Setting the value to \f(CW0\fR will allow workers to accept new connections
+indefinitely. Note that up to half of this value can be subtracted randomly to
+improve load balancing.
 .SS "backlog"
 .IX Subsection "backlog"
 .Vb 1
 \&  backlog => 128
 .Ve
 .PP
-Listen backlog size, defaults to \f(CW\*(C`SOMAXCONN\*(C'\fR.
+Listen backlog size, defaults to the value of
+\&\*(L"backlog\*(R" in Mojo::Server::Daemon.
 .SS "clients"
 .IX Subsection "clients"
 .Vb 1
@@ -259,10 +261,10 @@ Listen backlog size, defaults to \f(CW\*(C`SOMAXCONN\*(C'\fR.
 .Ve
 .PP
 Maximum number of concurrent client connections per worker process, defaults
-to \f(CW1000\fR. Note that high concurrency works best with applications that
-perform mostly non-blocking operations, to optimize for blocking operations
-you can decrease this value and increase \*(L"workers\*(R" instead for better
-performance.
+to the value of \*(L"max_connections\*(R" in Mojo::IOLoop. Note that high concurrency
+works best with applications that perform mostly non-blocking operations, to
+optimize for blocking operations you can decrease this value and increase
+\&\*(L"workers\*(R" instead for better performance.
 .SS "graceful_timeout"
 .IX Subsection "graceful_timeout"
 .Vb 1
@@ -270,21 +272,24 @@ performance.
 .Ve
 .PP
 Maximum amount of time in seconds stopping a worker gracefully may take before
-being forced, defaults to \f(CW20\fR.
+being forced, defaults to the value of
+\&\*(L"graceful_timeout\*(R" in Mojo::Server::Prefork.
 .SS "group"
 .IX Subsection "group"
 .Vb 1
 \&  group => \*(Aqstaff\*(Aq
 .Ve
 .PP
-Group name for worker processes.
+Group name for worker processes, defaults to the value of
+\&\*(L"group\*(R" in Mojo::Server.
 .SS "heartbeat_interval"
 .IX Subsection "heartbeat_interval"
 .Vb 1
 \&  heartbeat_interval => 3
 .Ve
 .PP
-Heartbeat interval in seconds, defaults to \f(CW5\fR.
+Heartbeat interval in seconds, defaults to the value of
+\&\*(L"heartbeat_interval\*(R" in Mojo::Server::Prefork.
 .SS "heartbeat_timeout"
 .IX Subsection "heartbeat_timeout"
 .Vb 1
@@ -292,7 +297,8 @@ Heartbeat interval in seconds, defaults to \f(CW5\fR.
 .Ve
 .PP
 Maximum amount of time in seconds before a worker without a heartbeat will be
-stopped gracefully, defaults to \f(CW20\fR.
+stopped gracefully, defaults to the value of
+\&\*(L"heartbeat_timeout\*(R" in Mojo::Server::Prefork.
 .SS "inactivity_timeout"
 .IX Subsection "inactivity_timeout"
 .Vb 1
@@ -300,15 +306,16 @@ stopped gracefully, defaults to \f(CW20\fR.
 .Ve
 .PP
 Maximum amount of time in seconds a connection can be inactive before getting
-closed, defaults to \f(CW15\fR. Setting the value to \f(CW0\fR will allow connections to
-be inactive indefinitely.
+closed, defaults to the value of \*(L"inactivity_timeout\*(R" in Mojo::Server::Daemon.
+Setting the value to \f(CW0\fR will allow connections to be inactive indefinitely.
 .SS "keep_alive_requests"
 .IX Subsection "keep_alive_requests"
 .Vb 1
 \&  keep_alive_requests => 50
 .Ve
 .PP
-Number of keep-alive requests per connection, defaults to \f(CW25\fR.
+Number of keep-alive requests per connection, defaults to the value of
+\&\*(L"max_requests\*(R" in Mojo::Server::Daemon.
 .SS "listen"
 .IX Subsection "listen"
 .Vb 1
@@ -324,7 +331,7 @@ also \*(L"listen\*(R" in Mojo::Server::Daemon for more examples.
 .Ve
 .PP
 Full path of accept mutex lock file prefix, to which the process id will be
-appended, defaults to a random temporary path.
+appended, defaults to the value of \*(L"lock_file\*(R" in Mojo::Server::Prefork.
 .SS "lock_timeout"
 .IX Subsection "lock_timeout"
 .Vb 1
@@ -332,15 +339,17 @@ appended, defaults to a random temporary path.
 .Ve
 .PP
 Maximum amount of time in seconds a worker may block when waiting for the
-accept mutex, defaults to \f(CW1\fR. Note that changing this value can affect
-performance and idle \s-1CPU\s0 usage.
+accept mutex, defaults to the value of
+\&\*(L"lock_timeout\*(R" in Mojo::Server::Prefork. Note that changing this value can
+affect performance and idle \s-1CPU\s0 usage.
 .SS "multi_accept"
 .IX Subsection "multi_accept"
 .Vb 1
 \&  multi_accept => 100
 .Ve
 .PP
-Number of connections to accept at once, defaults to \f(CW50\fR.
+Number of connections to accept at once, defaults to the value of
+\&\*(L"multi_accept\*(R" in Mojo::IOLoop.
 .SS "pid_file"
 .IX Subsection "pid_file"
 .Vb 1
@@ -357,8 +366,8 @@ the server has been stopped.
 .Ve
 .PP
 Activate reverse proxy support, which allows for the \f(CW\*(C`X\-Forwarded\-For\*(C'\fR and
-\&\f(CW\*(C`X\-Forwarded\-HTTPS\*(C'\fR headers to be picked up automatically, defaults to the
-value of the \s-1MOJO_REVERSE_PROXY\s0 environment variable.
+\&\f(CW\*(C`X\-Forwarded\-Proto\*(C'\fR headers to be picked up automatically, defaults to the
+value of \*(L"reverse_proxy\*(R" in Mojo::Server.
 .SS "upgrade_timeout"
 .IX Subsection "upgrade_timeout"
 .Vb 1
@@ -366,32 +375,61 @@ value of the \s-1MOJO_REVERSE_PROXY\s0 environment variable.
 .Ve
 .PP
 Maximum amount of time in seconds a zero downtime software upgrade may take
-before getting canceled, defaults to \f(CW60\fR.
+before getting canceled, defaults to the value of \*(L"upgrade_timeout\*(R".
 .SS "user"
 .IX Subsection "user"
 .Vb 1
 \&  user => \*(Aqsri\*(Aq
 .Ve
 .PP
-Username for worker processes.
+Username for worker processes, defaults to the value of
+\&\*(L"user\*(R" in Mojo::Server.
 .SS "workers"
 .IX Subsection "workers"
 .Vb 1
 \&  workers => 10
 .Ve
 .PP
-Number of worker processes, defaults to \f(CW4\fR. A good rule of thumb is two
-worker processes per \s-1CPU\s0 core for applications that perform mostly
-non-blocking operations, blocking operations often require more and benefit
-from decreasing the number of concurrent \*(L"clients\*(R" (often as low as \f(CW1\fR).
+Number of worker processes, defaults to the value of
+\&\*(L"workers\*(R" in Mojo::Server::Prefork. A good rule of thumb is two worker
+processes per \s-1CPU\s0 core for applications that perform mostly non-blocking
+operations, blocking operations often require more and benefit from decreasing
+the number of concurrent \*(L"clients\*(R" (often as low as \f(CW1\fR).
+.SH "ATTRIBUTES"
+.IX Header "ATTRIBUTES"
+Mojo::Server::Hypnotoad implements the following attributes.
+.SS "prefork"
+.IX Subsection "prefork"
+.Vb 2
+\&  my $prefork = $hypnotoad\->prefork;
+\&  $hypnotoad  = $hypnotoad\->prefork(Mojo::Server::Prefork\->new);
+.Ve
+.PP
+Mojo::Server::Prefork object this server manages.
+.SS "upgrade_timeout"
+.IX Subsection "upgrade_timeout"
+.Vb 2
+\&  my $timeout = $hypnotoad\->upgrade_timeout;
+\&  $hypnotoad  = $hypnotoad\->upgrade_timeout(15);
+.Ve
+.PP
+Maximum amount of time in seconds a zero downtime software upgrade may take
+before getting canceled, defaults to \f(CW60\fR.
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Server::Hypnotoad inherits all methods from Mojo::Base and
 implements the following new ones.
+.SS "configure"
+.IX Subsection "configure"
+.Vb 1
+\&  $hypnotoad\->configure(\*(Aqhypnotoad\*(Aq);
+.Ve
+.PP
+Configure server from application settings.
 .SS "run"
 .IX Subsection "run"
 .Vb 1
-\&  $toad\->run(\*(Aqscript/myapp\*(Aq);
+\&  $hypnotoad\->run(\*(Aqscript/myapp\*(Aq);
 .Ve
 .PP
 Run server for application.

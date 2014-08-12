@@ -21,16 +21,16 @@ sub run {
   $self->emit(request => $tx);
 
   # Response headers
-  my $res     = $tx->res->fix_headers;
-  my $headers = $res->content->headers;
+  my $res  = $tx->res->fix_headers;
+  my $hash = $res->headers->to_hash(1);
   my @headers;
-  for my $name (@{$headers->names}) {
-    push @headers, $name => $_ for map {@$_} $headers->header($name);
+  for my $name (keys %$hash) {
+    push @headers, map { $name => $_ } @{$hash->{$name}};
   }
 
   # PSGI response
   my $io = Mojo::Server::PSGI::_IO->new(tx => $tx, empty => $tx->is_empty);
-  return [$res->code || 404, \@headers, $io];
+  return [$res->code // 404, \@headers, $io];
 }
 
 sub to_psgi_app {
@@ -105,6 +105,10 @@ See L<Mojolicious::Guides::Cookbook/"DEPLOYMENT"> for more.
 =head1 EVENTS
 
 L<Mojo::Server::PSGI> inherits all events from L<Mojo::Server>.
+
+=head1 ATTRIBUTES
+
+L<Mojo::Server::PSGI> inherits all attributes from L<Mojo::Server>.
 
 =head1 METHODS
 

@@ -16,38 +16,42 @@ my $ATTR_RE = qr/
     |
       '([^']*?)'     # Apostrophes
     |
-      ([^>\s\/]*)    # Unquoted
+      ([^>\s]*)      # Unquoted
     )
   )?
   \s*
 /x;
-my $END_RE   = qr!^\s*/\s*(.+)!;
 my $TOKEN_RE = qr/
-  ([^<]+)?                                          # Text
+  ([^<]+)?                                            # Text
   (?:
-    <\?(.*?)\?>                                     # Processing Instruction
-  |
-    <!--(.*?)--\s*>                                 # Comment
-  |
-    <!\[CDATA\[(.*?)\]\]>                           # CDATA
-  |
-    <!DOCTYPE(
-      \s+\w+
-      (?:(?:\s+\w+)?(?:\s+(?:"[^"]*"|'[^']*'))+)?   # External ID
-      (?:\s+\[.+?\])?                               # Int Subset
-      \s*
+    <(?:
+      !(?:
+        DOCTYPE(
+        \s+\w+                                        # Doctype
+        (?:(?:\s+\w+)?(?:\s+(?:"[^"]*"|'[^']*'))+)?   # External ID
+        (?:\s+\[.+?\])?                               # Int Subset
+        \s*)
+      |
+        --(.*?)--\s*                                  # Comment
+      |
+        \[CDATA\[(.*?)\]\]                            # CDATA
+      )
+    |
+      \?(.*?)\?                                       # Processing Instruction
+    |
+      (\s*[^<>\s]+                                    # Tag
+      \s*(?:(?:$ATTR_RE){0,32766})*+)                 # Attributes
     )>
   |
-    <(
-      \s*
-      [^<>\s]+                                      # Tag
-      \s*
-      (?:$ATTR_RE)*                                 # Attributes
-    )>
-  |
-    (<)                                             # Runaway "<"
+    (<)                                               # Runaway "<"
   )??
 /xis;
+
+# HTML elements that only contain raw text
+my %RAW = map { $_ => 1 } qw(script style);
+
+# HTML elements that only contain raw text and entities
+my %RCDATA = map { $_ => 1 } qw(title textarea);
 
 # HTML elements with optional end tags
 my %END = (
@@ -78,20 +82,31 @@ my %EMPTY = map { $_ => 1 } (
 my @PHRASING = (
   qw(a abbr area audio b bdi bdo br button canvas cite code data datalist),
   qw(del dfn em embed i iframe img input ins kbd keygen label link map mark),
-  qw(math meta meter noscript object output progress q ruby s samp script),
-  qw(select small span strong sub sup svg template textarea time u var video),
-  qw(wbr)
+  qw(math meta meter noscript object output picture progress q ruby s samp),
+  qw(script select small span strong sub sup svg template textarea time u),
+  qw(var video wbr)
 );
 my @OBSOLETE = qw(acronym applet basefont big font strike tt);
 my %PHRASING = map { $_ => 1 } @OBSOLETE, @PHRASING;
+
+# HTML elements that don't get their self-closing flag acknowledged
+my %BLOCK = map { $_ => 1 } (
+  qw(a address applet article aside b big blockquote body button caption),
+  qw(center code col colgroup dd details dialog dir div dl dt em fieldset),
+  qw(figcaption figure font footer form frameset h1 h2 h3 h4 h5 h6 head),
+  qw(header hgroup html i iframe li listing main marquee menu nav nobr),
+  qw(noembed noframes noscript object ol optgroup option p plaintext pre rp),
+  qw(rt s script section select small strike strong style summary table),
+  qw(tbody td template textarea tfoot th thead title tr tt u ul xmp)
+);
 
 sub parse {
   my ($self, $html) = @_;
 
   my $xml = $self->xml;
   my $current = my $tree = ['root'];
-  while ($html =~ m/\G$TOKEN_RE/gcs) {
-    my ($text, $pi, $comment, $cdata, $doctype, $tag, $runaway)
+  while ($html =~ m/\G$TOKEN_RE/gcso) {
+    my ($text, $doctype, $comment, $cdata, $pi, $tag, $runaway)
       = ($1, $2, $3, $4, $5, $6, $11);
 
     # Text (and runaway "<")
@@ -102,33 +117,35 @@ sub parse {
     if (defined $tag) {
 
       # End
-      if ($tag =~ $END_RE) { _end($xml ? $1 : lc($1), $xml, \$current) }
+      if ($tag =~ /^\s*\/\s*(.+)/) { _end($xml ? $1 : lc $1, $xml, \$current) }
 
       # Start
       elsif ($tag =~ m!([^\s/]+)([\s\S]*)!) {
-        my ($start, $attr) = ($xml ? $1 : lc($1), $2);
+        my ($start, $attr) = ($xml ? $1 : lc $1, $2);
 
         # Attributes
-        my %attrs;
-        while ($attr =~ /$ATTR_RE/g) {
-          my ($key, $value) = ($xml ? $1 : lc($1), $2 // $3 // $4);
+        my (%attrs, $closing);
+        while ($attr =~ /$ATTR_RE/go) {
+          my ($key, $value) = ($xml ? $1 : lc $1, $2 // $3 // $4);
 
           # Empty tag
-          next if $key eq '/';
+          ++$closing and next if $key eq '/';
 
           $attrs{$key} = defined $value ? html_unescape($value) : $value;
         }
 
+        # "image" is an alias for "img"
+        $start = 'img' if !$xml && $start eq 'image';
         _start($start, \%attrs, $xml, \$current);
 
-        # Element without end tag
+        # Element without end tag (self-closing)
         _end($start, $xml, \$current)
-          if (!$xml && $EMPTY{$start}) || $attr =~ m!/\s*$!;
+          if !$xml && $EMPTY{$start} || ($xml || !$BLOCK{$start}) && $closing;
 
-        # Relaxed "script" or "style" HTML elements
-        next if $xml || ($start ne 'script' && $start ne 'style');
+        # Raw text elements
+        next if $xml || !$RAW{$start} && !$RCDATA{$start};
         next unless $html =~ m!\G(.*?)<\s*/\s*$start\s*>!gcsi;
-        _node($current, 'raw', $1);
+        _node($current, 'raw', $RCDATA{$start} ? html_unescape $1 : $1);
         _end($start, 0, \$current);
       }
     }
@@ -186,9 +203,8 @@ sub _end {
 
 sub _node {
   my ($current, $type, $content) = @_;
-  my $new = [$type, $content, $current];
+  push @$current, my $new = [$type, $content, $current];
   weaken $new->[2];
-  push @$current, $new;
 }
 
 sub _render {
@@ -229,7 +245,7 @@ sub _render {
       push @attrs, $key and next unless defined(my $value = $tree->[2]{$key});
 
       # Key and value
-      push @attrs, qq{$key="} . xml_escape($value) . '"';
+      push @attrs, $key . '="' . xml_escape($value) . '"';
     }
     $result .= join ' ', '', @attrs if @attrs;
 
@@ -242,6 +258,7 @@ sub _render {
   }
 
   # Render whole tree
+  no warnings 'recursion';
   $result .= _render($tree->[$_], $xml)
     for ($type eq 'root' ? 1 : 4) .. $#$tree;
 
@@ -276,9 +293,8 @@ sub _start {
   }
 
   # New tag
-  my $new = ['tag', $start, $attrs, $$current];
+  push @$$current, my $new = ['tag', $start, $attrs, $$current];
   weaken $new->[3];
-  push @$$current, $new;
   $$current = $new;
 }
 

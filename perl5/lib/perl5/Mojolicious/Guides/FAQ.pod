@@ -12,15 +12,17 @@ L<Mojolicious>.
 
 =head1 QUESTIONS
 
+We hope these answers are to your satisfaction.
+
 =head2 How does Mojolicious compare to other Perl web frameworks?
 
 The short answer is "it doesn't", because we interpret the words
 "web framework" much more literally than others. With the emergence of the
-C<real-time web> and new technologies such as C<WebSockets>, we are facing new
+real-time web and new technologies such as WebSockets, we are facing new
 challenges that go way beyond what commonly used modules like L<LWP> were
 designed for. Because of this, L<Mojolicious> contains a whole new HTTP
 client/server stack called L<Mojo>, which was heavily inspired by the original
-C<LWPng> effort and carefully designed with these new requirements in mind. So
+LWPng effort and carefully designed with these new requirements in mind. So
 while some of the higher abstraction layers might look similar to other web
 frameworks, it actually defines a whole new category and could even be the
 foundation for more advanced ones in the future.
@@ -32,8 +34,9 @@ without compromises. While there are no rules in
 L<Mojolicious::Guides::Contributing> that forbid dependencies, we do currently
 discourage adding non-optional ones in favor of a faster and more painless
 installation process. And we do in fact already use several optional CPAN
-modules such as L<EV>, L<IO::Socket::IP>, L<IO::Socket::SSL> and L<Plack> to
-provide advanced functionality if they are installed.
+modules such as L<EV>, L<IO::Socket::IP>, L<IO::Socket::Socks>,
+L<IO::Socket::SSL> and L<Plack> to provide advanced functionality if they are
+installed.
 
 =head2 Why reinvent wheels?
 
@@ -63,21 +66,30 @@ which we already have done in the past.
 
 First of all, you need to be aware that according to the L<perlpolicy>, only
 the two most recent stable release series of Perl are supported by the
-community and receive bug fixes, which are currently 5.18.x and 5.16.x.
+community and receive bug fixes, which are currently 5.20.x and 5.18.x.
 L<Mojolicious> follows this model and fully supports these two release series.
 In addition we will also keep the distribution installable up to a certain
 legacy version that we deem worthy of supporting, but not specifically
 optimize for it, this is currently 5.10.1.
 
+=head2 Do I need to clean my environment before testing Mojolicious?
+
+Mojolicious uses many environment variables both internally and externally,
+notably (but not exclusively) those starting with the prefix C<MOJO_*>. The
+test suite expects a clean environment; testing with a non-standard
+environment is unsupported and is unlikely to succeed. Therefore when
+installing or upgrading Mojolicious and when running its tests, we highly
+recommend using an environment which does not set these variables.
+
 =head2 What is the difference between blocking and non-blocking operations?
 
-A C<blocking> operation is a subroutine that blocks the execution of the
+A I<blocking> operation is a subroutine that blocks the execution of the
 calling subroutine until the subroutine is finished.
 
   my $result = blocking_subroutine();
   ...
 
-A C<non-blocking> operation on the other hand lets the calling subroutine
+A I<non-blocking> operation on the other hand lets the calling subroutine
 continue execution even though the subroutine is not yet finished. Instead of
 waiting, the calling subroutine passes along a callback to be executed once
 the subroutine is finished, this is called continuation-passing style.
@@ -124,7 +136,8 @@ In L<Mojolicious> this event loop is L<Mojo::IOLoop>.
 To protect your applications from excessively large requests and responses,
 our HTTP parser has a cap after which it will automatically stop accepting new
 data, and in most cases force the connection to be closed. This limit is
-around C<10MB> by default, you can use the MOJO_MAX_MESSAGE_SIZE environment
+around 10MB by default, you can use the attribute
+L<Mojo::Message/"max_message_size"> or C<MOJO_MAX_MESSAGE_SIZE> environment
 variable to change this value.
 
 =head2 What does the error "Maximum line size exceeded" mean?
@@ -132,15 +145,18 @@ variable to change this value.
 This is a very similar protection mechanism to the one described in the
 previous answer, but a little more specific. It limits the maximum length of
 any C<\x0d\x0a> terminated part of a HTTP message, such as request line,
-status line and headers. This limit is around C<10KB> by default, you can use
-the MOJO_MAX_LINE_SIZE environment variable to change this value.
+status line and headers. This limit is around 10KB by default, you can use the
+attributes L<Mojo::Message/"max_line_size"> and
+L<Mojo::Headers/"max_line_size"> or C<MOJO_MAX_LINE_SIZE> environment variable
+to change this value.
 
 =head2 What does the error "Maximum buffer size exceeded" mean?
 
 This protection mechanism is very similar to those mentioned in the two
 previous answers. It limits how much content the HTTP parser is allowed to
 buffer when parsing chunked, compressed and multipart messages. This limit is
-around C<256KB> by default, you can use the MOJO_MAX_BUFFER_SIZE environment
+around 256KB by default, you can use the attribute
+L<Mojo::Content/"max_buffer_size"> or C<MOJO_MAX_BUFFER_SIZE> environment
 variable to change this value.
 
 =head2 What does the error "EV does not work with ithreads" mean?
@@ -149,7 +165,8 @@ The L<Mojolicious> user agent and web servers are based on an event loop that
 supports multiple reactor backends. One of these backends is L<EV>, it is very
 fast and will be automatically used if installed. On Windows however, the
 C<ithreads> based C<fork()> emulation can interfere with it, and you may have
-to use the MOJO_REACTOR environment variable to enforce a more portable one.
+to use the C<MOJO_REACTOR> environment variable to enforce a more portable
+one.
 
   MOJO_REACTOR=Mojo::Reactor::Poll
 
@@ -175,9 +192,11 @@ timers to finally generate a response.
 To protect your applications from denial-of-service attacks, all connections
 have an inactivity timeout which limits how long a connection may be inactive
 before being closed automatically. It defaults to C<20> seconds for the user
-agent and C<15> seconds for all built-in web servers, and is commonly referred
-to as C<inactivity_timeout>. This timeout always applies, so you might have to
-tweak it for applications that take a long time to process a request.
+agent and C<15> seconds for all built-in web servers, and can be changed with
+the attributes L<Mojo::UserAgent/"inactivity_timeout"> and
+L<Mojo::Server::Daemon/"inactivity_timeout"> or the C<MOJO_INACTIVITY_TIMEOUT>
+environment variable. This timeout always applies, so you might have to tweak
+it for applications that take a long time to process a request.
 
 =head2 What does "Premature connection close" mean?
 
@@ -188,13 +207,13 @@ be closed immediately.
 
 =head2 What does "Worker 31842 has no heartbeat, restarting" mean?
 
-As long as they are accepting new connections, Hypnotoad worker processes send
-heartbeat messages to the manager process at regular intervals, to signal that
-they are still responsive. A blocking operation such as an infinite loop in
-your application (or active connections after a worker has stopped accepting
-new connections) can prevent this, and will force the affected worker to be
-restarted after a timeout. This C<heartbeat_timeout> defaults to C<20> seconds
-and can be extended if your application requires it.
+As long as they are accepting new connections, worker processes of all
+built-in preforking web servers send heartbeat messages to the manager process
+at regular intervals, to signal that they are still responsive. A blocking
+operation such as an infinite loop in your application can prevent this, and
+will force the affected worker to be restarted after a timeout. This timeout
+defaults to C<20> seconds and can be extended with the attribute
+L<Mojo::Server::Prefork/"heartbeat_interval"> if your application requires it.
 
 =head1 MORE
 

@@ -34,9 +34,8 @@ sub continue {
 
   # Merge captures into stash
   my $stash = $c->stash;
-  my $captures = $stash->{'mojo.captures'} //= {};
-  %$captures = (%$captures, %$field);
-  %$stash    = (%$stash,    %$field);
+  @{$stash->{'mojo.captures'} //= {}}{keys %$field} = values %$field;
+  @$stash{keys %$field} = values %$field;
 
   my $continue;
   my $last = !$stack->[++$current];
@@ -48,41 +47,8 @@ sub continue {
 
 sub dispatch {
   my ($self, $c) = @_;
-
-  # Path (partial path gets priority)
-  my $req  = $c->req;
-  my $path = $c->stash->{path};
-  if (defined $path) { $path = "/$path" if $path !~ m!^/! }
-  else               { $path = $req->url->path->to_route }
-
-  # Method (HEAD will be treated as GET)
-  my $method = uc $req->method;
-  $method = 'GET' if $method eq 'HEAD';
-
-  # Check cache
-  my $cache = $self->cache;
-  my $ws    = $c->tx->is_websocket ? 1 : 0;
-  my $match = Mojolicious::Routes::Match->new(root => $self);
-  $c->match($match);
-  if ($cache && (my $cached = $cache->get("$method:$path:$ws"))) {
-    $match->endpoint($cached->{endpoint})->stack($cached->{stack});
-  }
-
-  # Check routes
-  else {
-    my $options = {method => $method, path => $path, websocket => $ws};
-    $match->match($c => $options);
-
-    # Cache routes without conditions
-    if ($cache && (my $endpoint = $match->endpoint)) {
-      my $result = {endpoint => $endpoint, stack => $match->stack};
-      $cache->set("$method:$path:$ws" => $result)
-        unless $endpoint->has_conditions;
-    }
-  }
-
-  return undef unless @{$c->match->stack};
-  $self->continue($c);
+  $self->match($c);
+  @{$c->match->stack} ? $self->continue($c) : return undef;
   return 1;
 }
 
@@ -100,6 +66,37 @@ sub lookup {
   return $reverse->{$name} if exists $reverse->{$name};
   return undef unless my $route = $self->find($name);
   return $reverse->{$name} = $route;
+}
+
+sub match {
+  my ($self, $c) = @_;
+
+  # Path (partial path gets priority)
+  my $req  = $c->req;
+  my $path = $c->stash->{path};
+  if (defined $path) { $path = "/$path" if $path !~ m!^/! }
+  else               { $path = $req->url->path->to_route }
+
+  # Method (HEAD will be treated as GET)
+  my $method = uc $req->method;
+  $method = 'GET' if $method eq 'HEAD';
+
+  # Check cache
+  my $ws = $c->tx->is_websocket ? 1 : 0;
+  my $match = Mojolicious::Routes::Match->new(root => $self);
+  $c->match($match);
+  my $cache = $self->cache;
+  my $cached = $cache ? $cache->get("$method:$path:$ws") : undef;
+  return $match->endpoint($cached->{endpoint})->stack($cached->{stack})
+    if $cached;
+
+  # Check routes
+  $match->match($c => {method => $method, path => $path, websocket => $ws});
+
+  # Cache routes without conditions
+  return unless $cache && (my $endpoint = $match->endpoint);
+  my $result = {endpoint => $endpoint, stack => $match->stack};
+  $cache->set("$method:$path:$ws" => $result) unless $endpoint->has_conditions;
 }
 
 sub route {
@@ -147,11 +144,8 @@ sub _class {
   for my $class (@classes) {
 
     # Failed
-    unless (my $found = $self->_load($class)) {
-      next unless defined $found;
-      $log->debug(qq{Class "$class" is not a controller.});
-      return undef;
-    }
+    next unless defined(my $found = $self->_load($class));
+    return !$log->debug(qq{Class "$class" is not a controller.}) unless $found;
 
     # Success
     my $new = $class->new(%$c);
@@ -291,7 +285,7 @@ C<attr>, C<has>, C<new> and C<tap>.
 Namespaces to load controllers from.
 
   # Add another namespace to load controllers from
-  push @{$r->namespaces}, 'MyApp::Controller';
+  push @{$r->namespaces}, 'MyApp::MyController';
 
 =head2 shortcuts
 
@@ -327,13 +321,14 @@ Automatic rendering.
 
   $r->continue(Mojolicious::Controller->new);
 
-Continue dispatch chain.
+Continue dispatch chain and emit the hook L<Mojolicious/"around_action"> for
+every action.
 
 =head2 dispatch
 
   my $bool = $r->dispatch(Mojolicious::Controller->new);
 
-Match routes with L<Mojolicious::Routes::Match> and dispatch.
+Match routes with L</"match"> and dispatch with L</"continue">.
 
 =head2 hide
 
@@ -354,6 +349,12 @@ Check if controller attribute or method is hidden from router.
 Find route by name with L<Mojolicious::Routes::Route/"find"> and cache all
 results for future lookups.
 
+=head2 match
+
+  $r->match(Mojolicious::Controller->new);
+
+Match routes with L<Mojolicious::Routes::Match>.
+
 =head2 route
 
   my $route = $r->route;
@@ -361,7 +362,8 @@ results for future lookups.
   my $route = $r->route('/:action', action => qr/\w+/);
   my $route = $r->route(format => 0);
 
-Generate route matching all HTTP request methods.
+Low-level generator for routes matching all HTTP request methods, returns a
+L<Mojolicious::Routes::Route> object.
 
 =head1 SEE ALSO
 

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Message 3"
-.TH Mojo::Message 3 "2014-03-03" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Message 3 "2014-08-02" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -144,7 +144,8 @@ Mojo::Message \- HTTP message base class
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Mojo::Message is an abstract base class for \s-1HTTP\s0 messages based on
-<\s-1RFC\s0 2616> as well as
+<\s-1RFC\s0 7230>,
+<\s-1RFC\s0 7231> and
 <\s-1RFC\s0 2388>.
 .SH "EVENTS"
 .IX Header "EVENTS"
@@ -221,7 +222,7 @@ Default charset used for form-data parsing, defaults to \f(CW\*(C`UTF\-8\*(C'\fR
 .Ve
 .PP
 Maximum start line size in bytes, defaults to the value of the
-\&\s-1MOJO_MAX_LINE_SIZE\s0 environment variable or \f(CW10240\fR.
+\&\f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable or \f(CW10240\fR (10KB).
 .SS "max_message_size"
 .IX Subsection "max_message_size"
 .Vb 2
@@ -230,9 +231,9 @@ Maximum start line size in bytes, defaults to the value of the
 .Ve
 .PP
 Maximum message size in bytes, defaults to the value of the
-\&\s-1MOJO_MAX_MESSAGE_SIZE\s0 environment variable or \f(CW10485760\fR. Setting the value
-to \f(CW0\fR will allow messages of indefinite size. Note that increasing this
-value can also drastically increase memory usage, should you for example
+\&\f(CW\*(C`MOJO_MAX_MESSAGE_SIZE\*(C'\fR environment variable or \f(CW10485760\fR (10MB). Setting
+the value to \f(CW0\fR will allow messages of indefinite size. Note that increasing
+this value can also drastically increase memory usage, should you for example
 attempt to parse an excessively large message body with the \*(L"body_params\*(R",
 \&\*(L"dom\*(R" or \*(L"json\*(R" methods.
 .SS "version"
@@ -262,12 +263,12 @@ automatically downgraded to Mojo::Content::Single.
 \&  my $params = $msg\->body_params;
 .Ve
 .PP
-\&\s-1POST\s0 parameters extracted from \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or
+\&\f(CW\*(C`POST\*(C'\fR parameters extracted from \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or
 \&\f(CW\*(C`multipart/form\-data\*(C'\fR message body, usually a Mojo::Parameters object.
 Note that this method caches all data, so it should not be called before the
 entire message body has been received. Parts of the message body need to be
-loaded into memory to parse \s-1POST\s0 parameters, so you have to make sure it is
-not excessively large.
+loaded into memory to parse \f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is
+not excessively large, there's a 10MB limit by default.
 .PP
 .Vb 2
 \&  # Get POST parameter value
@@ -303,9 +304,10 @@ Render all headers.
 Render start line.
 .SS "cookie"
 .IX Subsection "cookie"
-.Vb 2
-\&  my $cookie  = $msg\->cookie(\*(Aqfoo\*(Aq);
-\&  my @cookies = $msg\->cookie(\*(Aqfoo\*(Aq);
+.Vb 3
+\&  my $foo         = $msg\->cookie(\*(Aqfoo\*(Aq);
+\&  my @foo         = $msg\->cookie(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $msg\->cookie([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
 .Ve
 .PP
 Access message cookies, usually Mojo::Cookie::Request or
@@ -335,7 +337,7 @@ to call the method \*(L"find\*(R" in Mojo::DOM on it right away, which returns a
 Mojo::Collection object. Note that this method caches all data, so it
 should not be called before the entire message body has been received. The
 whole message body needs to be loaded into memory to parse it, so you have to
-make sure it is not excessively large.
+make sure it is not excessively large, there's a 10MB limit by default.
 .PP
 .Vb 2
 \&  # Perform "find" right away
@@ -347,14 +349,13 @@ make sure it is not excessively large.
 .Ve
 .SS "error"
 .IX Subsection "error"
-.Vb 4
-\&  my $err          = $msg\->error;
-\&  my ($err, $code) = $msg\->error;
-\&  $msg             = $msg\->error(\*(AqParser error\*(Aq);
-\&  $msg             = $msg\->error(\*(AqParser error\*(Aq, 500);
+.Vb 2
+\&  my $err = $msg\->error;
+\&  $msg    = $msg\->error({message => \*(AqParser error\*(Aq, advice => 500});
 .Ve
 .PP
-Error and code.
+Get or set message error, an \f(CW\*(C`undef\*(C'\fR return value indicates that there is no
+error.
 .SS "extract_start_line"
 .IX Subsection "extract_start_line"
 .Vb 1
@@ -439,7 +440,7 @@ return value indicates a bare \f(CW\*(C`null\*(C'\fR or that decoding failed. An
 Mojo::JSON::Pointer. Note that this method caches all data, so it should
 not be called before the entire message body has been received. The whole
 message body needs to be loaded into memory to parse it, so you have to make
-sure it is not excessively large.
+sure it is not excessively large, there's a 10MB limit by default.
 .PP
 .Vb 3
 \&  # Extract JSON values
@@ -448,16 +449,19 @@ sure it is not excessively large.
 .Ve
 .SS "param"
 .IX Subsection "param"
-.Vb 3
-\&  my @names = $msg\->param;
-\&  my $foo   = $msg\->param(\*(Aqfoo\*(Aq);
-\&  my @foo   = $msg\->param(\*(Aqfoo\*(Aq);
+.Vb 4
+\&  my @names       = $msg\->param;
+\&  my $foo         = $msg\->param(\*(Aqfoo\*(Aq);
+\&  my @foo         = $msg\->param(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $msg\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
 .Ve
 .PP
-Access \s-1POST\s0 parameters. Note that this method caches all data, so it should
-not be called before the entire message body has been received. Parts of the
-message body need to be loaded into memory to parse \s-1POST\s0 parameters, so you
-have to make sure it is not excessively large.
+Access \f(CW\*(C`POST\*(C'\fR parameters extracted from \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR
+or \f(CW\*(C`multipart/form\-data\*(C'\fR message body. Note that this method caches all data,
+so it should not be called before the entire message body has been received.
+Parts of the message body need to be loaded into memory to parse \f(CW\*(C`POST\*(C'\fR
+parameters, so you have to make sure it is not excessively large, there's a
+10MB limit by default.
 .SS "parse"
 .IX Subsection "parse"
 .Vb 1
@@ -489,9 +493,10 @@ Retrieve \*(L"body\*(R" and try to decode it if a charset could be extracted wit
 Render whole message.
 .SS "upload"
 .IX Subsection "upload"
-.Vb 2
-\&  my $upload  = $msg\->upload(\*(Aqfoo\*(Aq);
-\&  my @uploads = $msg\->upload(\*(Aqfoo\*(Aq);
+.Vb 3
+\&  my $foo         = $msg\->upload(\*(Aqfoo\*(Aq);
+\&  my @foo         = $msg\->upload(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $msg\->upload([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
 .Ve
 .PP
 Access \f(CW\*(C`multipart/form\-data\*(C'\fR file uploads, usually Mojo::Upload objects.

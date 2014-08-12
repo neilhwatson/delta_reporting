@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Validator::Validation 3"
-.TH Mojolicious::Validator::Validation 3 "2014-01-22" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Validator::Validation 3 "2014-07-25" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -212,7 +212,8 @@ checks will be performed on them after the first one failed.
 Validate \f(CW\*(C`csrf_token\*(C'\fR and protect from cross-site request forgery.
 .SS "error"
 .IX Subsection "error"
-.Vb 2
+.Vb 3
+\&  my @names   = $validation\->error;
 \&  my $err     = $validation\->error(\*(Aqfoo\*(Aq);
 \&  $validation = $validation\->error(foo => [\*(Aqcustom_check\*(Aq]);
 .Ve
@@ -257,10 +258,10 @@ Change validation \*(L"topic\*(R".
 .SS "param"
 .IX Subsection "param"
 .Vb 4
-\&  my @names       = $c\->param;
-\&  my $foo         = $c\->param(\*(Aqfoo\*(Aq);
-\&  my @foo         = $c\->param(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $c\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+\&  my @names       = $validation\->param;
+\&  my $foo         = $validation\->param(\*(Aqfoo\*(Aq);
+\&  my @foo         = $validation\->param(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $validation\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
 .Ve
 .PP
 Access validated parameters, similar to \*(L"param\*(R" in Mojolicious::Controller.
@@ -275,7 +276,7 @@ empty string.
 .SH "AUTOLOAD"
 .IX Header "AUTOLOAD"
 In addition to the \*(L"\s-1ATTRIBUTES\s0\*(R" and \*(L"\s-1METHODS\s0\*(R" above, you can also call
-validation checks provided by Mojolicious::Validator on
+validation checks provided by \*(L"validator\*(R" on
 Mojolicious::Validator::Validation objects, similar to \*(L"check\*(R".
 .PP
 .Vb 3

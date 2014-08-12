@@ -2,7 +2,7 @@ package Mojolicious::Plugin::TagHelpers;
 use Mojo::Base 'Mojolicious::Plugin';
 
 use Mojo::ByteStream;
-use Mojo::Util qw(deprecated xml_escape);
+use Mojo::Util 'xml_escape';
 use Scalar::Util 'blessed';
 
 sub register {
@@ -44,17 +44,17 @@ sub register {
 }
 
 sub _csrf_field {
-  my $self = shift;
-  return _hidden_field($self, csrf_token => $self->csrf_token, @_);
+  my $c = shift;
+  return _hidden_field($c, csrf_token => $c->csrf_token, @_);
 }
 
 sub _form_for {
-  my ($self, @url) = (shift, shift);
+  my ($c, @url) = (shift, shift);
   push @url, shift if ref $_[0] eq 'HASH';
 
   # POST detection
   my @post;
-  if (my $r = $self->app->routes->lookup($url[0])) {
+  if (my $r = $c->app->routes->lookup($url[0])) {
     my %methods = (GET => 1, POST => 1);
     do {
       my @via = @{$r->via || []};
@@ -63,20 +63,20 @@ sub _form_for {
     @post = (method => 'POST') if $methods{POST} && !$methods{GET};
   }
 
-  return _tag('form', action => $self->url_for(@url), @post, @_);
+  return _tag('form', action => $c->url_for(@url), @post, @_);
 }
 
 sub _hidden_field {
-  my $self = shift;
+  my $c = shift;
   return _tag('input', name => shift, value => shift, @_, type => 'hidden');
 }
 
 sub _input {
-  my ($self, $name) = (shift, shift);
+  my ($c, $name) = (shift, shift);
   my %attrs = @_ % 2 ? (value => shift, @_) : @_;
 
   # Special selection value
-  my @values = $self->param($name);
+  my @values = $c->param($name);
   my $type = $attrs{type} || '';
   if (@values && $type ne 'submit') {
 
@@ -91,11 +91,11 @@ sub _input {
     else { $attrs{value} = $values[0] }
   }
 
-  return _validation($self, $name, 'input', %attrs, name => $name);
+  return _validation($c, $name, 'input', %attrs, name => $name);
 }
 
 sub _javascript {
-  my $self = shift;
+  my $c = shift;
 
   # CDATA
   my $cb = sub {''};
@@ -104,19 +104,19 @@ sub _javascript {
   }
 
   # URL
-  my $src = @_ % 2 ? $self->url_for(shift) : undef;
+  my $src = @_ % 2 ? $c->url_for(shift) : undef;
 
   return _tag('script', @_, $src ? (src => $src) : (), $cb);
 }
 
 sub _label_for {
-  my ($self, $name) = (shift, shift);
+  my ($c, $name) = (shift, shift);
   my $content = ref $_[-1] eq 'CODE' ? pop : shift;
-  return _validation($self, $name, 'label', for => $name, @_, $content);
+  return _validation($c, $name, 'label', for => $name, @_, $content);
 }
 
 sub _link_to {
-  my ($self, $content) = (shift, shift);
+  my ($c, $content) = (shift, shift);
   my @url = ($content);
 
   # Content
@@ -128,7 +128,7 @@ sub _link_to {
   # Captures
   push @url, shift if ref $_[0] eq 'HASH';
 
-  return _tag('a', href => $self->url_for(@url), @_);
+  return _tag('a', href => $c->url_for(@url), @_);
 }
 
 sub _option {
@@ -144,25 +144,18 @@ sub _option {
 }
 
 sub _password_field {
-  my ($self, $name) = (shift, shift);
-  return _validation($self, $name, 'input', @_, name => $name,
+  my ($c, $name) = (shift, shift);
+  return _validation($c, $name, 'input', @_, name => $name,
     type => 'password');
 }
 
 sub _select_field {
-  my ($self, $name, $options, %attrs) = (shift, shift, shift, @_);
+  my ($c, $name, $options, %attrs) = (shift, shift, shift, @_);
 
-  my %values = map { $_ => 1 } $self->param($name);
+  my %values = map { $_ => 1 } $c->param($name);
 
   my $groups = '';
   for my $group (@$options) {
-
-    # DEPRECATED in Top Hat!
-    if (ref $group eq 'HASH') {
-      deprecated
-        'hash references are DEPRECATED in favor of Mojo::Collection objects';
-      $group = Mojo::Collection->new(each %$group);
-    }
 
     # "optgroup" tag
     if (blessed $group && $group->isa('Mojo::Collection')) {
@@ -175,12 +168,12 @@ sub _select_field {
     else { $groups .= _option(\%values, $group) }
   }
 
-  return _validation($self, $name, 'select', %attrs, name => $name,
+  return _validation($c, $name, 'select', %attrs, name => $name,
     sub {$groups});
 }
 
 sub _stylesheet {
-  my $self = shift;
+  my $c = shift;
 
   # CDATA
   my $cb;
@@ -189,14 +182,14 @@ sub _stylesheet {
   }
 
   # "link" or "style" tag
-  my $href = @_ % 2 ? $self->url_for(shift) : undef;
+  my $href = @_ % 2 ? $c->url_for(shift) : undef;
   return $href
     ? _tag('link', rel => 'stylesheet', href => $href, @_)
     : _tag('style', @_, $cb);
 }
 
 sub _submit_button {
-  my $self = shift;
+  my $c = shift;
   return _tag('input', value => shift // 'Ok', @_, type => 'submit');
 }
 
@@ -232,28 +225,28 @@ sub _tag {
 }
 
 sub _tag_with_error {
-  my ($self, $tag) = (shift, shift);
+  my ($c, $tag) = (shift, shift);
   my ($content, %attrs) = (@_ % 2 ? pop : undef, @_);
   $attrs{class} .= $attrs{class} ? ' field-with-error' : 'field-with-error';
   return _tag($tag, %attrs, defined $content ? $content : ());
 }
 
 sub _text_area {
-  my ($self, $name) = (shift, shift);
+  my ($c, $name) = (shift, shift);
 
   # Make sure content is wrapped
   my $cb = ref $_[-1] eq 'CODE' ? pop : sub {''};
   my $content = @_ % 2 ? shift : undef;
   $cb = sub { xml_escape $content }
-    if defined($content = $self->param($name) // $content);
+    if defined($content = $c->param($name) // $content);
 
-  return _validation($self, $name, 'textarea', @_, name => $name, $cb);
+  return _validation($c, $name, 'textarea', @_, name => $name, $cb);
 }
 
 sub _validation {
-  my ($self, $name) = (shift, shift);
-  return _tag(@_) unless $self->validation->has_error($name);
-  return $self->tag_with_error(@_);
+  my ($c, $name) = (shift, shift);
+  return _tag(@_) unless $c->validation->has_error($name);
+  return $c->tag_with_error(@_);
 }
 
 1;
@@ -308,8 +301,8 @@ L<Mojolicious::Plugin::TagHelpers> implements the following helpers.
   %= check_box employed => 1
   %= check_box employed => 1, disabled => 'disabled'
 
-Generate checkbox input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<checkbox>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="employed" type="checkbox" value="1" />
   <input disabled="disabled" name="employed" type="checkbox" value="1" />
@@ -320,8 +313,8 @@ picked up and shown as default.
   %= color_field background => '#ffffff'
   %= color_field background => '#ffffff', id => 'foo'
 
-Generate color input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<color>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="background" type="color" />
   <input name="background" type="color" value="#ffffff" />
@@ -331,7 +324,7 @@ picked up and shown as default.
 
   %= csrf_field
 
-Generate hidden input element with
+Generate C<input> tag of type C<hidden> with
 L<Mojolicious::Plugin::DefaultHelpers/"csrf_token">.
 
   <input name="csrf_token" type="hidden" value="fa6a08..." />
@@ -342,8 +335,8 @@ L<Mojolicious::Plugin::DefaultHelpers/"csrf_token">.
   %= date_field end => '2012-12-21'
   %= date_field end => '2012-12-21', id => 'foo'
 
-Generate date input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<date>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="end" type="date" />
   <input name="end" type="date" value="2012-12-21" />
@@ -355,8 +348,8 @@ picked up and shown as default.
   %= datetime_field end => '2012-12-21T23:59:59Z'
   %= datetime_field end => '2012-12-21T23:59:59Z', id => 'foo'
 
-Generate datetime input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<datetime>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="end" type="datetime" />
   <input name="end" type="datetime" value="2012-12-21T23:59:59Z" />
@@ -368,8 +361,8 @@ picked up and shown as default.
   %= email_field notify => 'nospam@example.com'
   %= email_field notify => 'nospam@example.com', id => 'foo'
 
-Generate email input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<email>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="notify" type="email" />
   <input name="notify" type="email" value="nospam@example.com" />
@@ -380,7 +373,7 @@ picked up and shown as default.
   %= file_field 'avatar'
   %= file_field 'avatar', id => 'foo'
 
-Generate file input element.
+Generate C<input> tag of type C<file>.
 
   <input name="avatar" type="file" />
   <input id="foo" name="avatar" type="file" />
@@ -404,24 +397,24 @@ Generate file input element.
     %= submit_button
   % end
 
-Generate portable form tag with L<Mojolicious::Controller/"url_for">. For
-routes that allow POST but not GET, a C<method> attribute will be
+Generate portable C<form> tag with L<Mojolicious::Controller/"url_for">. For
+routes that allow C<POST> but not C<GET>, a C<method> attribute will be
 automatically added.
 
   <form action="/path/to/login">
-    <input name="first_name" />
+    <input name="first_name" type="text" />
     <input value="Ok" type="submit" />
   </form>
   <form action="/path/to/login.txt" method="POST">
-    <input name="first_name" />
+    <input name="first_name" type="text" />
     <input value="Ok" type="submit" />
   </form>
   <form action="/path/to/login" enctype="multipart/form-data">
-    <input disabled="disabled" name="first_name" />
+    <input disabled="disabled" name="first_name" type="text" />
     <input value="Ok" type="submit" />
   </form>
   <form action="http://example.com/login" method="POST">
-    <input name="first_name" />
+    <input name="first_name" type="text" />
     <input value="Ok" type="submit" />
   </form>
 
@@ -430,7 +423,7 @@ automatically added.
   %= hidden_field foo => 'bar'
   %= hidden_field foo => 'bar', id => 'bar'
 
-Generate hidden input element.
+Generate C<input> tag of type C<hidden>.
 
   <input name="foo" type="hidden" value="bar" />
   <input id="bar" name="foo" type="hidden" value="bar" />
@@ -440,7 +433,7 @@ Generate hidden input element.
   %= image '/images/foo.png'
   %= image '/images/foo.png', alt => 'Foo'
 
-Generate portable img tag.
+Generate portable C<img> tag.
 
   <img src="/path/to/images/foo.png" />
   <img alt="Foo" src="/path/to/images/foo.png" />
@@ -451,8 +444,8 @@ Generate portable img tag.
   %= input_tag first_name => 'Default name'
   %= input_tag 'employed', type => 'checkbox'
 
-Generate form input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag. Previous input values will automatically get picked up
+and shown as default.
 
   <input name="first_name" />
   <input name="first_name" value="Default name" />
@@ -465,7 +458,7 @@ picked up and shown as default.
     var a = 'b';
   % end
 
-Generate portable script tag for C<Javascript> asset.
+Generate portable C<script> tag for JavaScript asset.
 
   <script src="/path/to/script.js" />
   <script><![CDATA[
@@ -483,7 +476,7 @@ Generate portable script tag for C<Javascript> asset.
     First name
   % end
 
-Generate label.
+Generate C<label> tag.
 
   <label for="first_name">First name</label>
   <label class="user" for="first_name">First name</label>
@@ -507,8 +500,8 @@ Generate label.
   <%= link_to 'http://mojolicio.us' => begin %>Mojolicious<% end %>
   <%= link_to url_for->query(foo => 'bar')->to_abs => begin %>Retry<% end %>
 
-Generate portable link with L<Mojolicious::Controller/"url_for">, defaults to
-using the capitalized link target as content.
+Generate portable C<a> tag with L<Mojolicious::Controller/"url_for">, defaults
+to using the capitalized link target as content.
 
   <a href="/path/to/index">Home</a>
   <a class="menu" href="/path/to/index.txt">Home</a>
@@ -527,8 +520,8 @@ using the capitalized link target as content.
   %= month_field vacation => '2012-12'
   %= month_field vacation => '2012-12', id => 'foo'
 
-Generate month input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<month>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="vacation" type="month" />
   <input name="vacation" type="month" value="2012-12" />
@@ -540,8 +533,8 @@ picked up and shown as default.
   %= number_field age => 25
   %= number_field age => 25, id => 'foo', min => 0, max => 200
 
-Generate number input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<number>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="age" type="number" />
   <input name="age" type="number" value="25" />
@@ -552,7 +545,7 @@ picked up and shown as default.
   %= password_field 'pass'
   %= password_field 'pass', id => 'foo'
 
-Generate password input element.
+Generate C<input> tag of type C<password>.
 
   <input name="pass" type="password" />
   <input id="foo" name="pass" type="password" />
@@ -562,8 +555,8 @@ Generate password input element.
   %= radio_button country => 'germany'
   %= radio_button country => 'germany', id => 'foo'
 
-Generate radio input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<radio>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="country" type="radio" value="germany" />
   <input id="foo" name="country" type="radio" value="germany" />
@@ -574,8 +567,8 @@ picked up and shown as default.
   %= range_field age => 25
   %= range_field age => 25, id => 'foo', min => 0, max => 200
 
-Generate range input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<range>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="age" type="range" />
   <input name="age" type="range" value="25" />
@@ -587,8 +580,8 @@ picked up and shown as default.
   %= search_field q => 'perl'
   %= search_field q => 'perl', id => 'foo'
 
-Generate search input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<search>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="q" type="search" />
   <input name="q" type="search" value="perl" />
@@ -602,8 +595,8 @@ picked up and shown as default.
   %= select_field country => [c(EU => [[Germany => 'de'], 'en'], id => 'eu')]
   %= select_field country => [c(EU => [qw(de en)]), c(Asia => [qw(cn jp)])]
 
-Generate select and option elements from array references and optgroup
-elements from L<Mojo::Collection> objects. Previous input values will
+Generate C<select> and C<option> tags from array references and C<optgroup>
+tags from L<Mojo::Collection> objects. Previous input values will
 automatically get picked up and shown as default.
 
   <select name="country">
@@ -642,7 +635,7 @@ automatically get picked up and shown as default.
     body {color: #000}
   % end
 
-Generate portable style or link tag for C<CSS> asset.
+Generate portable C<style> or C<link> tag for CSS asset.
 
   <link href="/path/to/foo.css" rel="stylesheet" />
   <style><![CDATA[
@@ -654,7 +647,7 @@ Generate portable style or link tag for C<CSS> asset.
   %= submit_button
   %= submit_button 'Ok!', id => 'foo'
 
-Generate submit input element.
+Generate C<input> tag of type C<submit>.
 
   <input type="submit" value="Ok" />
   <input id="foo" type="submit" value="Ok!" />
@@ -693,9 +686,9 @@ HTML/XML tag generator.
 
 Very useful for reuse in more specific tag helpers.
 
-  $self->tag('div');
-  $self->tag('div', id => 'foo');
-  $self->tag(div => sub { 'Content' });
+  $c->tag('div');
+  $c->tag('div', id => 'foo');
+  $c->tag(div => sub { 'Content' });
 
 Results are automatically wrapped in L<Mojo::ByteStream> objects to prevent
 accidental double escaping.
@@ -714,8 +707,8 @@ Same as L</"tag">, but adds the class C<field-with-error>.
   %= tel_field work => '123456789'
   %= tel_field work => '123456789', id => 'foo'
 
-Generate tel input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<tel>. Previous input values will automatically
+get picked up and shown as default.
 
   <input name="work" type="tel" />
   <input name="work" type="tel" value="123456789" />
@@ -730,7 +723,7 @@ picked up and shown as default.
     Default!
   % end
 
-Generate textarea element. Previous input values will automatically get picked
+Generate C<textarea> tag. Previous input values will automatically get picked
 up and shown as default.
 
   <textarea name="foo"></textarea>
@@ -746,8 +739,8 @@ up and shown as default.
   %= text_field first_name => 'Default name'
   %= text_field first_name => 'Default name', class => 'user'
 
-Generate text input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<text>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="first_name" type="text" />
   <input name="first_name" type="text" value="Default name" />
@@ -759,8 +752,8 @@ picked up and shown as default.
   %= time_field start => '23:59:59'
   %= time_field start => '23:59:59', id => 'foo'
 
-Generate time input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<time>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="start" type="time" />
   <input name="start" type="time" value="23:59:59" />
@@ -772,8 +765,8 @@ picked up and shown as default.
   %= url_field address => 'http://mojolicio.us'
   %= url_field address => 'http://mojolicio.us', id => 'foo'
 
-Generate url input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<url>. Previous input values will automatically
+get picked up and shown as default.
 
   <input name="address" type="url" />
   <input name="address" type="url" value="http://mojolicio.us" />
@@ -785,8 +778,8 @@ picked up and shown as default.
   %= week_field vacation => '2012-W17'
   %= week_field vacation => '2012-W17', id => 'foo'
 
-Generate week input element. Previous input values will automatically get
-picked up and shown as default.
+Generate C<input> tag of type C<week>. Previous input values will
+automatically get picked up and shown as default.
 
   <input name="vacation" type="week" />
   <input name="vacation" type="week" value="2012-W17" />

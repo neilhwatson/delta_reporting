@@ -20,12 +20,11 @@ sub match_partial {
   my ($self, $pathref, $detect) = @_;
 
   # Compile on demand
-  my $regex = $self->regex || $self->_compile;
-  my $format
-    = $detect ? ($self->format_regex || $self->_compile_format) : undef;
+  $self->_compile unless $self->{regex};
+  $self->_compile_format if $detect && !$self->{format_regex};
 
   # Match
-  return undef unless my @captures = $$pathref =~ $regex;
+  return undef unless my @captures = $$pathref =~ $self->regex;
   $$pathref = ${^POSTMATCH};
 
   # Merge captures
@@ -37,11 +36,10 @@ sub match_partial {
   }
 
   # Format
-  my $constraint = $self->constraints->{format};
-  return $captures if !$detect || defined $constraint && !$constraint;
-  if ($$pathref =~ s!^/?$format!!) { $captures->{format} = $1 }
-  elsif ($constraint) { return undef unless $captures->{format} }
-
+  return $captures unless $detect && (my $regex = $self->format_regex);
+  return undef unless $$pathref =~ $regex;
+  $captures->{format} = $1 if defined $1;
+  $$pathref = '';
   return $captures;
 }
 
@@ -63,7 +61,8 @@ sub render {
 
   # Merge values with defaults
   my $format = ($values ||= {})->{format};
-  $values = {%{$self->defaults}, %$values};
+  my $defaults = $self->defaults;
+  $values = {%$defaults, %$values};
 
   # Placeholders can only be optional without a format
   my $optional = !$format;
@@ -77,15 +76,12 @@ sub render {
     if ($op eq 'slash') { $fragment = '/' unless $optional }
 
     # Text
-    elsif ($op eq 'text') {
-      $fragment = $value;
-      $optional = 0;
-    }
+    elsif ($op eq 'text') { ($fragment, $optional) = ($value, 0) }
 
-    # Placeholder, relaxed or wildcard
-    elsif ($op eq 'placeholder' || $op eq 'relaxed' || $op eq 'wildcard') {
+    # Placeholder
+    else {
       $fragment = $values->{$value} // '';
-      my $default = $self->defaults->{$value};
+      my $default = $defaults->{$value};
       if (!defined $default || ($default ne $fragment)) { $optional = 0 }
       elsif ($optional) { $fragment = '' }
     }
@@ -113,27 +109,23 @@ sub _compile {
 
     # Slash
     if ($op eq 'slash') {
-      $regex    = ($optional ? "(?:/$block)?" : "/$block") . $regex;
-      $block    = '';
-      $optional = 1;
+      $regex = ($optional ? "(?:/$block)?" : "/$block") . $regex;
+      ($block, $optional) = ('', 1);
       next;
     }
 
     # Text
-    elsif ($op eq 'text') {
-      $fragment = quotemeta $value;
-      $optional = 0;
-    }
+    elsif ($op eq 'text') { ($fragment, $optional) = (quotemeta $value, 0) }
 
     # Placeholder
     elsif ($op eq 'placeholder' || $op eq 'relaxed' || $op eq 'wildcard') {
       unshift @$placeholders, $value;
 
       # Placeholder
-      if ($op eq 'placeholder') { $fragment = '([^\/\.]+)' }
+      if ($op eq 'placeholder') { $fragment = '([^/\.]+)' }
 
       # Relaxed
-      elsif ($op eq 'relaxed') { $fragment = '([^\/]+)' }
+      elsif ($op eq 'relaxed') { $fragment = '([^/]+)' }
 
       # Wildcard
       elsif ($op eq 'wildcard') { $fragment = '(.+)' }
@@ -152,23 +144,23 @@ sub _compile {
   # Not rooted with a slash
   $regex = "$block$regex" if $block;
 
-  return $self->regex(qr/^$regex/ps)->regex;
+  $self->regex(qr/^$regex/ps);
 }
 
 sub _compile_format {
   my $self = shift;
 
   # Default regex
-  my $c = $self->constraints;
-  return $self->format_regex(qr!\.([^/]+)$!)->format_regex
-    unless defined $c->{format};
+  my $format = $self->constraints->{format};
+  return $self->format_regex(qr!^/?(?:\.([^/]+))?$!) unless defined $format;
 
   # No regex
-  return undef unless $c->{format};
+  return undef unless $format;
 
   # Compile custom regex
-  my $regex = _compile_req($c->{format});
-  return $self->format_regex(qr!\.$regex$!)->format_regex;
+  my $regex = '\.' . _compile_req($format);
+  $regex = "(?:$regex)?" if $self->defaults->{format};
+  $self->format_regex(qr!^/?$regex$!);
 }
 
 sub _compile_req {
@@ -186,51 +178,42 @@ sub _tokenize {
   my $relaxed     = $self->relaxed_start;
   my $wildcard    = $self->wildcard_start;
 
-  my $state = 'text';
-  my (@tree, $quoted);
+  my (@tree, $inside, $quoted);
   for my $char (split '', $pattern) {
-    my $inside = !!grep { $_ eq $state } qw(placeholder relaxed wildcard);
 
     # Quote start
     if ($char eq $quote_start) {
       push @tree, ['placeholder', ''];
-      $state  = 'placeholder';
-      $quoted = 1;
+      ($inside, $quoted) = (1, 1);
     }
 
     # Placeholder start
     elsif ($char eq $placeholder) {
-      push @tree, ['placeholder', ''] if $state ne 'placeholder';
-      $state = 'placeholder';
+      push @tree, ['placeholder', ''] unless $inside++;
     }
 
     # Relaxed or wildcard start (upgrade when quoted)
     elsif ($char eq $relaxed || $char eq $wildcard) {
       push @tree, ['placeholder', ''] unless $quoted;
-      $tree[-1][0] = $state = $char eq $relaxed ? 'relaxed' : 'wildcard';
+      $tree[-1][0] = $char eq $relaxed ? 'relaxed' : 'wildcard';
+      $inside = 1;
     }
 
     # Quote end
-    elsif ($char eq $quote_end) {
-      $state  = 'text';
-      $quoted = 0;
-    }
+    elsif ($char eq $quote_end) { ($inside, $quoted) = (0, 0) }
 
     # Slash
     elsif ($char eq '/') {
       push @tree, ['slash'];
-      $state = 'text';
+      $inside = 0;
     }
 
     # Placeholder, relaxed or wildcard
-    elsif ($inside && $char =~ /\w/) { $tree[-1][-1] .= $char }
+    elsif ($inside) { $tree[-1][-1] .= $char }
 
     # Text
-    else {
-      push @tree, ['text', $char] and next unless $tree[-1][0] eq 'text';
-      $tree[-1][-1] .= $char;
-      $state = 'text';
-    }
+    elsif ($tree[-1][0] eq 'text') { $tree[-1][-1] .= $char }
+    else                           { push @tree, ['text', $char] }
   }
 
   return $self->pattern($pattern)->tree(\@tree);

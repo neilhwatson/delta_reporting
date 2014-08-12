@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Static 3"
-.TH Mojolicious::Static 3 "2014-02-07" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Static 3 "2014-08-10" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -137,13 +137,15 @@ Mojolicious::Static \- Serve static files
 \&  use Mojolicious::Static;
 \&
 \&  my $static = Mojolicious::Static\->new;
-\&  push @{$static\->classes}, \*(AqMyApp::Foo\*(Aq;
+\&  push @{$static\->classes}, \*(AqMyApp::Controller::Foo\*(Aq;
 \&  push @{$static\->paths}, \*(Aq/home/sri/public\*(Aq;
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Mojolicious::Static is a static file server with \f(CW\*(C`Range\*(C'\fR and
-\&\f(CW\*(C`If\-Modified\-Since\*(C'\fR support.
+\&\f(CW\*(C`If\-Modified\-Since\*(C'\fR support based on
+<\s-1RFC\s0 7232> and
+<\s-1RFC\s0 7233>.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojolicious::Static implements the following attributes.
@@ -199,6 +201,31 @@ protect from traversing to parent directories.
 .Vb 1
 \&  my $content = $static\->file(\*(Aqfoo/bar.html\*(Aq)\->slurp;
 .Ve
+.SS "is_fresh"
+.IX Subsection "is_fresh"
+.Vb 1
+\&  my $bool = $static\->is_fresh(Mojolicious::Controller\->new, {etag => \*(Aqabc\*(Aq});
+.Ve
+.PP
+Check freshness of request by comparing the \f(CW\*(C`If\-None\-Match\*(C'\fR and
+\&\f(CW\*(C`If\-Modified\-Since\*(C'\fR request headers to the \f(CW\*(C`ETag\*(C'\fR and \f(CW\*(C`Last\-Modified\*(C'\fR
+response headers.
+.PP
+These options are currently available:
+.IP "etag" 2
+.IX Item "etag"
+.Vb 1
+\&  etag => \*(Aqabc\*(Aq
+.Ve
+.Sp
+Add \f(CW\*(C`ETag\*(C'\fR header before comparing.
+.IP "last_modified" 2
+.IX Item "last_modified"
+.Vb 1
+\&  last_modified => $epoch
+.Ve
+.Sp
+Add \f(CW\*(C`Last\-Modified\*(C'\fR header before comparing.
 .SS "serve"
 .IX Subsection "serve"
 .Vb 2

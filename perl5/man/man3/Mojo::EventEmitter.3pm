@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::EventEmitter 3"
-.TH Mojo::EventEmitter 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::EventEmitter 3 "2014-07-11" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -180,6 +180,18 @@ Emitted for event errors, fatal if unhandled.
 .IX Header "METHODS"
 Mojo::EventEmitter inherits all methods from Mojo::Base and
 implements the following new ones.
+.SS "catch"
+.IX Subsection "catch"
+.Vb 1
+\&  $e = $e\->catch(sub {...});
+.Ve
+.PP
+Subscribe to \*(L"error\*(R" event.
+.PP
+.Vb 2
+\&  # Longer version
+\&  $e\->on(error => sub {...});
+.Ve
 .SS "emit"
 .IX Subsection "emit"
 .Vb 2
@@ -253,7 +265,7 @@ All subscribers for event.
 Unsubscribe from event.
 .SH "DEBUGGING"
 .IX Header "DEBUGGING"
-You can set the \s-1MOJO_EVENTEMITTER_DEBUG\s0 environment variable to get some
+You can set the \f(CW\*(C`MOJO_EVENTEMITTER_DEBUG\*(C'\fR environment variable to get some
 advanced diagnostics information printed to \f(CW\*(C`STDERR\*(C'\fR.
 .PP
 .Vb 1

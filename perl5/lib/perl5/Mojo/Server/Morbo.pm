@@ -10,16 +10,22 @@ use POSIX 'WNOHANG';
 
 has watch => sub { [qw(lib templates)] };
 
-sub check_file {
-  my ($self, $file) = @_;
+sub check {
+  my $self = shift;
 
-  # Check if modify time and/or size have changed
-  my ($size, $mtime) = (stat $file)[7, 9];
-  return undef unless defined $mtime;
-  my $cache = $self->{cache} ||= {};
-  my $stats = $cache->{$file} ||= [$^T, $size];
-  return undef if $mtime <= $stats->[0] && $size == $stats->[1];
-  return !!($cache->{$file} = [$mtime, $size]);
+  # Discover files
+  my @files;
+  for my $watch (@{$self->watch}) {
+    if (-d $watch) {
+      my $home = Mojo::Home->new->parse($watch);
+      push @files, $home->rel_file($_) for @{$home->list_files};
+    }
+    elsif (-r $watch) { push @files, $watch }
+  }
+
+  # Check files
+  $self->_check($_) and return $_ for @files;
+  return undef;
 }
 
 sub run {
@@ -41,22 +47,22 @@ sub run {
   exit 0;
 }
 
+sub _check {
+  my ($self, $file) = @_;
+
+  # Check if modify time and/or size have changed
+  my ($size, $mtime) = (stat $file)[7, 9];
+  return undef unless defined $mtime;
+  my $cache = $self->{cache} ||= {};
+  my $stats = $cache->{$file} ||= [$^T, $size];
+  return undef if $mtime <= $stats->[0] && $size == $stats->[1];
+  return !!($cache->{$file} = [$mtime, $size]);
+}
+
 sub _manage {
   my $self = shift;
 
-  # Discover files
-  my @files;
-  for my $watch (@{$self->watch}) {
-    if (-d $watch) {
-      my $home = Mojo::Home->new->parse($watch);
-      push @files, $home->rel_file($_) for @{$home->list_files};
-    }
-    elsif (-r $watch) { push @files, $watch }
-  }
-
-  # Check files
-  for my $file (@files) {
-    next unless $self->check_file($file);
+  if (defined(my $file = $self->check)) {
     say qq{File "$file" changed, restarting.} if $ENV{MORBO_VERBOSE};
     kill 'TERM', $self->{running} if $self->{running};
     $self->{modified} = 1;
@@ -68,10 +74,7 @@ sub _manage {
   sleep 1;
 }
 
-sub _reap {
-  my $self = shift;
-  while ((my $pid = waitpid -1, WNOHANG) > 0) { delete $self->{running} }
-}
+sub _reap { delete $_[0]{running} while (waitpid -1, WNOHANG) > 0 }
 
 sub _spawn {
   my $self = shift;
@@ -127,11 +130,12 @@ To start applications with it you can use the L<morbo> script.
   $ morbo myapp.pl
   Server available at http://127.0.0.1:3000.
 
-For better scalability (epoll, kqueue) and to provide IPv6 as well as TLS
-support, the optional modules L<EV> (4.0+), L<IO::Socket::IP> (0.20+) and
-L<IO::Socket::SSL> (1.75+) will be used automatically by L<Mojo::IOLoop> if
-they are installed. Individual features can also be disabled with the
-MOJO_NO_IPV6 and MOJO_NO_TLS environment variables.
+For better scalability (epoll, kqueue) and to provide IPv6, SOCKS5 as well as
+TLS support, the optional modules L<EV> (4.0+), L<IO::Socket::IP> (0.20+),
+L<IO::Socket::Socks> (0.64+) and L<IO::Socket::SSL> (1.84+) will be used
+automatically if they are installed. Individual features can also be disabled
+with the C<MOJO_NO_IPV6>, C<MOJO_NO_SOCKS> and C<MOJO_NO_TLS> environment
+variables.
 
 See L<Mojolicious::Guides::Cookbook/"DEPLOYMENT"> for more.
 
@@ -153,11 +157,12 @@ directory.
 L<Mojo::Server::Morbo> inherits all methods from L<Mojo::Base> and implements
 the following new ones.
 
-=head2 check_file
+=head2 check
 
-  my $bool = $morbo->check_file('/home/sri/lib/MyApp.pm');
+  my $file = $morbo->check;
 
-Check if file has been modified since last check.
+Check if file from L</"watch"> has been modified since last check and return
+its name or C<undef> if there have been no changes.
 
 =head2 run
 

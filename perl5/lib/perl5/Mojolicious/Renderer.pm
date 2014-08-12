@@ -1,6 +1,7 @@
 package Mojolicious::Renderer;
 use Mojo::Base -base;
 
+use Carp ();
 use File::Spec::Functions 'catfile';
 use Mojo::Cache;
 use Mojo::JSON 'encode_json';
@@ -67,6 +68,14 @@ sub get_data_template {
   return $loader->data($self->{index}{$template}, $template);
 }
 
+sub get_helper {
+  my ($self, $name) = @_;
+  if (my $h = $self->helpers->{$name} || $self->{proxy}{$name}) { return $h }
+  return undef unless grep {/^\Q$name\E\./} keys %{$self->helpers};
+  return $self->{proxy}{$name}
+    = sub { bless [shift, $name], 'Mojolicious::Renderer::_Proxy' };
+}
+
 sub render {
   my ($self, $c, $args) = @_;
   $args ||= {};
@@ -75,16 +84,19 @@ sub render {
   my $stash = $c->stash;
   local $stash->{layout}  = $stash->{layout}  if exists $stash->{layout};
   local $stash->{extends} = $stash->{extends} if exists $stash->{extends};
-  delete @{$stash}{qw(layout extends)}
-    if my $partial = delete $args->{partial};
+
+  # Rendering to string
+  local @{$stash}{keys %$args} if my $ts = delete $args->{'mojo.to_string'};
+  delete @{$stash}{qw(layout extends)} if $ts;
 
   # Merge stash and arguments
-  %$stash = (%$stash, %$args);
+  @$stash{keys %$args} = values %$args;
 
   my $options = {
     encoding => $self->encoding,
     handler  => $stash->{handler},
-    template => delete $stash->{template}
+    template => delete $stash->{template},
+    variant  => $stash->{variant}
   };
   my $inline = $options->{inline} = delete $stash->{inline};
   $options->{handler} //= $self->default_handler if defined $inline;
@@ -128,7 +140,7 @@ sub render {
 
   # Encoding
   $output = encode $options->{encoding}, $output
-    if !$partial && $options->{encoding} && $output;
+    if !$ts && $options->{encoding} && $output;
 
   return $output, $options->{format};
 }
@@ -149,33 +161,28 @@ sub template_for {
 
 sub template_handler {
   my ($self, $options) = @_;
-
-  # Templates
   return undef unless my $file = $self->template_name($options);
-  unless ($self->{templates}) {
-    s/\.(\w+)$// and $self->{templates}{$_} ||= $1
-      for map { sort @{Mojo::Home->new($_)->list_files} } @{$self->paths};
-  }
-  return $self->{templates}{$file} if exists $self->{templates}{$file};
-
-  # DATA templates
-  unless ($self->{data}) {
-    my $loader = Mojo::Loader->new;
-    my @templates = map { sort keys %{$loader->data($_)} } @{$self->classes};
-    s/\.(\w+)$// and $self->{data}{$_} ||= $1 for @templates;
-  }
-  return $self->{data}{$file} if exists $self->{data}{$file};
-
-  # Default
-  return $self->default_handler;
+  return $self->default_handler unless my $handlers = $self->_handlers($file);
+  return $handlers->[0];
 }
 
 sub template_name {
   my ($self, $options) = @_;
+
   return undef unless my $template = $options->{template};
   return undef unless my $format   = $options->{format};
+  $template .= ".$format";
+
+  # Variants
   my $handler = $options->{handler};
-  return defined $handler ? "$template.$format.$handler" : "$template.$format";
+  if (defined(my $variant = $options->{variant})) {
+    $variant = "$template+$variant";
+    my $handlers = $self->_handlers($variant) // [];
+    $template = $variant
+      if @$handlers && !defined $handler || grep { $_ eq $handler } @$handlers;
+  }
+
+  return defined $handler ? "$template.$handler" : $template;
 }
 
 sub template_path {
@@ -190,8 +197,7 @@ sub template_path {
     return $file if -r $file;
   }
 
-  # Fall back to first path
-  return catfile($self->paths->[0], split '/', $name);
+  return undef;
 }
 
 sub _add {
@@ -209,11 +215,30 @@ sub _extends {
   return delete $stash->{extends};
 }
 
+sub _handlers {
+  my ($self, $file) = @_;
+
+  unless ($self->{templates}) {
+
+    # Templates
+    s/\.(\w+)$// and push @{$self->{templates}{$_}}, $1
+      for map { sort @{Mojo::Home->new($_)->list_files} } @{$self->paths};
+
+    # DATA templates
+    my $loader = Mojo::Loader->new;
+    s/\.(\w+)$// and push @{$self->{templates}{$_}}, $1
+      for map { sort keys %{$loader->data($_)} } @{$self->classes};
+  }
+
+  return $self->{templates}{$file};
+}
+
 sub _render_template {
   my ($self, $c, $output, $options) = @_;
 
   # Find handler and render
   my $handler = $options->{handler} ||= $self->template_handler($options);
+  return undef unless $handler;
   if (my $renderer = $self->handlers->{$handler}) {
     return 1 if $renderer->($self, $c, $output, $options);
   }
@@ -222,6 +247,21 @@ sub _render_template {
   else { $c->app->log->error(qq{No handler for "$handler" available.}) }
   return undef;
 }
+
+package Mojolicious::Renderer::_Proxy;
+use Mojo::Base -strict;
+
+sub AUTOLOAD {
+  my $self = shift;
+
+  my ($package, $method) = split /::(\w+)$/, our $AUTOLOAD;
+  my $c = $self->[0];
+  Carp::croak qq{Can't locate object method "$method" via package "$package"}
+    unless my $helper = $c->app->renderer->get_helper("$self->[1].$method");
+  return $c->$helper(@_);
+}
+
+sub DESTROY { }
 
 1;
 
@@ -236,8 +276,8 @@ Mojolicious::Renderer - Generate dynamic content
   use Mojolicious::Renderer;
 
   my $renderer = Mojolicious::Renderer->new;
-  push @{$renderer->classes}, 'MyApp::Foo';
-  push @{renderer->paths}, '/home/sri/templates';
+  push @{$renderer->classes}, 'MyApp::Controller::Foo';
+  push @{$renderer->paths}, '/home/sri/templates';
 
 =head1 DESCRIPTION
 
@@ -327,7 +367,7 @@ implements the following new ones.
   my $best = $renderer->accepts(Mojolicious::Controller->new, 'html', 'json');
 
 Select best possible representation for L<Mojolicious::Controller> object from
-C<Accept> request header, C<format> stash value or C<format> GET/POST
+C<Accept> request header, C<format> stash value or C<format> C<GET>/C<POST>
 parameter, defaults to returning the first extension if no preference could be
 detected. Since browsers often don't really know what they actually want,
 unspecific C<Accept> request headers with more than one MIME type will be
@@ -355,6 +395,14 @@ Register a new helper.
   });
 
 Get a C<DATA> section template by name, usually used by handlers.
+
+=head2 get_helper
+
+  my $helper = $renderer->get_helper('url_for');
+
+Get a helper by full name, generate a helper dynamically for a prefix or
+return C<undef> if no helper or prefix could be found. Generated helpers
+return a proxy object on which nested helpers can be called.
 
 =head2 render
 

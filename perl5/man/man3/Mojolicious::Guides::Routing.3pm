@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides::Routing 3"
-.TH Mojolicious::Guides::Routing 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides::Routing 3 "2014-08-06" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -144,7 +144,7 @@ The foundation of every web framework is a tiny black box connecting incoming
 requests with code generating the appropriate response.
 .PP
 .Vb 1
-\&  GET /user/show/1 \-> $self\->render(text => \*(AqSebastian\*(Aq);
+\&  GET /user/show/1 \-> $c\->render(text => \*(AqSebastian\*(Aq);
 .Ve
 .PP
 This black box is usually called a dispatcher. There are many implementations
@@ -152,10 +152,10 @@ using different strategies to establish these connections, but pretty much all
 are based around mapping the requests path to some kind of response generator.
 .PP
 .Vb 4
-\&  /user/show/1 \-> $self\->render(text => \*(AqSebastian\*(Aq);
-\&  /user/show/2 \-> $self\->render(text => \*(AqSara\*(Aq);
-\&  /user/show/3 \-> $self\->render(text => \*(AqBaerbel\*(Aq);
-\&  /user/show/4 \-> $self\->render(text => \*(AqWolfgang\*(Aq);
+\&  /user/show/1 \-> $c\->render(text => \*(AqSebastian\*(Aq);
+\&  /user/show/2 \-> $c\->render(text => \*(AqSara\*(Aq);
+\&  /user/show/3 \-> $c\->render(text => \*(AqBaerbel\*(Aq);
+\&  /user/show/4 \-> $c\->render(text => \*(AqWolfgang\*(Aq);
 .Ve
 .PP
 While it is very well possible to make all these connections static, it is
@@ -163,7 +163,7 @@ also rather inefficient. That's why regular expressions are commonly used to
 make the dispatch process more dynamic.
 .PP
 .Vb 1
-\&  qr!/user/show/(\ed+)! \-> $self\->render(text => $users{$1});
+\&  qr!/user/show/(\ed+)! \-> $c\->render(text => $users{$1});
 .Ve
 .PP
 Modern dispatchers have pretty much everything \s-1HTTP\s0 has to offer at their
@@ -182,14 +182,14 @@ While regular expressions are quite powerful they also tend to be unpleasant
 to look at and are generally overkill for ordinary path matching.
 .PP
 .Vb 1
-\&  qr!/user/show/(\ed+)! \-> $self\->render(text => $users{$1});
+\&  qr!/user/show/(\ed+)! \-> $c\->render(text => $users{$1});
 .Ve
 .PP
 This is where routes come into play, they have been designed from the ground
 up to represent paths with placeholders.
 .PP
 .Vb 1
-\&  /user/show/:id \-> $self\->render(text => $users{$id});
+\&  /user/show/:id \-> $c\->render(text => $users{$id});
 .Ve
 .PP
 The only difference between a static path and the route above is the \f(CW\*(C`:id\*(C'\fR
@@ -235,7 +235,8 @@ Every placeholder has a name, even if it's just an empty string.
 .SS "Generic placeholders"
 .IX Subsection "Generic placeholders"
 Generic placeholders are the simplest form of placeholders, they use a colon
-prefix and match all characters except \f(CW\*(C`/\*(C'\fR and \f(CW\*(C`.\*(C'\fR.
+prefix and match all characters except \f(CW\*(C`/\*(C'\fR and \f(CW\*(C`.\*(C'\fR, similar to the regular
+expression \f(CW\*(C`([^/.]+)\*(C'\fR.
 .PP
 .Vb 6
 \&  /hello              \-> /:name/hello \-> undef
@@ -267,7 +268,8 @@ parentheses.
 .SS "Relaxed placeholders"
 .IX Subsection "Relaxed placeholders"
 Relaxed placeholders are just like generic placeholders, but use a hash prefix
-and match all characters except \f(CW\*(C`/\*(C'\fR.
+and match all characters except \f(CW\*(C`/\*(C'\fR, similar to the regular expression
+\&\f(CW\*(C`([^/]+)\*(C'\fR.
 .PP
 .Vb 6
 \&  /hello              \-> /#name/hello \-> undef
@@ -280,7 +282,8 @@ and match all characters except \f(CW\*(C`/\*(C'\fR.
 .SS "Wildcard placeholders"
 .IX Subsection "Wildcard placeholders"
 Wildcard placeholders are just like the two placeholders above, but use an
-asterisk prefix and match absolutely everything, including \f(CW\*(C`/\*(C'\fR and \f(CW\*(C`.\*(C'\fR.
+asterisk prefix and match absolutely everything, including \f(CW\*(C`/\*(C'\fR and \f(CW\*(C`.\*(C'\fR,
+similar to the regular expression \f(CW\*(C`(.+)\*(C'\fR.
 .PP
 .Vb 6
 \&  /hello              \-> /*name/hello \-> undef
@@ -317,12 +320,12 @@ defined.
 \&  1;
 .Ve
 .PP
-The minimal route above will load and instantiate the class \f(CW\*(C`MyApp::Foo\*(C'\fR and
-call its \f(CW\*(C`welcome\*(C'\fR method.
+The minimal route above will load and instantiate the class
+\&\f(CW\*(C`MyApp::Controller::Foo\*(C'\fR and call its \f(CW\*(C`welcome\*(C'\fR method.
 .PP
 .Vb 3
 \&  # Controller
-\&  package MyApp::Foo;
+\&  package MyApp::Controller::Foo;
 \&  use Mojo::Base \*(AqMojolicious::Controller\*(Aq;
 \&
 \&  # Action
@@ -340,9 +343,10 @@ Routes are usually configured in the \f(CW\*(C`startup\*(C'\fR method of the app
 class, but the router can be accessed from everywhere (even at runtime).
 .SS "Routing destination"
 .IX Subsection "Routing destination"
-After you start a new route with the method \*(L"route\*(R" in Mojolicious::Routes,
-you can also give it a destination in the form of a hash using the chained
-method \*(L"to\*(R" in Mojolicious::Routes::Route.
+After you start a new route with the method
+\&\*(L"route\*(R" in Mojolicious::Routes::Route, you can also give it a destination in
+the form of a hash using the chained method
+\&\*(L"to\*(R" in Mojolicious::Routes::Route.
 .PP
 .Vb 2
 \&  # /welcome \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqwelcome\*(Aq}
@@ -414,9 +418,10 @@ old ones.
 When the dispatcher sees \f(CW\*(C`controller\*(C'\fR and \f(CW\*(C`action\*(C'\fR values in the stash it
 will always try to turn them into a class and method to dispatch to. The
 \&\f(CW\*(C`controller\*(C'\fR value gets camelized using \*(L"camelize\*(R" in Mojo::Util and
-prefixed with a \f(CW\*(C`namespace\*(C'\fR (defaulting to the applications class). While the
-action value is not changed at all, because of this both values are case
-sensitive.
+appended to one or more namespaces, defaulting to a controller namespace based
+on the application class (\f(CW\*(C`MyApp::Controller\*(C'\fR), as well as the bare
+application class (\f(CW\*(C`MyApp\*(C'\fR), and these namespaces are searched in that order.
+The action value is not changed at all, so both values are case sensitive.
 .PP
 .Vb 3
 \&  # Application
@@ -426,14 +431,14 @@ sensitive.
 \&  sub startup {
 \&    my $self = shift;
 \&
-\&    # /bye \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbye\*(Aq} \-> MyApp::Foo\->bye
+\&    # /bye \-> MyApp::Controller::Foo\->bye
 \&    $self\->routes\->route(\*(Aq/bye\*(Aq)\->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqbye\*(Aq);
 \&  }
 \&
 \&  1;
 \&
 \&  # Controller
-\&  package MyApp::Foo;
+\&  package MyApp::Controller::Foo;
 \&  use Mojo::Base \*(AqMojolicious::Controller\*(Aq;
 \&
 \&  # Action
@@ -457,12 +462,20 @@ used ones they also got a special shortcut in the form of
 \&  $r\->route(\*(Aq/bye\*(Aq)\->to(\*(Aqfoo#bye\*(Aq, mymessage => \*(AqBye\*(Aq);
 .Ve
 .PP
-During camelization \f(CW\*(C`\-\*(C'\fR gets replaced with \f(CW\*(C`::\*(C'\fR, this allows multi level
+During camelization \f(CW\*(C`\-\*(C'\fR gets replaced with \f(CW\*(C`::\*(C'\fR, this allows multi-level
 \&\f(CW\*(C`controller\*(C'\fR hierarchies.
 .PP
 .Vb 2
-\&  # / \-> {controller => \*(Aqfoo\-bar\*(Aq, action => \*(Aqhi\*(Aq} \-> MyApp::Foo::Bar\->hi
+\&  # / \-> MyApp::Controller::Foo::Bar\->hi
 \&  $r\->route(\*(Aq/\*(Aq)\->to(\*(Aqfoo\-bar#hi\*(Aq);
+.Ve
+.PP
+You can also just specify the \f(CW\*(C`controller\*(C'\fR in CamelCase form instead of
+snake_case.
+.PP
+.Vb 2
+\&  # / \-> MyApp::Controller::Foo::Bar\->hi
+\&  $r\->route(\*(Aq/\*(Aq)\->to(\*(AqFoo::Bar#hi\*(Aq);
 .Ve
 .PP
 For security reasons the dispatcher will always check if the \f(CW\*(C`controller\*(C'\fR is
@@ -474,26 +487,26 @@ You can use the \f(CW\*(C`namespace\*(C'\fR stash value to change the namespace 
 route with all its children.
 .PP
 .Vb 3
-\&  # /bye \-> MyApp::Controller::Foo::Bar\->bye
+\&  # /bye \-> MyApp::MyController::Foo::Bar\->bye
 \&  $r\->route(\*(Aq/bye\*(Aq)
-\&    \->to(namespace => \*(AqMyApp::Controller::Foo::Bar\*(Aq, action => \*(Aqbye\*(Aq);
+\&    \->to(namespace => \*(AqMyApp::MyController::Foo::Bar\*(Aq, action => \*(Aqbye\*(Aq);
 .Ve
 .PP
-The \f(CW\*(C`controller\*(C'\fR is always appended to the \f(CW\*(C`namespace\*(C'\fR if available.
+The \f(CW\*(C`controller\*(C'\fR is always appended to this \f(CW\*(C`namespace\*(C'\fR if available.
 .PP
 .Vb 2
-\&  # /bye \-> MyApp::Controller::Foo::Bar\->bye
-\&  $r\->route(\*(Aq/bye\*(Aq)\->to(\*(Aqfoo\-bar#bye\*(Aq, namespace => \*(AqMyApp::Controller\*(Aq);
+\&  # /bye \-> MyApp::MyController::Foo::Bar\->bye
+\&  $r\->route(\*(Aq/bye\*(Aq)\->to(\*(Aqfoo\-bar#bye\*(Aq, namespace => \*(AqMyApp::MyController\*(Aq);
 \&
-\&  # /hey \-> MyApp::Controller::Foo::Bar\->hey
-\&  $r\->route(\*(Aq/hey\*(Aq)\->to(\*(AqFoo::Bar#hey\*(Aq, namespace => \*(AqMyApp::Controller\*(Aq);
+\&  # /hey \-> MyApp::MyController::Foo::Bar\->hey
+\&  $r\->route(\*(Aq/hey\*(Aq)\->to(\*(AqFoo::Bar#hey\*(Aq, namespace => \*(AqMyApp::MyController\*(Aq);
 .Ve
 .PP
 You can also change the default namespaces for all routes in the application
 with the router attribute \*(L"namespaces\*(R" in Mojolicious::Routes.
 .PP
 .Vb 1
-\&  $r\->namespaces([\*(AqMyApp::Controller\*(Aq]);
+\&  $r\->namespaces([\*(AqMyApp::MyController\*(Aq]);
 .Ve
 .SS "Route to callback"
 .IX Subsection "Route to callback"
@@ -502,15 +515,15 @@ to bypass controllers and execute a callback instead.
 .PP
 .Vb 4
 \&  $r\->route(\*(Aq/bye\*(Aq)\->to(cb => sub {
-\&    my $self = shift;
-\&    $self\->render(text => \*(AqGood bye.\*(Aq);
+\&    my $c = shift;
+\&    $c\->render(text => \*(AqGood bye.\*(Aq);
 \&  });
 .Ve
 .PP
 This technique is the foundation of Mojolicious::Lite, you can learn more
 about it from the included tutorial.
-.SS "Placeholders and destinations"
-.IX Subsection "Placeholders and destinations"
+.SS "Optional placeholders"
+.IX Subsection "Optional placeholders"
 Extracted placeholder values will simply redefine older stash values if they
 already exist.
 .PP
@@ -522,7 +535,8 @@ already exist.
 .Ve
 .PP
 One more interesting effect, a placeholder automatically becomes optional if
-there is already a stash value of the same name present.
+there is already a stash value of the same name present, this works similar to
+the regular expression \f(CW\*(C`([^/.]+)?\*(C'\fR.
 .PP
 .Vb 3
 \&  # / \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq, mymessage => \*(Aqhi\*(Aq}
@@ -563,7 +577,8 @@ Mojolicious::Controller.
 .SS "More restrictive placeholders"
 .IX Subsection "More restrictive placeholders"
 A very easy way to make placeholders more restrictive are alternatives, you
-just make a list of possible values.
+just make a list of possible values, which then work similar to the regular
+expression \f(CW\*(C`(bender|leela)\*(C'\fR.
 .PP
 .Vb 5
 \&  # /bender \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq, name => \*(Aqbender\*(Aq}
@@ -573,10 +588,10 @@ just make a list of possible values.
 \&    \->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq);
 .Ve
 .PP
-You can also adjust the regular expressions behind placeholders to better suit
-your needs. Just make sure not to use \f(CW\*(C`^\*(C'\fR and \f(CW\*(C`$\*(C'\fR or capturing groups
-\&\f(CW\*(C`(...)\*(C'\fR, because placeholders become part of a larger regular expression
-internally, \f(CW\*(C`(?:...)\*(C'\fR is fine though.
+You can also adjust the regular expressions behind placeholders directly, just
+make sure not to use \f(CW\*(C`^\*(C'\fR and \f(CW\*(C`$\*(C'\fR or capturing groups \f(CW\*(C`(...)\*(C'\fR, because
+placeholders become part of a larger regular expression internally, \f(CW\*(C`(?:...)\*(C'\fR
+is fine though.
 .PP
 .Vb 4
 \&  # /23   \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq, number => 23}
@@ -605,15 +620,8 @@ automatically detected and stored in the stash value \f(CW\*(C`format\*(C'\fR.
 .Ve
 .PP
 This for example allows multiple templates in different formats to share the
-same code.
-.PP
-.Vb 3
-\&  # /foo      \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq}
-\&  # /foo.html \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq, format => \*(Aqhtml\*(Aq}
-\&  $r\->route(\*(Aq/foo\*(Aq)\->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq);
-.Ve
-.PP
-Restrictive placeholders can also be used.
+same action code. Restrictive placeholders can also be used to limit the
+allowed formats.
 .PP
 .Vb 5
 \&  # /foo.rss \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq, format => \*(Aqrss\*(Aq}
@@ -653,13 +661,13 @@ throughout the whole framework, most of them internally rely on
 \&    \->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq);
 \&
 \&  # Generate URL "/foo/abc" for route "test"
-\&  my $url = $self\->url_for(\*(Aqtest\*(Aq);
+\&  my $url = $c\->url_for(\*(Aqtest\*(Aq);
 \&
 \&  # Generate URL "/foo/sebastian" for route "test"
-\&  my $url = $self\->url_for(\*(Aqtest\*(Aq, name => \*(Aqsebastian\*(Aq);
+\&  my $url = $c\->url_for(\*(Aqtest\*(Aq, name => \*(Aqsebastian\*(Aq);
 \&
 \&  # Generate URL "http://127.0.0.1:3000/foo/sebastian" for route "test"
-\&  my $url = $self\->url_for(\*(Aqtest\*(Aq, name => \*(Aqsebastian\*(Aq)\->to_abs;
+\&  my $url = $c\->url_for(\*(Aqtest\*(Aq, name => \*(Aqsebastian\*(Aq)\->to_abs;
 .Ve
 .PP
 Nameless routes get an automatically generated one assigned that is simply
@@ -670,7 +678,7 @@ equal to the route itself without non-word characters.
 \&  $r\->route(\*(Aq/foo/bar\*(Aq)\->to(\*(Aqtest#stuff\*(Aq);
 \&
 \&  # Generate URL "/foo/bar"
-\&  my $url = $self\->url_for(\*(Aqfoobar\*(Aq);
+\&  my $url = $c\->url_for(\*(Aqfoobar\*(Aq);
 .Ve
 .PP
 To refer to the current route you can use the reserved name \f(CW\*(C`current\*(C'\fR or no
@@ -678,8 +686,8 @@ name at all.
 .PP
 .Vb 3
 \&  # Generate URL for current route
-\&  my $url = $self\->url_for(\*(Aqcurrent\*(Aq);
-\&  my $url = $self\->url_for;
+\&  my $url = $c\->url_for(\*(Aqcurrent\*(Aq);
+\&  my $url = $c\->url_for;
 .Ve
 .PP
 To check or get the name of the current route you can use the helper
@@ -687,10 +695,10 @@ To check or get the name of the current route you can use the helper
 .PP
 .Vb 2
 \&  # Name for current route
-\&  my $name = $self\->current_route;
+\&  my $name = $c\->current_route;
 \&
 \&  # Check route name in code shared by multiple routes
-\&  $self\->stash(button => \*(Aqgreen\*(Aq) if $self\->current_route(\*(Aqlogin\*(Aq);
+\&  $c\->stash(button => \*(Aqgreen\*(Aq) if $c\->current_route(\*(Aqlogin\*(Aq);
 .Ve
 .SS "\s-1HTTP\s0 methods"
 .IX Subsection "HTTP methods"
@@ -710,7 +718,7 @@ methods to pass.
 \&    \->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqbye\*(Aq);
 .Ve
 .PP
-With one small exception, \s-1HEAD\s0 requests are considered equal to \s-1GET\s0 and
+With one small exception, \f(CW\*(C`HEAD\*(C'\fR requests are considered equal to \f(CW\*(C`GET\*(C'\fR and
 content will not be sent with the response.
 .PP
 .Vb 4
@@ -722,7 +730,7 @@ content will not be sent with the response.
 .SS "WebSockets"
 .IX Subsection "WebSockets"
 With the method \*(L"websocket\*(R" in Mojolicious::Routes::Route you can restrict
-access to WebSocket handshakes, which are normal \s-1GET\s0 requests with some
+access to WebSocket handshakes, which are normal \f(CW\*(C`GET\*(C'\fR requests with some
 additional information.
 .PP
 .Vb 2
@@ -730,7 +738,7 @@ additional information.
 \&  $r\->websocket(\*(Aq/echo\*(Aq)\->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqecho\*(Aq);
 \&
 \&  # Controller
-\&  package MyApp::Foo;
+\&  package MyApp::Controller::Foo;
 \&  use Mojo::Base \*(AqMojolicious::Controller\*(Aq;
 \&
 \&  # Action
@@ -771,13 +779,13 @@ be broken, this makes bridges a very powerful tool for authentication.
 \&  # /foo/bar \-> {cb => sub {...}}
 \&  #             {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq}
 \&  my $foo = $r\->bridge(\*(Aq/foo\*(Aq)\->to(cb => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Authenticated
-\&    return 1 if $self\->req\->headers\->header(\*(AqX\-Bender\*(Aq);
+\&    return 1 if $c\->req\->headers\->header(\*(AqX\-Bender\*(Aq);
 \&
 \&    # Not authenticated
-\&    $self\->render(text => "You\*(Aqre not Bender.");
+\&    $c\->render(text => "You\*(Aqre not Bender.");
 \&    return undef;
 \&  });
 \&  $foo\->route(\*(Aq/bar\*(Aq)\->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq);
@@ -792,16 +800,16 @@ operations to finish before reaching the next dispatch cycle.
 \&  # /foo/bar \-> {cb => sub {...}}
 \&  #          \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq}
 \&  my $foo = $r\->bridge(\*(Aq/foo\*(Aq)\->to(cb => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Wait 3 seconds and then give visitors a 50% chance to continue
 \&    Mojo::IOLoop\->timer(3 => sub {
 \&
 \&      # Loser
-\&      return $self\->render(text => \*(AqNo luck.\*(Aq) unless int rand 2;
+\&      return $c\->render(text => \*(AqNo luck.\*(Aq) unless int rand 2;
 \&
 \&      # Winner
-\&      $self\->continue;
+\&      $c\->continue;
 \&    });
 \&
 \&    return undef;
@@ -812,8 +820,8 @@ operations to finish before reaching the next dispatch cycle.
 .IX Subsection "More convenient routes"
 From the tutorial you should already know Mojolicious::Lite routes, which
 are in fact just a small convenience layer around everything described above
-and accessible through methods like \*(L"get\*(R" in Mojolicious::Routes::Route as
-part of the normal router.
+and accessible through methods like \*(L"get\*(R" in Mojolicious::Routes::Route and
+\&\*(L"any\*(R" in Mojolicious::Routes::Route as part of the normal router.
 .PP
 .Vb 2
 \&  # POST /foo \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqabc\*(Aq}
@@ -844,8 +852,8 @@ full Mojolicious applications very straightforward.
 .Vb 5
 \&  # POST /bar
 \&  $r\->post(\*(Aq/bar\*(Aq => sub {
-\&    my $self = shift;
-\&    $self\->render(text => \*(AqJust like a Mojolicious::Lite action.\*(Aq);
+\&    my $c = shift;
+\&    $c\->render(text => \*(AqJust like a Mojolicious::Lite action.\*(Aq);
 \&  });
 .Ve
 .PP
@@ -857,12 +865,26 @@ Even the more abstract concepts are available with methods like
 \&  # POST /yada
 \&  my $yada = $r\->under(\*(Aq/yada\*(Aq);
 \&  $yada\->get(sub {
-\&    my $self = shift;
-\&    $self\->render(text => \*(AqHello.\*(Aq);
+\&    my $c = shift;
+\&    $c\->render(text => \*(AqHello.\*(Aq);
 \&  });
 \&  $yada\->post(sub {
-\&    my $self = shift;
-\&    $self\->render(text => \*(AqGo away.\*(Aq);
+\&    my $c = shift;
+\&    $c\->render(text => \*(AqGo away.\*(Aq);
+\&  });
+.Ve
+.SS "Catch-all route"
+.IX Subsection "Catch-all route"
+Since routes match in the order in which they were defined, you can catch all
+requests that did not match in your last route with an optional wildcard
+placeholder.
+.PP
+.Vb 6
+\&  # * /*
+\&  $r\->any(\*(Aq/*whatever\*(Aq => {whatever => \*(Aq\*(Aq} => sub {
+\&    my $c        = shift;
+\&    my $whatever = $c\->param(\*(Aqwhatever\*(Aq);
+\&    $c\->render(text => "/$whatever did not match.", status => 404);
 \&  });
 .Ve
 .SS "Hooks"
@@ -900,7 +922,7 @@ Post-processing the response to set additional headers is a very common use.
 .PP
 .Vb 5
 \&  # Make sure static files are cached
-\&  $self\->hook(after_static => sub {
+\&  $app\->hook(after_static => sub {
 \&    my $c = shift;
 \&    $c\->res\->headers\->cache_control(\*(Aqmax\-age=3600, must\-revalidate\*(Aq);
 \&  });
@@ -910,10 +932,17 @@ Same for pre-processing the request.
 .PP
 .Vb 6
 \&  # Allow "_method" query parameter to override request method
-\&  $self\->hook(before_dispatch => sub {
+\&  $app\->hook(before_dispatch => sub {
 \&    my $c = shift;
 \&    return unless my $method = $c\->req\->url\->query\->param(\*(Aq_method\*(Aq);
 \&    $c\->req\->method($method);
+\&  });
+\&
+\&  # Choose template variant based on request headers
+\&  $app\->hook(before_dispatch => sub {
+\&    my $c = shift;
+\&    return unless my $agent = $c\->req\->headers\->user_agent;
+\&    $c\->stash(variant => \*(Aqie\*(Aq) if $agent =~ /Internet Explorer/;
 \&  });
 .Ve
 .PP
@@ -921,7 +950,7 @@ Or more advanced extensions to add monitoring to your application.
 .PP
 .Vb 6
 \&  # Forward exceptions to a web service
-\&  $self\->hook(after_dispatch => sub {
+\&  $app\->hook(after_dispatch => sub {
 \&    my $c = shift;
 \&    return unless my $e = $c\->stash(\*(Aqexception\*(Aq);
 \&    $c\->ua\->post(\*(Aqhttps://example.com/bugs\*(Aq => form => {exception => $e});
@@ -932,14 +961,14 @@ You can even extend much of the core functionality.
 .PP
 .Vb 6
 \&  # Make controller object available to actions as $_
-\&  $self\->hook(around_action => sub {
+\&  $app\->hook(around_action => sub {
 \&    my ($next, $c, $action, $last) = @_;
 \&    local $_ = $c;
 \&    return $next\->();
 \&  });
 \&
 \&  # Pass route name as argument to actions
-\&  $self\->hook(around_action => sub {
+\&  $app\->hook(around_action => sub {
 \&    my ($next, $c, $action, $last) = @_;
 \&    return $c\->$action($c\->current_route);
 \&  });
@@ -967,9 +996,9 @@ to make route generation more expressive.
 \&
 \&    # Handle OPTIONS requests
 \&    $resource\->options(sub {
-\&      my $self = shift;
-\&      $self\->res\->headers\->allow(\*(AqPOST, GET, OPTIONS\*(Aq);
-\&      $self\->render(data => \*(Aq\*(Aq, status => 204);
+\&      my $c = shift;
+\&      $c\->res\->headers\->allow(\*(AqPOST, GET, OPTIONS\*(Aq);
+\&      $c\->render(data => \*(Aq\*(Aq, status => 204);
 \&    });
 \&
 \&    return $resource;
@@ -991,10 +1020,10 @@ expressions.
 .PP
 .Vb 5
 \&  $ ./myapp.pl routes \-v
-\&  /foo/:name  ....  POST  fooname  ^/foo/([^/\e.]+))(?:\e.([^/]+)$)?
+\&  /foo/:name  ....  POST  fooname  ^/foo/([^/\e.]+)  ^/?(?:\e.([^/]+))?$
 \&  /bar        B...  *     bar      ^/bar
-\&    +/baz     ...W  GET   baz      ^/baz(?:\e.([^/]+)$)?
-\&  /yada       ....  *     yada     ^/yada(?:\e.([^/]+)$)?
+\&    +/baz     ...W  GET   baz      ^/baz            ^/?(?:\e.([^/]+))?$
+\&  /yada       ....  *     yada     ^/yada           ^/?(?:\e.([^/]+))?$
 .Ve
 .SH "ADVANCED"
 .IX Header "ADVANCED"
@@ -1012,8 +1041,7 @@ unescaped and decoded from bytes to characters.
 .IX Subsection "Rearranging routes"
 Until the first request has been handled, all routes can still be moved around
 or even removed with methods like \*(L"add_child\*(R" in Mojolicious::Routes::Route
-and \*(L"remove\*(R" in Mojolicious::Routes::Route. Especially for rearranging routes
-created by plugins this can be very useful.
+and \*(L"remove\*(R" in Mojolicious::Routes::Route.
 .PP
 .Vb 3
 \&  # GET /example/show \-> {controller => \*(Aqexample\*(Aq, action => \*(Aqshow\*(Aq}
@@ -1025,12 +1053,14 @@ created by plugins this can be very useful.
 \&  $r\->find(\*(Aqshow_secrets\*(Aq)\->remove;
 .Ve
 .PP
-To find routes by their name you can use \*(L"find\*(R" in Mojolicious::Routes::Route.
+Especially for rearranging routes created by plugins this can be very useful,
+to find routes by their name you can use \*(L"find\*(R" in Mojolicious::Routes::Route.
 .SS "Conditions"
 .IX Subsection "Conditions"
 Sometimes you might need a little more power, for example to check the
 \&\f(CW\*(C`User\-Agent\*(C'\fR header in multiple routes. This is where conditions come into
-play, they are basically router plugins.
+play, they are basically router plugins and need to return a true value for
+the route to match.
 .PP
 .Vb 4
 \&  # Simple "User\-Agent" condition
@@ -1115,14 +1145,14 @@ specific language in normal Mojolicious controllers.
 .PP
 .Vb 3
 \&  # Controller
-\&  package MyApp::Bar;
+\&  package MyApp::Controller::Bar;
 \&  use Mojolicious::Lite;
 \&
 \&  # /hello
 \&  get \*(Aq/hello\*(Aq => sub {
-\&    my $self = shift;
-\&    my $name = $self\->param(\*(Aqname\*(Aq);
-\&    $self\->render(text => "Hello $name.");
+\&    my $c    = shift;
+\&    my $name = $c\->param(\*(Aqname\*(Aq);
+\&    $c\->render(text => "Hello $name.");
 \&  };
 \&
 \&  1;
@@ -1142,7 +1172,7 @@ A minimal embeddable application is nothing more than a subclass of Mojo,
 containing a \f(CW\*(C`handler\*(C'\fR method accepting Mojolicious::Controller objects.
 .PP
 .Vb 2
-\&  package MyApp::Bar;
+\&  package MyApp::Controller::Bar;
 \&  use Mojo::Base \*(AqMojo\*(Aq;
 \&
 \&  sub handler {

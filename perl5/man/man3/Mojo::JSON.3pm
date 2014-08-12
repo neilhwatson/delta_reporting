@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::JSON 3"
-.TH Mojo::JSON 3 "2014-03-03" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::JSON 3 "2014-08-07" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -151,13 +151,12 @@ Mojo::JSON \- Minimalistic JSON
 Mojo::JSON is a minimalistic and possibly the fastest pure-Perl
 implementation of <\s-1RFC\s0 7159>.
 .PP
-It supports normal Perl data types like \f(CW\*(C`Scalar\*(C'\fR, \f(CW\*(C`Array\*(C'\fR reference, \f(CW\*(C`Hash\*(C'\fR
+It supports normal Perl data types like scalar, array reference, hash
 reference and will try to call the \f(CW\*(C`TO_JSON\*(C'\fR method on blessed references, or
 stringify them if it doesn't exist. Differentiating between strings and
-numbers in Perl is hard, depending on how it has been used, a \f(CW\*(C`Scalar\*(C'\fR can be
-both at the same time. Since numeric comparisons on strings are very unlikely
-to happen intentionally, the numeric value always gets priority, so any
-\&\f(CW\*(C`Scalar\*(C'\fR that has been used in numeric context is considered a number.
+numbers in Perl is hard, depending on how it has been used, a scalar can be
+both at the same time. The string value gets precedence unless both
+representations are equivalent.
 .PP
 .Vb 2
 \&  [1, \-2, 3]     \-> [1, \-2, 3]
@@ -173,8 +172,8 @@ similar native Perl value.
 \&  null  \-> undef
 .Ve
 .PP
-In addition \f(CW\*(C`Scalar\*(C'\fR references will be used to generate booleans, based on
-if their values are true or false.
+In addition scalar references will be used to generate booleans, based on if
+their values are true or false.
 .PP
 .Vb 2
 \&  \e1 \-> true
@@ -209,7 +208,7 @@ Encode Perl value to \s-1JSON\s0.
 \&  my $value = j($bytes);
 .Ve
 .PP
-Encode Perl data structure (which may only be an \f(CW\*(C`Array\*(C'\fR reference or \f(CW\*(C`Hash\*(C'\fR
+Encode Perl data structure (which may only be an array reference or hash
 reference) or decode \s-1JSON\s0, an \f(CW\*(C`undef\*(C'\fR return value indicates a bare \f(CW\*(C`null\*(C'\fR
 or that decoding failed.
 .SH "ATTRIBUTES"

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Transaction::WebSocket 3"
-.TH Mojo::Transaction::WebSocket 3 "2014-03-03" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Transaction::WebSocket 3 "2014-08-10" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -316,7 +316,7 @@ Mask outgoing frames with \s-1XOR\s0 cipher and a random 32bit key.
 .Ve
 .PP
 Maximum WebSocket message size in bytes, defaults to the value of the
-\&\s-1MOJO_MAX_WEBSOCKET_SIZE\s0 environment variable or \f(CW262144\fR.
+\&\f(CW\*(C`MOJO_MAX_WEBSOCKET_SIZE\*(C'\fR environment variable or \f(CW262144\fR (256KB).
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Transaction::WebSocket inherits all methods from
@@ -539,10 +539,17 @@ Read data server-side, used to implement web servers.
 .Ve
 .PP
 Write data server-side, used to implement web servers.
+.SS "with_compression"
+.IX Subsection "with_compression"
+.Vb 1
+\&  $ws\->with_compression;
+.Ve
+.PP
+Negotiate \f(CW\*(C`permessage\-deflate\*(C'\fR extension for this WebSocket connection.
 .SH "DEBUGGING"
 .IX Header "DEBUGGING"
-You can set the \s-1MOJO_WEBSOCKET_DEBUG\s0 environment variable to get some advanced
-diagnostics information printed to \f(CW\*(C`STDERR\*(C'\fR.
+You can set the \f(CW\*(C`MOJO_WEBSOCKET_DEBUG\*(C'\fR environment variable to get some
+advanced diagnostics information printed to \f(CW\*(C`STDERR\*(C'\fR.
 .PP
 .Vb 1
 \&  MOJO_WEBSOCKET_DEBUG=1

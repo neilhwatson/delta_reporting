@@ -11,6 +11,9 @@ use Carp ();
 # Only Perl 5.14+ requires it on demand
 use IO::Handle ();
 
+# Protect subclasses using AUTOLOAD
+sub DESTROY { }
+
 sub import {
   my $class = shift;
   return unless my $flag = shift;
@@ -216,7 +219,7 @@ and is also available as C<$_>.
 
 =head1 DEBUGGING
 
-You can set the MOJO_BASE_DEBUG environment variable to get some advanced
+You can set the C<MOJO_BASE_DEBUG> environment variable to get some advanced
 diagnostics information printed to C<STDERR>.
 
   MOJO_BASE_DEBUG=1

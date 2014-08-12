@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Controller 3"
-.TH Mojolicious::Controller 3 "2014-03-03" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Controller 3 "2014-08-10" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -135,7 +135,7 @@ Mojolicious::Controller \- Controller base class
 .IX Header "SYNOPSIS"
 .Vb 3
 \&  # Controller
-\&  package MyApp::Foo;
+\&  package MyApp::Controller::Foo;
 \&  use Mojo::Base \*(AqMojolicious::Controller\*(Aq;
 \&
 \&  # Action
@@ -224,11 +224,12 @@ implements the following new ones.
 Continue dispatch chain with \*(L"continue\*(R" in Mojolicious::Routes.
 .SS "cookie"
 .IX Subsection "cookie"
-.Vb 4
-\&  my $value  = $c\->cookie(\*(Aqfoo\*(Aq);
-\&  my @values = $c\->cookie(\*(Aqfoo\*(Aq);
-\&  $c         = $c\->cookie(foo => \*(Aqbar\*(Aq);
-\&  $c         = $c\->cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
+.Vb 5
+\&  my $foo         = $c\->cookie(\*(Aqfoo\*(Aq);
+\&  my @foo         = $c\->cookie(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $c\->cookie([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+\&  $c              = $c\->cookie(foo => \*(Aqbar\*(Aq);
+\&  $c              = $c\->cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
 .Ve
 .PP
 Access request cookie values and create new response cookies.
@@ -302,31 +303,36 @@ status.
 .Ve
 .SS "param"
 .IX Subsection "param"
-.Vb 6
+.Vb 7
 \&  my @names       = $c\->param;
 \&  my $foo         = $c\->param(\*(Aqfoo\*(Aq);
 \&  my @foo         = $c\->param(\*(Aqfoo\*(Aq);
 \&  my ($foo, $bar) = $c\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
 \&  $c              = $c\->param(foo => \*(Aqba;r\*(Aq);
-\&  $c              = $c\->param(foo => qw(ba;r ba;z));
+\&  $c              = $c\->param(foo => qw(ba;r baz));
+\&  $c              = $c\->param(foo => [\*(Aqba;r\*(Aq, \*(Aqbaz\*(Aq]);
 .Ve
 .PP
 Access route placeholder values that are not reserved stash values, file
-uploads and \s-1GET/POST\s0 parameters, in that order. Note that this method is
-context sensitive in some cases and therefore needs to be used with care,
-there can always be multiple values, which might have unexpected consequences.
-Parts of the request body need to be loaded into memory to parse \s-1POST\s0
-parameters, so you have to make sure it is not excessively large.
+uploads as well as \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`POST\*(C'\fR parameters extracted from the query
+string and \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR
+message body, in that order. Note that this method is context sensitive in
+some cases and therefore needs to be used with care, there can always be
+multiple values, which might have unexpected consequences. Parts of the
+request body need to be loaded into memory to parse \f(CW\*(C`POST\*(C'\fR parameters, so you
+have to make sure it is not excessively large, there's a 10MB limit by
+default.
 .PP
-.Vb 2
-\&  # List context is ambiguous and should be avoided
-\&  my $hash = {foo => $self\->param(\*(Aqfoo\*(Aq)};
+.Vb 3
+\&  # List context is ambiguous and should be avoided, you can get multiple
+\&  # values returned for a query string like "?foo=bar&foo=baz&foo=yada"
+\&  my $hash = {foo => $c\->param(\*(Aqfoo\*(Aq)};
 \&
 \&  # Better enforce scalar context
-\&  my $hash = {foo => scalar $self\->param(\*(Aqfoo\*(Aq)};
+\&  my $hash = {foo => scalar $c\->param(\*(Aqfoo\*(Aq)};
 \&
-\&  # The multi name form can also enforce scalar context
-\&  my $hash = {foo => $self\->param([\*(Aqfoo\*(Aq])};
+\&  # The multi\-name form can also be used to enforce a list with one element
+\&  my $hash = {foo => $c\->param([\*(Aqfoo\*(Aq])};
 .Ve
 .PP
 For more control you can also access request information directly.
@@ -362,25 +368,23 @@ Prepare a \f(CW302\fR redirect response, takes the same arguments as \*(L"url_fo
 .Ve
 .SS "render"
 .IX Subsection "render"
-.Vb 10
-\&  my $bool   = $c\->render;
-\&  my $bool   = $c\->render(controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq);
-\&  my $bool   = $c\->render(template => \*(Aqfoo/index\*(Aq);
-\&  my $bool   = $c\->render(template => \*(Aqindex\*(Aq, format => \*(Aqhtml\*(Aq);
-\&  my $bool   = $c\->render(data => $bytes);
-\&  my $bool   = $c\->render(text => \*(AqHello!\*(Aq);
-\&  my $bool   = $c\->render(json => {foo => \*(Aqbar\*(Aq});
-\&  my $bool   = $c\->render(handler => \*(Aqsomething\*(Aq);
-\&  my $bool   = $c\->render(\*(Aqfoo/index\*(Aq);
-\&  my $output = $c\->render(\*(Aqfoo/index\*(Aq, partial => 1);
+.Vb 9
+\&  my $bool = $c\->render;
+\&  my $bool = $c\->render(controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq);
+\&  my $bool = $c\->render(template => \*(Aqfoo/index\*(Aq);
+\&  my $bool = $c\->render(template => \*(Aqindex\*(Aq, format => \*(Aqhtml\*(Aq);
+\&  my $bool = $c\->render(data => $bytes);
+\&  my $bool = $c\->render(text => \*(AqHello!\*(Aq);
+\&  my $bool = $c\->render(json => {foo => \*(Aqbar\*(Aq});
+\&  my $bool = $c\->render(handler => \*(Aqsomething\*(Aq);
+\&  my $bool = $c\->render(\*(Aqfoo/index\*(Aq);
 .Ve
 .PP
 Render content using \*(L"render\*(R" in Mojolicious::Renderer and emit hooks
-\&\*(L"before_render\*(R" in Mojolicious as well as \*(L"after_render\*(R" in Mojolicious if the
-result is not \f(CW\*(C`partial\*(C'\fR. If no template is provided a default one based on
-controller and action or route name will be generated with
-\&\*(L"template_for\*(R" in Mojolicious::Renderer, all additional values get merged into
-the \*(L"stash\*(R".
+\&\*(L"before_render\*(R" in Mojolicious as well as \*(L"after_render\*(R" in Mojolicious. If no
+template is provided a default one based on controller and action or route
+name will be generated with \*(L"template_for\*(R" in Mojolicious::Renderer, all
+additional pairs get merged into the \*(L"stash\*(R".
 .PP
 .Vb 2
 \&  # Render characters
@@ -437,12 +441,12 @@ automatic rendering would result in a response.
 \&  my $bool = $c\->render_maybe(\*(Aqfoo/index\*(Aq, format => \*(Aqhtml\*(Aq);
 .Ve
 .PP
-Try to render content but do not call \*(L"render_not_found\*(R" if no response
+Try to render content, but do not call \*(L"render_not_found\*(R" if no response
 could be generated, takes the same arguments as \*(L"render\*(R".
 .PP
 .Vb 2
 \&  # Render template "index_local" only if it exists
-\&  $self\->render_maybe(\*(Aqindex_local\*(Aq) or $self\->render(\*(Aqindex\*(Aq);
+\&  $c\->render_maybe(\*(Aqindex_local\*(Aq) or $c\->render(\*(Aqindex\*(Aq);
 .Ve
 .SS "render_not_found"
 .IX Subsection "render_not_found"
@@ -464,6 +468,16 @@ templates.
 Render a static file using \*(L"serve\*(R" in Mojolicious::Static, usually from the
 \&\f(CW\*(C`public\*(C'\fR directories or \f(CW\*(C`DATA\*(C'\fR sections of your application. Note that this
 method does not protect from traversing to parent directories.
+.SS "render_to_string"
+.IX Subsection "render_to_string"
+.Vb 1
+\&  my $output = $c\->render_to_string(\*(Aqfoo/index\*(Aq, format => \*(Aqpdf\*(Aq);
+.Ve
+.PP
+Try to render content and return it wrapped in a Mojo::ByteStream object or
+return \f(CW\*(C`undef\*(C'\fR, all arguments get localized automatically and are only
+available during this render operation, takes the same arguments as
+\&\*(L"render\*(R".
 .SS "rendered"
 .IX Subsection "rendered"
 .Vb 2
@@ -476,12 +490,12 @@ using a \f(CW200\fR response code.
 .PP
 .Vb 4
 \&  # Custom response
-\&  $self\->res\->headers\->content_type(\*(Aqtext/plain\*(Aq);
-\&  $self\->res\->body(\*(AqHello World!\*(Aq);
-\&  $self\->rendered(200);
+\&  $c\->res\->headers\->content_type(\*(Aqtext/plain\*(Aq);
+\&  $c\->res\->body(\*(AqHello World!\*(Aq);
+\&  $c\->rendered(200);
 \&
 \&  # Accept WebSocket handshake without subscribing to an event
-\&  $self\->rendered(101);
+\&  $c\->rendered(101);
 .Ve
 .SS "req"
 .IX Subsection "req"
@@ -534,7 +548,7 @@ Get Mojo::Message::Response object from \*(L"res\*(R" in Mojo::Transaction.
 .Ve
 .PP
 Automatically select best possible representation for resource from \f(CW\*(C`Accept\*(C'\fR
-request header, \f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \s-1GET/POST\s0 parameter,
+request header, \f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \f(CW\*(C`GET\*(C'\fR/\f(CW\*(C`POST\*(C'\fR parameter,
 defaults to rendering an empty \f(CW204\fR response. Since browsers often don't
 really know what they actually want, unspecific \f(CW\*(C`Accept\*(C'\fR request headers with
 more than one \s-1MIME\s0 type will be ignored, unless the \f(CW\*(C`X\-Requested\-With\*(C'\fR header
@@ -549,7 +563,7 @@ is set to the value \f(CW\*(C`XMLHttpRequest\*(C'\fR.
 .Ve
 .PP
 For more advanced negotiation logic you can also use the helper
-\&\*(L"accepts\*(R" in Mojolicious::Plugin::DefaultHelper.
+\&\*(L"accepts\*(R" in Mojolicious::Plugin::DefaultHelpers.
 .SS "send"
 .IX Subsection "send"
 .Vb 6
@@ -588,11 +602,12 @@ status.
 .Ve
 .PP
 For mostly idle WebSockets you might also want to increase the inactivity
-timeout, which usually defaults to \f(CW15\fR seconds.
+timeout with \*(L"inactivity_timeout\*(R" in Mojolicious::Plugin::DefaultHelpers,
+which usually defaults to \f(CW15\fR seconds.
 .PP
 .Vb 2
 \&  # Increase inactivity timeout for connection to 300 seconds
-\&  Mojo::IOLoop\->stream($c\->tx\->connection)\->timeout(300);
+\&  $c\->inactivity_timeout(300);
 .Ve
 .SS "session"
 .IX Subsection "session"
@@ -604,9 +619,9 @@ timeout, which usually defaults to \f(CW15\fR seconds.
 .Ve
 .PP
 Persistent data storage for the next few requests, all session data gets
-serialized with Mojo::JSON and stored \f(CW\*(C`Base64\*(C'\fR encoded in \f(CW\*(C`HMAC\-SHA1\*(C'\fR
-signed cookies. Note that cookies usually have a 4096 byte limit, depending on
-browser.
+serialized with Mojo::JSON and stored Base64 encoded in \s-1HMAC\-SHA1\s0 signed
+cookies. Note that cookies usually have a \f(CW4096\fR byte (4KB) limit, depending
+on browser.
 .PP
 .Vb 4
 \&  # Manipulate session
@@ -625,15 +640,16 @@ browser.
 .Ve
 .SS "signed_cookie"
 .IX Subsection "signed_cookie"
-.Vb 4
-\&  my $value  = $c\->signed_cookie(\*(Aqfoo\*(Aq);
-\&  my @values = $c\->signed_cookie(\*(Aqfoo\*(Aq);
-\&  $c         = $c\->signed_cookie(foo => \*(Aqbar\*(Aq);
-\&  $c         = $c\->signed_cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
+.Vb 5
+\&  my $foo         = $c\->signed_cookie(\*(Aqfoo\*(Aq);
+\&  my @foo         = $c\->signed_cookie(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $c\->signed_cookie([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+\&  $c              = $c\->signed_cookie(foo => \*(Aqbar\*(Aq);
+\&  $c              = $c\->signed_cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
 .Ve
 .PP
 Access signed request cookie values and create new signed response cookies.
-Cookies failing \f(CW\*(C`HMAC\-SHA1\*(C'\fR signature verification will be automatically
+Cookies failing \s-1HMAC\-SHA1\s0 signature verification will be automatically
 discarded.
 .SS "stash"
 .IX Subsection "stash"
@@ -648,9 +664,9 @@ Non-persistent data storage and exchange for the current request, application
 wide default values can be set with \*(L"defaults\*(R" in Mojolicious. Some stash
 values have a special meaning and are reserved, the full list is currently
 \&\f(CW\*(C`action\*(C'\fR, \f(CW\*(C`app\*(C'\fR, \f(CW\*(C`cb\*(C'\fR, \f(CW\*(C`controller\*(C'\fR, \f(CW\*(C`data\*(C'\fR, \f(CW\*(C`extends\*(C'\fR, \f(CW\*(C`format\*(C'\fR,
-\&\f(CW\*(C`handler\*(C'\fR, \f(CW\*(C`json\*(C'\fR, \f(CW\*(C`layout\*(C'\fR, \f(CW\*(C`namespace\*(C'\fR, \f(CW\*(C`partial\*(C'\fR, \f(CW\*(C`path\*(C'\fR, \f(CW\*(C`status\*(C'\fR,
-\&\f(CW\*(C`template\*(C'\fR and \f(CW\*(C`text\*(C'\fR. Note that all stash values with a \f(CW\*(C`mojo.*\*(C'\fR prefix
-are reserved for internal use.
+\&\f(CW\*(C`handler\*(C'\fR, \f(CW\*(C`json\*(C'\fR, \f(CW\*(C`layout\*(C'\fR, \f(CW\*(C`namespace\*(C'\fR, \f(CW\*(C`path\*(C'\fR, \f(CW\*(C`status\*(C'\fR, \f(CW\*(C`template\*(C'\fR,
+\&\f(CW\*(C`text\*(C'\fR and \f(CW\*(C`variant\*(C'\fR. Note that all stash values with a \f(CW\*(C`mojo.*\*(C'\fR prefix are
+reserved for internal use.
 .PP
 .Vb 2
 \&  # Remove value
@@ -697,9 +713,11 @@ to inherit query parameters from the current request.
 .Ve
 .PP
 Get Mojolicious::Validator::Validation object for current request to
-validate \s-1GET/POST\s0 parameters. Parts of the request body need to be loaded into
-memory to parse \s-1POST\s0 parameters, so you have to make sure it is not
-excessively large.
+validate \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`POST\*(C'\fR parameters extracted from the query string and
+\&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body.
+Parts of the request body need to be loaded into memory to parse \f(CW\*(C`POST\*(C'\fR
+parameters, so you have to make sure it is not excessively large, there's a
+10MB limit by default.
 .PP
 .Vb 3
 \&  my $validation = $c\->validation;
@@ -737,11 +755,12 @@ invoked once all data has been written.
 .Ve
 .PP
 For Comet (long polling) you might also want to increase the inactivity
-timeout, which usually defaults to \f(CW15\fR seconds.
+timeout with \*(L"inactivity_timeout\*(R" in Mojolicious::Plugin::DefaultHelpers,
+which usually defaults to \f(CW15\fR seconds.
 .PP
 .Vb 2
 \&  # Increase inactivity timeout for connection to 300 seconds
-\&  Mojo::IOLoop\->stream($c\->tx\->connection)\->timeout(300);
+\&  $c\->inactivity_timeout(300);
 .Ve
 .SS "write_chunk"
 .IX Subsection "write_chunk"
@@ -780,8 +799,9 @@ You can call \*(L"finish\*(R" at any time to end the stream.
 .SH "AUTOLOAD"
 .IX Header "AUTOLOAD"
 In addition to the \*(L"\s-1ATTRIBUTES\s0\*(R" and \*(L"\s-1METHODS\s0\*(R" above you can also call
-helpers on Mojolicious::Controller objects. This includes all helpers from
-Mojolicious::Plugin::DefaultHelpers and Mojolicious::Plugin::TagHelpers.
+helpers provided by \*(L"app\*(R" on Mojolicious::Controller objects. This
+includes all helpers from Mojolicious::Plugin::DefaultHelpers and
+Mojolicious::Plugin::TagHelpers.
 .PP
 .Vb 2
 \&  $c\->layout(\*(Aqgreen\*(Aq);

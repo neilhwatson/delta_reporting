@@ -26,7 +26,7 @@ presentation and input.
            +------------+    +-------+    +------+
 
 A slightly modified version of the pattern moving some application logic into
-the C<controller> is the foundation of pretty much every web framework these
+the I<controller> is the foundation of pretty much every web framework these
 days, including L<Mojolicious>.
 
               +----------------+     +-------+
@@ -37,9 +37,9 @@ days, including L<Mojolicious>.
   Response <- |                | <-> | View  |
               +----------------+     +-------+
 
-The C<controller> receives a request from a user, passes incoming data to the
-C<model> and retrieves data from it, which then gets turned into an actual
-response by the C<view>. But note that this pattern is just a guideline that
+The I<controller> receives a request from a user, passes incoming data to the
+I<model> and retrieves data from it, which then gets turned into an actual
+response by the I<view>. But note that this pattern is just a guideline that
 most of the time results in cleaner more maintainable code, not a rule that
 should be followed at all costs.
 
@@ -49,8 +49,8 @@ REST is a software architectural style for distributed hypermedia systems such
 as the web. While it can be applied to many protocols it is most commonly used
 with HTTP these days. In REST terms, when you are opening a URL like
 C<http://mojolicio.us/foo> with your browser, you are basically asking the web
-server for the HTML C<representation> of the C<http://mojolicio.us/foo>
-C<resource>.
+server for the HTML I<representation> of the C<http://mojolicio.us/foo>
+I<resource>.
 
   +--------+                                +--------+
   |        | -> http://mojolicio.us/foo  -> |        |
@@ -79,8 +79,9 @@ all session state is kept client-side.
   |         | <-    200 OK        <- |            |
   +---------+                        +------------+
 
-While HTTP methods such as PUT, GET and DELETE are not directly part of REST
-they go very well with it and are commonly used to manipulate C<resources>.
+While HTTP methods such as C<PUT>, C<GET> and C<DELETE> are not directly part
+of REST they go very well with it and are commonly used to manipulate
+I<resources>.
 
 =head2 Sessions
 
@@ -112,17 +113,17 @@ ids were exchanged between browser and web server in the form of cookies.
   Set-Cookie: session=hmac-sha1(base64(json($session)))
 
 In L<Mojolicious> however we are taking this concept one step further by
-storing everything C<JSON> serialized and C<Base64> encoded in C<HMAC-SHA1>
-signed cookies, which is more compatible with the REST philosophy and reduces
+storing everything JSON serialized and Base64 encoded in HMAC-SHA1 signed
+cookies, which is more compatible with the REST philosophy and reduces
 infrastructure requirements.
 
-=head2 Test Driven Development
+=head2 Test-Driven Development
 
 TDD is a software development process where the developer starts writing
 failing test cases that define the desired functionality and then moves on to
 producing code that passes these tests. There are many advantages such as
 always having good test coverage and code being designed for testability,
-which will in turn often prevent future changes from breaking old code. Most
+which will in turn often prevent future changes from breaking old code. Much
 of L<Mojolicious> was developed using TDD.
 
 =head1 PROTOTYPE
@@ -148,7 +149,8 @@ organized CPAN distribution to maximize maintainability.
   |- lib                     # Library directory
   |  |- MyApp.pm             # Application class
   |  +- MyApp                # Application namespace
-  |     +- Example.pm        # Controller class
+  |     +- Controller        # Controller namespace
+  |        +- Example.pm     # Controller class
   |- t                       # Test directory
   |  +- basic.t              # Random test
   |- log                     # Log directory
@@ -161,7 +163,9 @@ organized CPAN distribution to maximize maintainability.
      +- example              # Template directory for "Example" controller
         +- welcome.html.ep   # Template for "welcome" action
 
-Both application skeletons can be automatically generated.
+Both application skeletons can be automatically generated with the commands
+L<Mojolicious::Command::generate::lite_app> and
+L<Mojolicious::Command::generate::app>.
 
   $ mojo generate lite_app myapp.pl
   $ mojo generate app MyApp
@@ -181,8 +185,8 @@ This will be the foundation for our login manager example application.
   use Mojolicious::Lite;
 
   get '/' => sub {
-    my $self = shift;
-    $self->render(text => 'Hello world!');
+    my $c = shift;
+    $c->render(text => 'Hello world!');
   };
 
   app->start;
@@ -202,14 +206,16 @@ In L<Mojolicious> we consider web applications simple frontends for existing
 business logic, that means L<Mojolicious> is by design entirely L<model> layer
 agnostic and you just use whatever Perl modules you like most.
 
-  $ mkdir lib
-  $ touch lib/MyUsers.pm
-  $ chmod 644 lib/MyUsers.pm
+  $ mkdir -p lib/MyApp/Model
+  $ touch lib/MyApp/Model/Users.pm
+  $ chmod 644 lib/MyApp/Model/Users.pm
 
 Our login manager will simply use a plain old Perl module abstracting away all
-logic related to matching usernames and passwords.
+logic related to matching usernames and passwords. The name
+C<MyApp::Model::Users> is an arbitrary choice, and is simply used to make the
+separation of concerns more visible.
 
-  package MyUsers;
+  package MyApp::Model::Users;
 
   use strict;
   use warnings;
@@ -235,43 +241,44 @@ logic related to matching usernames and passwords.
   1;
 
 A simple helper can be registered with the function
-L<Mojolicious::Lite/"helper"> to make our C<model> available to all actions
-and templates.
+L<Mojolicious::Lite/"helper"> to make our model available to all actions and
+templates.
 
   #!/usr/bin/env perl
   use Mojolicious::Lite;
 
   use lib 'lib';
-  use MyUsers;
+  use MyApp::Model::Users;
 
   # Helper to lazy initialize and store our model object
-  helper users => sub { state $users = MyUsers->new };
+  helper users => sub { state $users = MyApp::Model::Users->new };
 
   # /?user=sri&pass=secr3t
   any '/' => sub {
-    my $self = shift;
+    my $c = shift;
 
     # Query parameters
-    my $user = $self->param('user') || '';
-    my $pass = $self->param('pass') || '';
+    my $user = $c->param('user') || '';
+    my $pass = $c->param('pass') || '';
 
     # Check password
-    return $self->render(text => "Welcome $user.")
-      if $self->users->check($user, $pass);
+    return $c->render(text => "Welcome $user.")
+      if $c->users->check($user, $pass);
 
     # Failed
-    $self->render(text => 'Wrong username or password.');
+    $c->render(text => 'Wrong username or password.');
   };
 
   app->start;
 
 The method L<Mojolicious::Controller/"param"> is used to access query
-parameters, POST parameters, file uploads and route placeholders, all at once.
+parameters, C<POST> parameters, file uploads and route placeholders, all at
+once.
 
 =head2 Testing
 
-In L<Mojolicious> we take test driven development very serious and try to
-promote it wherever we can.
+In L<Mojolicious> we take testing very serious and try to make it a pleasant
+experience.
 
   $ mkdir t
   $ touch t/login.t
@@ -314,14 +321,15 @@ on L<Mojo::DOM>.
 
   done_testing();
 
-From now on you can always check your progress by running these unit tests
-against your application.
+Your application won't pass these tests, but from now on you can use them to
+check your progress with the command L<Mojolicious::Command::test>.
 
   $ ./myapp.pl test
   $ ./myapp.pl test t/login.t
   $ ./myapp.pl test -v t/login.t
 
-Or perform quick requests right from the command line.
+Or perform quick requests right from the command line with
+L<Mojolicious::Command::get>.
 
   $ ./myapp.pl get /
   Wrong username or password.
@@ -352,78 +360,78 @@ L<Mojolicious/"secrets">.
 
   app->secrets(['Mojolicious rocks']);
 
-This passphrase is used by the C<HMAC-SHA1> algorithm to make signed cookies
+This passphrase is used by the HMAC-SHA1 algorithm to make signed cookies
 secure and can be changed at any time to invalidate all existing sessions.
 
-  $self->session(user => 'sri');
-  my $user = $self->session('user');
+  $c->session(user => 'sri');
+  my $user = $c->session('user');
 
 By default all sessions expire after one hour, for more control you can use
 the C<expiration> session value to set an expiration date in seconds from now.
 
-  $self->session(expiration => 3600);
+  $c->session(expiration => 3600);
 
 And the whole session can be deleted by using the C<expires> session value to
 set an absolute expiration date in the past.
 
-  $self->session(expires => 1);
+  $c->session(expires => 1);
 
 For data that should only be visible on the next request, like a confirmation
 message after a 302 redirect, you can use the flash, accessible through the
 method L<Mojolicious::Controller/"flash">.
 
-  $self->flash(message => 'Everything is fine.');
-  $self->redirect_to('goodbye');
+  $c->flash(message => 'Everything is fine.');
+  $c->redirect_to('goodbye');
 
 Just remember that all session data gets serialized with L<Mojo::JSON> and
-stored in C<HMAC-SHA1> signed cookies, which usually have a 4096 byte limit,
-depending on browser.
+stored in HMAC-SHA1 signed cookies, which usually have a C<4096> byte (4KB)
+limit, depending on browser.
 
 =head2 Final prototype
 
-A final C<myapp.pl> prototype passing all of the unit tests above could look
-like this.
+A final C<myapp.pl> prototype passing all of the tests above could look like
+this.
 
   #!/usr/bin/env perl
   use Mojolicious::Lite;
 
   use lib 'lib';
-  use MyUsers;
+  use MyApp::Model::Users;
 
   # Make signed cookies secure
   app->secrets(['Mojolicious rocks']);
 
-  helper users => sub { state $users = MyUsers->new };
+  helper users => sub { state $users = MyApp::Model::Users->new };
 
   # Main login action
   any '/' => sub {
-    my $self = shift;
+    my $c = shift;
 
     # Query or POST parameters
-    my $user = $self->param('user') || '';
-    my $pass = $self->param('pass') || '';
+    my $user = $c->param('user') || '';
+    my $pass = $c->param('pass') || '';
 
     # Check password and render "index.html.ep" if necessary
-    return $self->render unless $self->users->check($user, $pass);
+    return $c->render unless $c->users->check($user, $pass);
 
     # Store username in session
-    $self->session(user => $user);
+    $c->session(user => $user);
 
     # Store a friendly message for the next page in flash
-    $self->flash(message => 'Thanks for logging in.');
+    $c->flash(message => 'Thanks for logging in.');
 
     # Redirect to protected page with a 302 response
-    $self->redirect_to('protected');
+    $c->redirect_to('protected');
   } => 'index';
 
   # Make sure user is logged in for actions in this group
   group {
     under sub {
-      my $self = shift;
+      my $c = shift;
 
       # Redirect to main page with a 302 response if user is not logged in
-      return 1 if $self->session('user');
-      $self->redirect_to('index');
+      return 1 if $c->session('user');
+      $c->redirect_to('index');
       return undef;
     };
 
@@ -433,13 +441,13 @@ like this.
 
   # Logout action
   get '/logout' => sub {
-    my $self = shift;
+    my $c = shift;
 
     # Expire and in turn clear session automatically
-    $self->session(expires => 1);
+    $c->session(expires => 1);
 
     # Redirect to main page with a 302 response
-    $self->redirect_to('index');
+    $c->redirect_to('index');
   };
 
   app->start;
@@ -487,7 +495,7 @@ possibilities.
 
 All templates and static files inlined in the C<DATA> section can be
 automatically turned into separate files in the C<templates> and C<public>
-directories.
+directories with the command L<Mojolicious::Command::inflate>.
 
   $ ./myapp.pl inflate
 
@@ -509,40 +517,40 @@ actual action code needs to be changed.
   package MyApp;
   use Mojo::Base 'Mojolicious';
 
-  use MyUsers;
+  use MyApp::Model::Users;
 
   sub startup {
     my $self = shift;
 
     $self->secrets(['Mojolicious rocks']);
-    $self->helper(users => sub { state $users = MyUsers->new });
+    $self->helper(users => sub { state $users = MyApp::Model::Users->new });
 
     my $r = $self->routes;
 
     $r->any('/' => sub {
-      my $self = shift;
+      my $c = shift;
 
-      my $user = $self->param('user') || '';
-      my $pass = $self->param('pass') || '';
-      return $self->render unless $self->users->check($user, $pass);
+      my $user = $c->param('user') || '';
+      my $pass = $c->param('pass') || '';
+      return $c->render unless $c->users->check($user, $pass);
 
-      $self->session(user => $user);
-      $self->flash(message => 'Thanks for logging in.');
-      $self->redirect_to('protected');
+      $c->session(user => $user);
+      $c->flash(message => 'Thanks for logging in.');
+      $c->redirect_to('protected');
     } => 'index');
 
     my $logged_in = $r->under(sub {
-      my $self = shift;
-      return 1 if $self->session('user');
-      $self->redirect_to('index');
+      my $c = shift;
+      return 1 if $c->session('user');
+      $c->redirect_to('index');
       return undef;
     });
     $logged_in->get('/protected');
 
     $r->get('/logout' => sub {
-      my $self = shift;
-      $self->session(expires => 1);
-      $self->redirect_to('index');
+      my $c = shift;
+      $c->session(expires => 1);
+      $c->redirect_to('index');
     });
   }
 
@@ -555,7 +563,7 @@ applications can use nested routes they have no need for C<group> blocks.
 =head2 Simplified application script
 
 C<myapp.pl> itself can now be turned into a simplified application script to
-allow running unit tests again.
+allow running tests again.
 
   #!/usr/bin/env perl
 
@@ -573,13 +581,14 @@ allow running unit tests again.
 Hybrid routes are a nice intermediate step, but to maximize maintainability it
 makes sense to split our action code from its routing information.
 
-  $ mkdir lib/MyApp
-  $ touch lib/MyApp/Login.pm
-  $ chmod 644 lib/MyApp/Login.pm
+  $ mkdir lib/MyApp/Controller
+  $ touch lib/MyApp/Controller/Login.pm
+  $ chmod 644 lib/MyApp/Controller/Login.pm
 
-Once again the actual action code does not change at all.
+Once again the actual action code does not need to change, we just rename
+C<$c> to C<$self> since the controller is now the invocant.
 
-  package MyApp::Login;
+  package MyApp::Controller::Login;
   use Mojo::Base 'Mojolicious::Controller';
 
   sub index {
@@ -620,13 +629,13 @@ information.
   package MyApp;
   use Mojo::Base 'Mojolicious';
 
-  use MyUsers;
+  use MyApp::Model::Users;
 
   sub startup {
     my $self = shift;
 
     $self->secrets(['Mojolicious rocks']);
-    $self->helper(users => sub { state $users = MyUsers->new });
+    $self->helper(users => sub { state $users = MyApp::Model::Users->new });
 
     my $r = $self->routes;
     $r->any('/')->to('login#index')->name('index');
@@ -642,8 +651,8 @@ most.
 
 =head2 Templates
 
-Templates are usually bound to controllers, so they need to be moved into the
-appropriate directories.
+Templates are our views, and usually bound to controllers, so they need to be
+moved into the appropriate directories.
 
   $ mkdir templates/login
   $ mv templates/index.html.ep templates/login/index.html.ep
@@ -703,8 +712,8 @@ C<t/login.t> can be simplified.
 
   done_testing();
 
-Test driven development takes a little getting used to, but is very well worth
-it!
+Test-driven development takes a little getting used to, but can be a very
+powerful tool.
 
 =head1 MORE
 

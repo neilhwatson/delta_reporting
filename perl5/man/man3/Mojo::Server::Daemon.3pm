@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Server::Daemon 3"
-.TH Mojo::Server::Daemon 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Server::Daemon 3 "2014-07-31" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -162,11 +162,12 @@ Mojo::Server::Daemon is a full featured, highly portable non-blocking I/O
 connection pooling, timeout, cookie, multipart and multiple event loop
 support.
 .PP
-For better scalability (epoll, kqueue) and to provide IPv6 as well as \s-1TLS\s0
-support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+) and
-IO::Socket::SSL (1.75+) will be used automatically by Mojo::IOLoop if
-they are installed. Individual features can also be disabled with the
-\&\s-1MOJO_NO_IPV6\s0 and \s-1MOJO_NO_TLS\s0 environment variables.
+For better scalability (epoll, kqueue) and to provide IPv6, \s-1SOCKS5\s0 as well as
+\&\s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+),
+IO::Socket::Socks (0.64+) and IO::Socket::SSL (1.84+) will be used
+automatically if they are installed. Individual features can also be disabled
+with the \f(CW\*(C`MOJO_NO_IPV6\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and \f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment
+variables.
 .PP
 See \*(L"\s-1DEPLOYMENT\s0\*(R" in Mojolicious::Guides::Cookbook for more.
 .SH "EVENTS"
@@ -192,14 +193,6 @@ Active acceptors.
 .Ve
 .PP
 Listen backlog size, defaults to \f(CW\*(C`SOMAXCONN\*(C'\fR.
-.SS "group"
-.IX Subsection "group"
-.Vb 2
-\&  my $group = $daemon\->group;
-\&  $daemon   = $daemon\->group(\*(Aqusers\*(Aq);
-.Ve
-.PP
-Group for server process.
 .SS "inactivity_timeout"
 .IX Subsection "inactivity_timeout"
 .Vb 2
@@ -208,7 +201,7 @@ Group for server process.
 .Ve
 .PP
 Maximum amount of time in seconds a connection can be inactive before getting
-closed, defaults to the value of the \s-1MOJO_INACTIVITY_TIMEOUT\s0 environment
+closed, defaults to the value of the \f(CW\*(C`MOJO_INACTIVITY_TIMEOUT\*(C'\fR environment
 variable or \f(CW15\fR. Setting the value to \f(CW0\fR will allow connections to be
 inactive indefinitely.
 .SS "ioloop"
@@ -228,7 +221,7 @@ Mojo::IOLoop singleton.
 .Ve
 .PP
 List of one or more locations to listen on, defaults to the value of the
-\&\s-1MOJO_LISTEN\s0 environment variable or \f(CW\*(C`http://*:3000\*(C'\fR.
+\&\f(CW\*(C`MOJO_LISTEN\*(C'\fR environment variable or \f(CW\*(C`http://*:3000\*(C'\fR.
 .PP
 .Vb 2
 \&  # Listen on all IPv4 interfaces
@@ -278,8 +271,7 @@ Path to the \s-1TLS\s0 cert file, defaults to a built-in test certificate.
 \&  ciphers=AES128\-GCM\-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH
 .Ve
 .Sp
-Cipher specification string, defaults to
-\&\f(CW\*(C`ECDHE\-RSA\-AES128\-SHA256:AES128\-GCM\-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH\*(C'\fR.
+Cipher specification string.
 .IP "key" 2
 .IX Item "key"
 .Vb 1
@@ -309,7 +301,8 @@ option.
 \&  $daemon = $daemon\->max_clients(1000);
 .Ve
 .PP
-Maximum number of concurrent client connections, defaults to \f(CW1000\fR.
+Maximum number of concurrent client connections, passed along to
+\&\*(L"max_connections\*(R" in Mojo::IOLoop.
 .SS "max_requests"
 .IX Subsection "max_requests"
 .Vb 2
@@ -326,14 +319,6 @@ Maximum number of keep-alive requests per connection, defaults to \f(CW25\fR.
 .Ve
 .PP
 Disable console messages.
-.SS "user"
-.IX Subsection "user"
-.Vb 2
-\&  my $user = $daemon\->user;
-\&  $daemon  = $daemon\->user(\*(Aqweb\*(Aq);
-.Ve
-.PP
-User for the server process.
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Server::Daemon inherits all methods from Mojo::Server and
@@ -345,13 +330,6 @@ implements the following new ones.
 .Ve
 .PP
 Run server.
-.SS "setuidgid"
-.IX Subsection "setuidgid"
-.Vb 1
-\&  $daemon = $daemon\->setuidgid;
-.Ve
-.PP
-Set user and group for process.
 .SS "start"
 .IX Subsection "start"
 .Vb 1
@@ -359,6 +337,12 @@ Set user and group for process.
 .Ve
 .PP
 Start accepting connections.
+.PP
+.Vb 3
+\&  # Listen on random port
+\&  my $id   = $daemon\->listen([\*(Aqhttp://127.0.0.1\*(Aq])\->start\->acceptors\->[0];
+\&  my $port = $daemon\->ioloop\->acceptor($id)\->handle\->sockport;
+.Ve
 .SS "stop"
 .IX Subsection "stop"
 .Vb 1
@@ -368,7 +352,7 @@ Start accepting connections.
 Stop accepting connections.
 .SH "DEBUGGING"
 .IX Header "DEBUGGING"
-You can set the \s-1MOJO_DAEMON_DEBUG\s0 environment variable to get some advanced
+You can set the \f(CW\*(C`MOJO_DAEMON_DEBUG\*(C'\fR environment variable to get some advanced
 diagnostics information printed to \f(CW\*(C`STDERR\*(C'\fR.
 .PP
 .Vb 1

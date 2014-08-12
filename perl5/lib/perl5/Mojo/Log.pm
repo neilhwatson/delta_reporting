@@ -5,6 +5,7 @@ use Carp 'croak';
 use Fcntl ':flock';
 use Mojo::Util 'encode';
 
+has format => sub { \&_format };
 has handle => sub {
 
   # File
@@ -25,17 +26,19 @@ has 'path';
 # Supported log level
 my $LEVEL = {debug => 1, info => 2, warn => 3, error => 4, fatal => 5};
 
+sub append {
+  my ($self, $msg) = @_;
+
+  return unless my $handle = $self->handle;
+  flock $handle, LOCK_EX;
+  $handle->print(encode('UTF-8', $msg)) or croak "Can't write to log: $!";
+  flock $handle, LOCK_UN;
+}
+
 sub debug { shift->log(debug => @_) }
 sub error { shift->log(error => @_) }
 sub fatal { shift->log(fatal => @_) }
-
-sub format {
-  my ($self, $level, @lines) = @_;
-  return encode 'UTF-8',
-    '[' . localtime(time) . "] [$level] " . join("\n", @lines, '');
-}
-
-sub info { shift->log(info => @_) }
+sub info  { shift->log(info  => @_) }
 
 sub is_debug { shift->is_level('debug') }
 sub is_error { shift->is_level('error') }
@@ -43,13 +46,12 @@ sub is_fatal { shift->is_level('fatal') }
 sub is_info  { shift->is_level('info') }
 
 sub is_level {
-  my ($self, $level) = @_;
-  return $LEVEL->{lc $level} >= $LEVEL->{$ENV{MOJO_LOG_LEVEL} || $self->level};
+  $LEVEL->{lc pop} >= $LEVEL->{$ENV{MOJO_LOG_LEVEL} || shift->level};
 }
 
 sub is_warn { shift->is_level('warn') }
 
-sub log { shift->emit('message', lc(shift), @_) }
+sub log { shift->emit('message', lc shift, @_) }
 
 sub new {
   my $self = shift->SUPER::new(@_);
@@ -59,19 +61,21 @@ sub new {
 
 sub warn { shift->log(warn => @_) }
 
+sub _format {
+  '[' . localtime(shift) . '] [' . shift() . '] ' . join("\n", @_, '');
+}
+
 sub _message {
   my ($self, $level) = (shift, shift);
 
-  return unless $self->is_level($level) && (my $handle = $self->handle);
+  return unless $self->is_level($level);
 
   my $max     = $self->max_history_size;
   my $history = $self->history;
-  push @$history, [time, $level, @_];
+  push @$history, my $msg = [time, $level, @_];
   shift @$history while @$history > $max;
 
-  flock $handle, LOCK_EX;
-  $handle->print($self->format($level, @_)) or croak "Can't write to log: $!";
-  flock $handle, LOCK_UN;
+  $self->append($self->format->(@$msg));
 }
 
 1;
@@ -127,6 +131,18 @@ Emitted when a new message gets logged.
 
 L<Mojo::Log> implements the following attributes.
 
+=head2 format
+
+  my $cb = $log->format;
+  $log   = $log->format(sub {...});
+
+A callback for formatting log messages.
+
+  $log->format(sub {
+    my ($time, $level, @lines) = @_;
+    return "[Thu May 15 17:47:04 2014] [info] I ♥ Mojolicious.\n";
+  });
+
 =head2 handle
 
   my $handle = $log->handle;
@@ -149,7 +165,7 @@ The last few logged messages.
 
 Active log level, defaults to C<debug>. Available log levels are C<debug>,
 C<info>, C<warn>, C<error> and C<fatal>, in that order. Note that the
-MOJO_LOG_LEVEL environment variable can override this value.
+C<MOJO_LOG_LEVEL> environment variable can override this value.
 
 =head2 max_history_size
 
@@ -171,6 +187,12 @@ Log file path used by L</"handle">.
 L<Mojo::Log> inherits all methods from L<Mojo::EventEmitter> and implements
 the following new ones.
 
+=head2 append
+
+  $log->append("[Thu May 15 17:47:04 2014] [info] I ♥ Mojolicious.\n");
+
+Append message to L</"handle">.
+
 =head2 debug
 
   $log = $log->debug('You screwed up, but that is ok.');
@@ -191,13 +213,6 @@ Log error message.
   $log = $log->fatal('Bye', 'bye!');
 
 Log fatal message.
-
-=head2 format
-
-  my $msg = $log->format(debug => 'Hi there!');
-  my $msg = $log->format(debug => 'Hi', 'there!');
-
-Format log message.
 
 =head2 info
 

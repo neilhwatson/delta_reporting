@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Log 3"
-.TH Mojo::Log 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Log 3 "2014-07-26" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -177,6 +177,21 @@ Emitted when a new message gets logged.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojo::Log implements the following attributes.
+.SS "format"
+.IX Subsection "format"
+.Vb 2
+\&  my $cb = $log\->format;
+\&  $log   = $log\->format(sub {...});
+.Ve
+.PP
+A callback for formatting log messages.
+.PP
+.Vb 4
+\&  $log\->format(sub {
+\&    my ($time, $level, @lines) = @_;
+\&    return "[Thu May 15 17:47:04 2014] [info] I X Mojolicious.\en";
+\&  });
+.Ve
 .SS "handle"
 .IX Subsection "handle"
 .Vb 2
@@ -203,7 +218,7 @@ The last few logged messages.
 .PP
 Active log level, defaults to \f(CW\*(C`debug\*(C'\fR. Available log levels are \f(CW\*(C`debug\*(C'\fR,
 \&\f(CW\*(C`info\*(C'\fR, \f(CW\*(C`warn\*(C'\fR, \f(CW\*(C`error\*(C'\fR and \f(CW\*(C`fatal\*(C'\fR, in that order. Note that the
-\&\s-1MOJO_LOG_LEVEL\s0 environment variable can override this value.
+\&\f(CW\*(C`MOJO_LOG_LEVEL\*(C'\fR environment variable can override this value.
 .SS "max_history_size"
 .IX Subsection "max_history_size"
 .Vb 2
@@ -225,6 +240,13 @@ Log file path used by \*(L"handle\*(R".
 .IX Header "METHODS"
 Mojo::Log inherits all methods from Mojo::EventEmitter and implements
 the following new ones.
+.SS "append"
+.IX Subsection "append"
+.Vb 1
+\&  $log\->append("[Thu May 15 17:47:04 2014] [info] I X Mojolicious.\en");
+.Ve
+.PP
+Append message to \*(L"handle\*(R".
 .SS "debug"
 .IX Subsection "debug"
 .Vb 2
@@ -249,14 +271,6 @@ Log error message.
 .Ve
 .PP
 Log fatal message.
-.SS "format"
-.IX Subsection "format"
-.Vb 2
-\&  my $msg = $log\->format(debug => \*(AqHi there!\*(Aq);
-\&  my $msg = $log\->format(debug => \*(AqHi\*(Aq, \*(Aqthere!\*(Aq);
-.Ve
-.PP
-Format log message.
 .SS "info"
 .IX Subsection "info"
 .Vb 2

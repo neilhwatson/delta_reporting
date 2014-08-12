@@ -1,7 +1,7 @@
 package Mojo::Reactor::Poll;
 use Mojo::Base 'Mojo::Reactor';
 
-use IO::Poll qw(POLLERR POLLHUP POLLIN POLLOUT);
+use IO::Poll qw(POLLERR POLLHUP POLLIN POLLOUT POLLPRI);
 use List::Util 'min';
 use Mojo::Util qw(md5_sum steady_time);
 use Time::HiRes 'usleep';
@@ -42,10 +42,14 @@ sub one_tick {
     # I/O
     if (keys %{$self->{io}}) {
       $poll->poll($timeout);
-      ++$i and $self->_sandbox('Read', $self->{io}{fileno $_}{cb}, 0)
-        for $poll->handles(POLLIN | POLLHUP | POLLERR);
-      ++$i and $self->_sandbox('Write', $self->{io}{fileno $_}{cb}, 1)
-        for $poll->handles(POLLOUT);
+      for my $handle ($poll->handles(POLLIN | POLLPRI | POLLHUP | POLLERR)) {
+        next unless my $io = $self->{io}{fileno $handle};
+        ++$i and $self->_sandbox('Read', $io->{cb}, 0);
+      }
+      for my $handle ($poll->handles(POLLOUT)) {
+        next unless my $io = $self->{io}{fileno $handle};
+        ++$i and $self->_sandbox('Write', $io->{cb}, 1);
+      }
     }
 
     # Wait for timeout if poll can't be used
@@ -80,6 +84,8 @@ sub remove {
   return !!delete $self->{io}{fileno $remove};
 }
 
+sub reset { delete @{shift()}{qw(io poll timers)} }
+
 sub start {
   my $self = shift;
   $self->{running}++;
@@ -95,8 +101,8 @@ sub watch {
 
   my $poll = $self->_poll;
   $poll->remove($handle);
-  if ($read && $write) { $poll->mask($handle, POLLIN | POLLOUT) }
-  elsif ($read)  { $poll->mask($handle, POLLIN) }
+  if ($read && $write) { $poll->mask($handle, POLLIN | POLLPRI | POLLOUT) }
+  elsif ($read)  { $poll->mask($handle, POLLIN | POLLPRI) }
   elsif ($write) { $poll->mask($handle, POLLOUT) }
 
   return $self;
@@ -128,7 +134,7 @@ sub _timer {
 
 =head1 NAME
 
-Mojo::Reactor::Poll - Low level event reactor with poll support
+Mojo::Reactor::Poll - Low-level event reactor with poll support
 
 =head1 SYNOPSIS
 
@@ -156,7 +162,7 @@ Mojo::Reactor::Poll - Low level event reactor with poll support
 
 =head1 DESCRIPTION
 
-L<Mojo::Reactor::Poll> is a low level event reactor based on L<IO::Poll>.
+L<Mojo::Reactor::Poll> is a low-level event reactor based on L<IO::Poll>.
 
 =head1 EVENTS
 
@@ -206,6 +212,12 @@ amount of time in seconds.
   my $bool = $reactor->remove($id);
 
 Remove handle or timer.
+
+=head2 reset
+
+  $reactor->reset;
+
+Remove all handles and timers.
 
 =head2 start
 

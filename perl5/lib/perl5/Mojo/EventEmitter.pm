@@ -5,6 +5,8 @@ use Scalar::Util qw(blessed weaken);
 
 use constant DEBUG => $ENV{MOJO_EVENTEMITTER_DEBUG} || 0;
 
+sub catch { $_[0]->on(error => $_[1]) and return $_[0] }
+
 sub emit {
   my ($self, $name) = (shift, shift);
 
@@ -135,6 +137,15 @@ Emitted for event errors, fatal if unhandled.
 L<Mojo::EventEmitter> inherits all methods from L<Mojo::Base> and
 implements the following new ones.
 
+=head2 catch
+
+  $e = $e->catch(sub {...});
+
+Subscribe to L</"error"> event.
+
+  # Longer version
+  $e->on(error => sub {...});
+
 =head2 emit
 
   $e = $e->emit('foo');
@@ -195,7 +206,7 @@ Unsubscribe from event.
 
 =head1 DEBUGGING
 
-You can set the MOJO_EVENTEMITTER_DEBUG environment variable to get some
+You can set the C<MOJO_EVENTEMITTER_DEBUG> environment variable to get some
 advanced diagnostics information printed to C<STDERR>.
 
   MOJO_EVENTEMITTER_DEBUG=1

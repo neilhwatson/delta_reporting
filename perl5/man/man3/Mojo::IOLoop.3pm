@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::IOLoop 3"
-.TH Mojo::IOLoop 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::IOLoop 3 "2014-08-06" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -181,17 +181,31 @@ Mojo::IOLoop is a very minimalistic event loop based on Mojo::Reactor,
 it has been reduced to the absolute minimal feature set required to build
 solid and scalable non-blocking \s-1TCP\s0 clients and servers.
 .PP
+Depending on operating system, the default per-process and system-wide file
+descriptor limits are often very low and need to be tuned for better
+scalability. The \f(CW\*(C`LIBEV_FLAGS\*(C'\fR environment variable should also be used to
+select the best possible \s-1EV\s0 backend, which usually defaults to the not very
+scalable \f(CW\*(C`select\*(C'\fR.
+.PP
+.Vb 4
+\&  LIBEV_FLAGS=1   # select
+\&  LIBEV_FLAGS=2   # poll
+\&  LIBEV_FLAGS=4   # epoll (Linux)
+\&  LIBEV_FLAGS=8   # kqueue (*BSD, OS X)
+.Ve
+.PP
 The event loop will be resilient to time jumps if a monotonic clock is
 available through Time::HiRes. A \s-1TLS\s0 certificate and key are also built
 right in, to make writing test servers as easy as possible. Also note that for
 convenience the \f(CW\*(C`PIPE\*(C'\fR signal will be set to \f(CW\*(C`IGNORE\*(C'\fR when Mojo::IOLoop
 is loaded.
 .PP
-For better scalability (epoll, kqueue) and to provide IPv6 as well as \s-1TLS\s0
-support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+) and
-IO::Socket::SSL (1.75+) will be used automatically if they are installed.
-Individual features can also be disabled with the \s-1MOJO_NO_IPV6\s0 and \s-1MOJO_NO_TLS\s0
-environment variables.
+For better scalability (epoll, kqueue) and to provide IPv6, \s-1SOCKS5\s0 as well as
+\&\s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+),
+IO::Socket::Socks (0.64+) and IO::Socket::SSL (1.84+) will be used
+automatically if they are installed. Individual features can also be disabled
+with the \f(CW\*(C`MOJO_NO_IPV6\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and \f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment
+variables.
 .PP
 See \*(L"REAL-TIME \s-1WEB\s0\*(R" in Mojolicious::Guides::Cookbook for more.
 .SH "ATTRIBUTES"
@@ -220,7 +234,7 @@ this callback are not captured.
 .PP
 .Vb 2
 \&  $loop\->lock(sub {
-\&    my ($loop, $blocking) = @_;
+\&    my $blocking = shift;
 \&
 \&    # Got the accept mutex, start accepting new connections
 \&    return 1;
@@ -265,7 +279,7 @@ Number of connections to accept at once, defaults to \f(CW50\fR.
 \&  $loop       = $loop\->reactor(Mojo::Reactor\->new);
 .Ve
 .PP
-Low level event reactor, usually a Mojo::Reactor::Poll or
+Low-level event reactor, usually a Mojo::Reactor::Poll or
 Mojo::Reactor::EV object with a default subscriber to the event
 \&\*(L"error\*(R" in Mojo::Reactor.
 .PP
@@ -330,10 +344,9 @@ Open \s-1TCP\s0 connection with Mojo::IOLoop::Client, takes the same arguments a
 .Ve
 .PP
 Build Mojo::IOLoop::Delay object to manage callbacks and control the flow
-of events, which can help you avoid deep nested closures that often result
-from continuation-passing style. A single callback will be treated as a
-subscriber to the event \*(L"finish\*(R" in Mojo::IOLoop::Delay, and multiple ones as
-a chain for \*(L"steps\*(R" in Mojo::IOLoop::Delay.
+of events for this event loop, which can help you avoid deep nested closures
+and memory leaks that often result from continuation-passing style. Callbacks
+will be passed along to \*(L"steps\*(R" in Mojo::IOLoop::Delay.
 .PP
 .Vb 10
 \&  # Synchronize multiple events
@@ -345,10 +358,10 @@ a chain for \*(L"steps\*(R" in Mojo::IOLoop::Delay.
 \&      $end\->();
 \&    });
 \&  }
-\&  $delay\->wait unless Mojo::IOLoop\->is_running;
+\&  $delay\->wait;
 \&
 \&  # Sequentialize multiple events
-\&  my $delay = Mojo::IOLoop\->delay(
+\&  Mojo::IOLoop\->delay(
 \&
 \&    # First step (simple timer)
 \&    sub {
@@ -367,17 +380,23 @@ a chain for \*(L"steps\*(R" in Mojo::IOLoop::Delay.
 \&
 \&    # Third step (the end)
 \&    sub { say \*(AqAnd done after 5 seconds total.\*(Aq }
-\&  );
-\&  $delay\->wait unless Mojo::IOLoop\->is_running;
+\&  )\->wait;
+\&
+\&  # Handle exceptions in all steps
+\&  Mojo::IOLoop\->delay(
+\&    sub {
+\&      my $delay = shift;
+\&      die \*(AqIntentional error\*(Aq;
+\&    },
+\&    sub {
+\&      my ($delay, @args) = @_;
+\&      say \*(AqNever actually reached.\*(Aq;
+\&    }
+\&  )\->catch(sub {
+\&    my ($delay, $err) = @_;
+\&    say "Something went wrong: $err";
+\&  })\->wait;
 .Ve
-.SS "generate_port"
-.IX Subsection "generate_port"
-.Vb 2
-\&  my $port = Mojo::IOLoop\->generate_port;
-\&  my $port = $loop\->generate_port;
-.Ve
-.PP
-Find a free \s-1TCP\s0 port, this is a utility function primarily used for tests.
 .SS "is_running"
 .IX Subsection "is_running"
 .Vb 2
@@ -450,6 +469,14 @@ amount of time in seconds.
 .PP
 Remove anything with an id, connections will be dropped gracefully by allowing
 them to finish writing all data in their write buffers.
+.SS "reset"
+.IX Subsection "reset"
+.Vb 2
+\&  Mojo::IOLoop\->reset;
+\&  $loop\->reset;
+.Ve
+.PP
+Remove everything and stop the event loop.
 .SS "server"
 .IX Subsection "server"
 .Vb 3
@@ -467,6 +494,13 @@ as \*(L"listen\*(R" in Mojo::IOLoop::Server.
 \&    my ($loop, $stream, $id) = @_;
 \&    ...
 \&  });
+\&
+\&  # Listen on random port
+\&  my $id = Mojo::IOLoop\->server({address => \*(Aq127.0.0.1\*(Aq} => sub {
+\&    my ($loop, $stream, $id) = @_;
+\&    ...
+\&  });
+\&  my $port = Mojo::IOLoop\->acceptor($id)\->handle\->sockport;
 .Ve
 .SS "singleton"
 .IX Subsection "singleton"
@@ -543,7 +577,7 @@ seconds.
 .Ve
 .SH "DEBUGGING"
 .IX Header "DEBUGGING"
-You can set the \s-1MOJO_IOLOOP_DEBUG\s0 environment variable to get some advanced
+You can set the \f(CW\*(C`MOJO_IOLOOP_DEBUG\*(C'\fR environment variable to get some advanced
 diagnostics information printed to \f(CW\*(C`STDERR\*(C'\fR.
 .PP
 .Vb 1

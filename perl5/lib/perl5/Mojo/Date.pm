@@ -16,14 +16,14 @@ sub new { @_ > 1 ? shift->SUPER::new->parse(@_) : shift->SUPER::new }
 sub parse {
   my ($self, $date) = @_;
 
-  # epoch (784111777)
-  return $self->epoch($date) if $date =~ /^\d+$/;
-
   # RFC 822/1123 (Sun, 06 Nov 1994 08:49:37 GMT)
   my ($day, $month, $year, $h, $m, $s);
   if ($date =~ /^\w+\,\s+(\d+)\s+(\w+)\s+(\d+)\s+(\d+):(\d+):(\d+)\s+GMT$/) {
     ($day, $month, $year, $h, $m, $s) = ($1, $MONTHS{$2}, $3, $4, $5, $6);
   }
+
+  # epoch (784111777)
+  elsif ($date =~ /^\d+$/) { return $self->epoch($date) }
 
   # RFC 850/1036 (Sunday, 06-Nov-94 08:49:37 GMT)
   elsif ($date =~ /^\w+\,\s+(\d+)-(\w+)-(\d+)\s+(\d+):(\d+):(\d+)\s+GMT$/) {
@@ -46,7 +46,7 @@ sub parse {
 sub to_string {
   my $self = shift;
 
-  # RFC 2616 (Sun, 06 Nov 1994 08:49:37 GMT)
+  # RFC 7231 (Sun, 06 Nov 1994 08:49:37 GMT)
   my ($s, $m, $h, $mday, $month, $year, $wday) = gmtime($self->epoch // time);
   return sprintf '%s, %02d %s %04d %02d:%02d:%02d GMT', $DAYS[$wday], $mday,
     $MONTHS[$month], $year + 1900, $h, $m, $s;
@@ -75,7 +75,8 @@ Mojo::Date - HTTP date
 =head1 DESCRIPTION
 
 L<Mojo::Date> implements HTTP date and time functions based on
-L<RFC 2616|http://tools.ietf.org/html/rfc2616>.
+L<RFC 7230|http://tools.ietf.org/html/rfc7230> and
+L<RFC 7231|http://tools.ietf.org/html/rfc7231>.
 
   Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
   Sunday, 06-Nov-94 08:49:37 GMT ; RFC 850, obsoleted by RFC 1036

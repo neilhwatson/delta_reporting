@@ -8,13 +8,13 @@ use Mojo::URL;
 has env => sub { {} };
 has method => 'GET';
 has url => sub { Mojo::URL->new };
+has 'reverse_proxy';
 
 my $START_LINE_RE = qr/
   ^
-  ([a-zA-Z]+)                                            # Method
-  \s+
-  ([0-9a-zA-Z!#\$\%&'()*+,\-.\/:;=?\@[\\\]^_`\{|\}~]+)   # URL
-  (?:\s+HTTP\/(\d\.\d))?                                 # Version
+  ([a-zA-Z]+)                                               # Method
+  \s+([0-9a-zA-Z!#\$\%&'()*+,\-.\/:;=?\@[\\\]^_`\{|\}~]+)   # URL
+  \s+HTTP\/(\d\.\d)                                         # Version
   $
 /x;
 
@@ -60,7 +60,7 @@ sub extract_start_line {
   return undef unless $$bufref =~ s/^\s*(.*?)\x0d?\x0a//;
 
   # We have a (hopefully) full request line
-  $self->error('Bad request start line', 400) and return undef
+  return !$self->error({message => 'Bad request start line', advice => 400})
     unless $1 =~ $START_LINE_RE;
   my $url = $self->method($1)->version($3)->url;
   return !!($1 eq 'CONNECT' ? $url->authority($2) : $url->parse($2));
@@ -106,9 +106,8 @@ sub get_start_line_chunk {
     }
 
     # Proxy
-    elsif ($self->proxy) {
-      $path = $url->clone->userinfo(undef)
-        unless $self->is_handshake || $url->protocol eq 'https';
+    elsif ($self->proxy && $url->protocol ne 'https') {
+      $path = $url->clone->userinfo(undef) unless $self->is_handshake;
     }
 
     $self->{start_buffer} = "$method $path HTTP/@{[$self->version]}\x0d\x0a";
@@ -168,9 +167,10 @@ sub parse {
   my $proxy_auth = _parse_basic_auth($headers->proxy_authorization);
   $self->proxy(Mojo::URL->new->userinfo($proxy_auth)) if $proxy_auth;
 
-  # "X-Forwarded-HTTPS"
+  # "X-Forwarded-Proto"
   $base->scheme('https')
-    if $ENV{MOJO_REVERSE_PROXY} && $headers->header('X-Forwarded-HTTPS');
+    if $self->reverse_proxy
+    && ($headers->header('X-Forwarded-Proto') // '') eq 'https';
 
   return $self;
 }
@@ -196,7 +196,8 @@ sub _parse_env {
   my $headers = $self->headers;
   my $url     = $self->url;
   my $base    = $url->base;
-  while (my ($name, $value) = each %$env) {
+  for my $name (keys %$env) {
+    my $value = $env->{$name};
     next unless $name =~ s/^HTTP_//i;
     $name =~ y/_/-/;
     $headers->header($name => $value);
@@ -282,7 +283,9 @@ Mojo::Message::Request - HTTP request
 =head1 DESCRIPTION
 
 L<Mojo::Message::Request> is a container for HTTP requests based on
-L<RFC 2616|http://tools.ietf.org/html/rfc2616> and
+L<RFC 7230|http://tools.ietf.org/html/rfc7230>,
+L<RFC 7231|http://tools.ietf.org/html/rfc7235>,
+L<RFC 7231|http://tools.ietf.org/html/rfc7235> and
 L<RFC 2817|http://tools.ietf.org/html/rfc2817>.
 
 =head1 EVENTS
@@ -325,6 +328,13 @@ HTTP request URL, defaults to a L<Mojo::URL> object.
   say $req->url->to_abs->userinfo;
   say $req->url->to_abs->host;
   say $req->url->to_abs->path;
+
+=head2 reverse_proxy
+
+  my $bool = $req->reverse_proxy;
+  $req     = $req->reverse_proxy($bool);
+
+Request has been performed through a reverse proxy.
 
 =head1 METHODS
 
@@ -383,24 +393,29 @@ Check C<X-Requested-With> header for C<XMLHttpRequest> value.
 
 =head2 param
 
-  my @names = $req->param;
-  my $foo   = $req->param('foo');
-  my @foo   = $req->param('foo');
+  my @names       = $req->param;
+  my $foo         = $req->param('foo');
+  my @foo         = $req->param('foo');
+  my ($foo, $bar) = $req->param(['foo', 'bar']);
 
-Access GET and POST parameters. Note that this method caches all data, so it
-should not be called before the entire request body has been received. Parts
-of the request body need to be loaded into memory to parse POST parameters, so
-you have to make sure it is not excessively large.
+Access C<GET> and C<POST> parameters extracted from the query string and
+C<application/x-www-form-urlencoded> or C<multipart/form-data> message body.
+Note that this method caches all data, so it should not be called before the
+entire request body has been received. Parts of the request body need to be
+loaded into memory to parse C<POST> parameters, so you have to make sure it is
+not excessively large, there's a 10MB limit by default.
 
 =head2 params
 
   my $params = $req->params;
 
-All GET and POST parameters, usually a L<Mojo::Parameters> object. Note that
-this method caches all data, so it should not be called before the entire
-request body has been received. Parts of the request body need to be loaded
-into memory to parse POST parameters, so you have to make sure it is not
-excessively large.
+All C<GET> and C<POST> parameters extracted from the query string and
+C<application/x-www-form-urlencoded> or C<multipart/form-data> message body,
+usually a L<Mojo::Parameters> object. Note that this method caches all data,
+so it should not be called before the entire request body has been received.
+Parts of the request body need to be loaded into memory to parse C<POST>
+parameters, so you have to make sure it is not excessively large, there's a
+10MB limit by default.
 
   # Get parameter value
   say $req->params->param('foo');
@@ -428,7 +443,7 @@ Proxy URL for request.
 
   my $params = $req->query_params;
 
-All GET parameters, usually a L<Mojo::Parameters> object.
+All C<GET> parameters, usually a L<Mojo::Parameters> object.
 
   # Turn GET parameters to hash and extract value
   say $req->query_params->to_hash->{foo};

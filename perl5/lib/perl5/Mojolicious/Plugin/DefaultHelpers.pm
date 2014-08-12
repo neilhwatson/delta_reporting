@@ -3,6 +3,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 
 use Mojo::ByteStream;
 use Mojo::Collection;
+use Mojo::IOLoop;
 use Mojo::Util qw(dumper sha1_sum steady_time);
 
 sub register {
@@ -17,58 +18,55 @@ sub register {
   for my $name (qw(extends layout title)) {
     $app->helper(
       $name => sub {
-        my $self  = shift;
-        my $stash = $self->stash;
+        my $c     = shift;
+        my $stash = $c->stash;
         $stash->{$name} = shift if @_;
-        $self->stash(@_) if @_;
+        $c->stash(@_) if @_;
         return $stash->{$name};
       }
     );
   }
 
-  $app->helper(accepts => \&_accepts);
-  $app->helper(b       => sub { shift; Mojo::ByteStream->new(@_) });
-  $app->helper(c       => sub { shift; Mojo::Collection->new(@_) });
-  $app->helper(config => sub { shift->app->config(@_) });
-  $app->helper(content       => \&_content);
-  $app->helper(content_for   => \&_content_for);
-  $app->helper(csrf_token    => \&_csrf_token);
-  $app->helper(current_route => \&_current_route);
-  $app->helper(dumper        => sub { shift; dumper(@_) });
-  $app->helper(include       => \&_include);
-  $app->helper(ua => sub { shift->app->ua });
-  $app->helper(url_with => \&_url_with);
+  $app->helper($_ => $self->can("_$_"))
+    for qw(accepts content content_for csrf_token current_route delay),
+    qw(inactivity_timeout is_fresh url_with);
+  $app->helper(b => sub { shift; Mojo::ByteStream->new(@_) });
+  $app->helper(c => sub { shift; Mojo::Collection->new(@_) });
+  $app->helper(config  => sub { shift->app->config(@_) });
+  $app->helper(dumper  => sub { shift; dumper(@_) });
+  $app->helper(include => sub { shift->render_to_string(@_) });
+  $app->helper(ua      => sub { shift->app->ua });
 }
 
 sub _accepts {
-  my $self = shift;
-  return $self->app->renderer->accepts($self, @_);
+  my $c = shift;
+  return $c->app->renderer->accepts($c, @_);
 }
 
 sub _content {
-  my ($self, $name, $content) = @_;
+  my ($c, $name, $content) = @_;
   $name ||= 'content';
 
   # Set (first come)
-  my $c = $self->stash->{'mojo.content'} ||= {};
-  $c->{$name} //= ref $content eq 'CODE' ? $content->() : $content
+  my $hash = $c->stash->{'mojo.content'} ||= {};
+  $hash->{$name} //= ref $content eq 'CODE' ? $content->() : $content
     if defined $content;
 
   # Get
-  return Mojo::ByteStream->new($c->{$name} // '');
+  return Mojo::ByteStream->new($hash->{$name} // '');
 }
 
 sub _content_for {
-  my ($self, $name, $content) = @_;
-  return _content($self, $name) unless defined $content;
-  my $c = $self->stash->{'mojo.content'} ||= {};
-  return $c->{$name} .= ref $content eq 'CODE' ? $content->() : $content;
+  my ($c, $name, $content) = @_;
+  return _content($c, $name) unless defined $content;
+  my $hash = $c->stash->{'mojo.content'} ||= {};
+  return $hash->{$name} .= ref $content eq 'CODE' ? $content->() : $content;
 }
 
 sub _csrf_token {
-  my $self = shift;
-  $self->session->{csrf_token}
-    ||= sha1_sum($self->app->secrets->[0] . steady_time . rand 999);
+  my $c = shift;
+  $c->session->{csrf_token}
+    ||= sha1_sum($c->app->secrets->[0] . steady_time . rand 999);
 }
 
 sub _current_route {
@@ -77,21 +75,26 @@ sub _current_route {
   return $endpoint->name eq shift;
 }
 
-sub _include {
-  my $self = shift;
+sub _delay {
+  my $c     = shift;
+  my $tx    = $c->render_later->tx;
+  my $delay = Mojo::IOLoop->delay(@_);
+  $delay->catch(sub { $c->render_exception(pop) and undef $tx })->wait;
+}
 
-  # Template may be first argument
-  my ($template, $args) = (@_ % 2 ? shift : undef, {@_});
-  $args->{template} = $template if $template;
+sub _inactivity_timeout {
+  return unless my $stream = Mojo::IOLoop->stream(shift->tx->connection // '');
+  $stream->timeout(shift);
+}
 
-  # Localize arguments
-  local @{$self->stash}{keys %$args};
-  return $self->render(partial => 1, %$args);
+sub _is_fresh {
+  my ($c, %options) = @_;
+  return $c->app->static->is_fresh($c, \%options);
 }
 
 sub _url_with {
-  my $self = shift;
-  return $self->url_for(@_)->query($self->req->url->query->clone);
+  my $c = shift;
+  return $c->url_for(@_)->query($c->req->url->query->clone);
 }
 
 1;
@@ -127,26 +130,26 @@ L<Mojolicious::Plugin::DefaultHelpers> implements the following helpers.
 
 =head2 accepts
 
-  %= accepts->[0] // 'html'
-  %= accepts('html', 'json', 'txt') // 'html'
+  my $formats = $c->accepts;
+  my $format  = $c->accepts('html', 'json', 'txt');
 
 Select best possible representation for resource from C<Accept> request
-header, C<format> stash value or C<format> GET/POST parameter with
+header, C<format> stash value or C<format> C<GET>/C<POST> parameter with
 L<Mojolicious::Renderer/"accepts">, defaults to returning the first extension
 if no preference could be detected.
 
   # Check if JSON is acceptable
-  $self->render(json => {hello => 'world'}) if $self->accepts('json');
+  $c->render(json => {hello => 'world'}) if $c->accepts('json');
 
   # Check if JSON was specifically requested
-  $self->render(json => {hello => 'world'}) if $self->accepts('', 'json');
+  $c->render(json => {hello => 'world'}) if $c->accepts('', 'json');
 
   # Unsupported representation
-  $self->render(data => '', status => 204)
-    unless my $format = $self->accepts('html', 'json');
+  $c->render(data => '', status => 204)
+    unless my $format = $c->accepts('html', 'json');
 
   # Detected representations to select from
-  my @formats = @{$self->accepts};
+  my @formats = @{$c->accepts};
 
 =head2 app
 
@@ -220,6 +223,21 @@ Get CSRF token from L</"session">, and generate one if none exists.
 
 Check or get name of current route.
 
+=head2 delay
+
+  $c->delay(sub {...}, sub {...});
+
+Disable automatic rendering and use L<Mojo::IOLoop/"delay"> to manage
+callbacks and control the flow of events, which can help you avoid deep nested
+closures and memory leaks that often result from continuation-passing style.
+Calls L<Mojolicious::Controller/"render_exception"> if an error occured in one
+of the steps, breaking the chain.
+
+  # Longer version
+  $c->render_later;
+  my $delay = Mojo::IOLoop->delay(sub {...}, sub {...});
+  $delay->catch(sub { $c->render_exception(pop) })->wait;
+
 =head2 dumper
 
   %= dumper {some => 'data'}
@@ -231,7 +249,8 @@ Dump a Perl data structure with L<Mojo::Util/"dumper">.
   % extends 'blue';
   % extends 'blue', title => 'Blue!';
 
-Extend a template. All additional values get merged into the L</"stash">.
+Set C<extends> stash value, all additional pairs get merged into the
+L</"stash">.
 
 =head2 flash
 
@@ -239,20 +258,44 @@ Extend a template. All additional values get merged into the L</"stash">.
 
 Alias for L<Mojolicious::Controller/"flash">.
 
+=head2 inactivity_timeout
+
+  $c->inactivity_timeout(3600);
+
+Use L<Mojo::IOLoop/"stream"> to find the current connection and increase
+timeout if possible.
+
+  # Longer version
+  Mojo::IOLoop->stream($c->tx->connection)->timeout(3600);
+
 =head2 include
 
   %= include 'menubar'
   %= include 'menubar', format => 'txt'
 
-Include a partial template, all arguments get localized automatically and are
-only available in the partial template.
+Alias for C<Mojolicious::Controller/"render_to_string">.
+
+=head2 is_fresh
+
+  my $bool = $c->is_fresh;
+  my $bool = $c->is_fresh(etag => 'abc');
+  my $bool = $c->is_fresh(last_modified => $epoch);
+
+Check freshness of request by comparing the C<If-None-Match> and
+C<If-Modified-Since> request headers to the C<ETag> and C<Last-Modified>
+response headers with L<Mojolicious::Static/"is_fresh">.
+
+  # Add ETag header and check freshness before rendering
+  $c->is_fresh(etag => 'abc')
+    ? $c->rendered(304)
+    : $c->render(text => 'I ♥ Mojolicious!');
 
 =head2 layout
 
   % layout 'green';
   % layout 'green', title => 'Green!';
 
-Render this template with a layout. All additional values get merged into the
+Set C<layout> stash value, all additional pairs get merged into the
 L</"stash">.
 
 =head2 param
@@ -282,7 +325,8 @@ Alias for L<Mojolicious::Controller/"stash">.
   % title 'Welcome!', foo => 'bar';
   %= title
 
-Page title. All additional values get merged into the L</"stash">.
+Set C<title> stash value, all additional pairs get merged into the
+L</"stash">.
 
 =head2 ua
 

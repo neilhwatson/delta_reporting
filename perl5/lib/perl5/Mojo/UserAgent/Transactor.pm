@@ -11,7 +11,7 @@ use Mojo::Parameters;
 use Mojo::Transaction::HTTP;
 use Mojo::Transaction::WebSocket;
 use Mojo::URL;
-use Mojo::Util 'encode';
+use Mojo::Util qw(encode url_escape);
 
 has generators => sub { {form => \&_form, json => \&_json} };
 has name => 'Mojolicious (Perl)';
@@ -33,16 +33,15 @@ sub endpoint {
   my $port  = $url->port || ($proto eq 'https' ? 443 : 80);
 
   # Proxy for normal HTTP requests
+  my $socks;
+  if (my $proxy = $req->proxy) { $socks = $proxy->protocol eq 'socks' }
   return $self->_proxy($tx, $proto, $host, $port)
-    if $proto eq 'http' && !$req->is_handshake;
+    if $proto eq 'http' && !$req->is_handshake && !$socks;
 
   return $proto, $host, $port;
 }
 
-sub peer {
-  my ($self, $tx) = @_;
-  return $self->_proxy($tx, $self->endpoint($tx));
-}
+sub peer { $_[0]->_proxy($_[1], $_[0]->endpoint($_[1])) }
 
 sub proxy_connect {
   my ($self, $old) = @_;
@@ -53,14 +52,16 @@ sub proxy_connect {
 
   # No proxy
   return undef unless my $proxy = $req->proxy;
+  return undef if $proxy->protocol eq 'socks';
 
   # WebSocket and/or HTTPS
   my $url = $req->url;
   return undef unless $req->is_handshake || $url->protocol eq 'https';
 
-  # CONNECT request
+  # CONNECT request (expect a bad response)
   my $new = $self->tx(CONNECT => $url->clone->userinfo(undef));
   $new->req->proxy($proxy);
+  $new->res->content->auto_relax(0)->headers->connection('keep-alive');
 
   return $new;
 }
@@ -70,10 +71,10 @@ sub redirect {
 
   # Commonly used codes
   my $res = $old->res;
-  my $code = $res->code // '';
-  return undef unless grep { $_ eq $code } 301, 302, 303, 307, 308;
+  my $code = $res->code // 0;
+  return undef unless grep { $_ == $code } 301, 302, 303, 307, 308;
 
-  # Fix broken location without authority and/or scheme
+  # Fix location without authority and/or scheme
   return unless my $location = $res->headers->location;
   $location = Mojo::URL->new($location);
   $location = $location->base($old->req->url)->to_abs unless $location->is_abs;
@@ -81,7 +82,7 @@ sub redirect {
   # Clone request if necessary
   my $new = Mojo::Transaction::HTTP->new;
   my $req = $old->req;
-  if ($code eq 307 || $code eq 308) {
+  if ($code == 307 || $code == 308) {
     return undef unless my $clone = $req->clone;
     $new->req($clone);
   }
@@ -126,8 +127,8 @@ sub tx {
 
 sub upgrade {
   my ($self, $tx) = @_;
-  my $code = $tx->res->code // '';
-  return undef unless $tx->req->is_handshake && $code eq '101';
+  my $code = $tx->res->code // 0;
+  return undef unless $tx->req->is_handshake && $code == 101;
   my $ws = Mojo::Transaction::WebSocket->new(handshake => $tx, masked => 1);
   return $ws->client_challenge ? $ws : undef;
 }
@@ -207,7 +208,7 @@ sub _multipart {
         if (my $file = delete $value->{file}) {
           $file = Mojo::Asset::File->new(path => $file) unless ref $file;
           $part->asset($file);
-          $value->{filename} ||= basename $file->path
+          $value->{filename} //= basename $file->path
             if $file->isa('Mojo::Asset::File');
         }
 
@@ -217,7 +218,7 @@ sub _multipart {
         }
 
         # Filename and headers
-        $filename = delete $value->{filename} || $name;
+        $filename = url_escape delete $value->{filename} // $name, '"';
         $filename = encode $charset, $filename if $charset;
         $headers->from_hash($value);
       }
@@ -229,9 +230,10 @@ sub _multipart {
       }
 
       # Content-Disposition
+      $name = url_escape $name, '"';
       $name = encode $charset, $name if $charset;
       my $disposition = qq{form-data; name="$name"};
-      $disposition .= qq{; filename="$filename"} if $filename;
+      $disposition .= qq{; filename="$filename"} if defined $filename;
       $headers->content_disposition($disposition);
     }
   }
@@ -282,6 +284,23 @@ Mojo::UserAgent::Transactor - User agent transactor
 L<Mojo::UserAgent::Transactor> is the transaction building and manipulation
 framework used by L<Mojo::UserAgent>.
 
+=head1 GENERATORS
+
+These content generators are available by default.
+
+=head2 form
+
+  $t->tx(POST => 'http://example.com' => form => {a => 'b'});
+
+Generate query string, C<application/x-www-form-urlencoded> or
+C<multipart/form-data> content.
+
+=head2 json
+
+  $t->tx(PATCH => 'http://example.com' => json => {a => 'b'});
+
+Generate JSON content with L<Mojo::JSON>.
+
 =head1 ATTRIBUTES
 
 L<Mojo::UserAgent::Transactor> implements the following attributes.
@@ -329,7 +348,7 @@ Actual peer for transaction.
 
   my $tx = $t->proxy_connect(Mojo::Transaction::HTTP->new);
 
-Build L<Mojo::Transaction::HTTP> proxy connect request for transaction if
+Build L<Mojo::Transaction::HTTP> proxy C<CONNECT> request for transaction if
 possible.
 
 =head2 redirect
@@ -343,18 +362,18 @@ C<307> or C<308> redirect response if possible.
 
   my $tx = $t->tx(GET  => 'example.com');
   my $tx = $t->tx(POST => 'http://example.com');
-  my $tx = $t->tx(GET  => 'http://example.com' => {DNT => 1});
+  my $tx = $t->tx(GET  => 'http://example.com' => {Accept => '*/*'});
   my $tx = $t->tx(PUT  => 'http://example.com' => 'Hi!');
   my $tx = $t->tx(PUT  => 'http://example.com' => form => {a => 'b'});
   my $tx = $t->tx(PUT  => 'http://example.com' => json => {a => 'b'});
-  my $tx = $t->tx(POST => 'http://example.com' => {DNT => 1} => 'Hi!');
+  my $tx = $t->tx(POST => 'http://example.com' => {Accept => '*/*'} => 'Hi!');
   my $tx = $t->tx(
-    PUT  => 'http://example.com' => {DNT => 1} => form => {a => 'b'});
+    PUT  => 'http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
   my $tx = $t->tx(
-    PUT  => 'http://example.com' => {DNT => 1} => json => {a => 'b'});
+    PUT  => 'http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Versatile general purpose L<Mojo::Transaction::HTTP> transaction builder for
-requests, with support for content generators.
+requests, with support for L</"GENERATORS">.
 
   # Generate and inspect custom GET request with DNT header and content
   say $t->tx(GET => 'example.com' => {DNT => 1} => 'Bye!')->req->to_string;
@@ -418,9 +437,9 @@ requests, with support for content generators.
   });
 
 The C<form> content generator will automatically use query parameters for
-GET/HEAD requests and the "application/x-www-form-urlencoded" content type for
-everything else. Both get upgraded automatically to using the
-"multipart/form-data" content type when necessary or when the header has been
+C<GET>/C<HEAD> requests and the C<application/x-www-form-urlencoded> content
+type for everything else. Both get upgraded automatically to using the
+C<multipart/form-data> content type when necessary or when the header has been
 set manually.
 
   # Force "multipart/form-data"

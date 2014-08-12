@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo 3"
-.TH Mojo 3 "2014-03-01" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo 3 "2014-07-31" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -200,9 +200,7 @@ The logging layer of your application, defaults to a Mojo::Log object.
 .Ve
 .PP
 A full featured \s-1HTTP\s0 user agent for use in your applications, defaults to a
-Mojo::UserAgent object. Note that this user agent should not be used in
-plugins, since non-blocking requests that are already in progress will
-interfere with new blocking ones.
+Mojo::UserAgent object.
 .PP
 .Vb 2
 \&  # Perform blocking request

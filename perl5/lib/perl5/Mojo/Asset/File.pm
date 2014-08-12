@@ -3,7 +3,7 @@ use Mojo::Base 'Mojo::Asset';
 
 use Carp 'croak';
 use Errno 'EEXIST';
-use Fcntl qw(O_CREAT O_EXCL O_RDWR);
+use Fcntl qw(O_APPEND O_CREAT O_EXCL O_RDONLY O_RDWR);
 use File::Copy 'move';
 use File::Spec::Functions 'catfile';
 use IO::File;
@@ -17,14 +17,15 @@ has handle => sub {
   my $handle = IO::File->new;
   my $path   = $self->path;
   if (defined $path && -f $path) {
-    $handle->open($path, '<') or croak qq{Can't open file "$path": $!};
+    $handle->open($path, -w _ ? O_APPEND | O_RDWR : O_RDONLY)
+      or croak qq{Can't open file "$path": $!};
     return $handle;
   }
 
   # Open new or temporary file
   my $base = catfile $self->tmpdir, 'mojo.tmp';
   my $name = $path // $base;
-  until ($handle->open($name, O_CREAT | O_EXCL | O_RDWR)) {
+  until ($handle->open($name, O_APPEND | O_CREAT | O_EXCL | O_RDWR)) {
     croak qq{Can't open file "$name": $!} if defined $path || $! != $!{EEXIST};
     $name = "$base." . md5_sum(time . $$ . rand 999);
   }
@@ -46,13 +47,9 @@ sub DESTROY {
 
 sub add_chunk {
   my ($self, $chunk) = @_;
-
-  my $handle = $self->handle;
-  $handle->sysseek(0, SEEK_END);
   $chunk //= '';
   croak "Can't write to asset: $!"
-    unless defined $handle->syswrite($chunk, length $chunk);
-
+    unless defined $self->handle->syswrite($chunk, length $chunk);
   return $self;
 }
 
@@ -179,7 +176,7 @@ implements the following new ones.
   my $bool = $file->cleanup;
   $file    = $file->cleanup($bool);
 
-Delete file automatically once it's not used anymore.
+Delete L</"path"> automatically once the file is not used anymore.
 
 =head2 handle
 
@@ -202,7 +199,7 @@ necessary.
   $file      = $file->tmpdir('/tmp');
 
 Temporary directory used to generate L</"path">, defaults to the value of the
-MOJO_TMPDIR environment variable or auto detection.
+C<MOJO_TMPDIR> environment variable or auto detection.
 
 =head1 METHODS
 
@@ -227,7 +224,7 @@ Check if asset contains a specific string.
   my $bytes = $file->get_chunk($offset, $max);
 
 Get chunk of data starting from a specific position, defaults to a maximum
-chunk size of C<131072> bytes.
+chunk size of C<131072> bytes (128KB).
 
 =head2 is_file
 

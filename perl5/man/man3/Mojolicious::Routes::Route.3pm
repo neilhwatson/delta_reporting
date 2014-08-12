@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Routes::Route 3"
-.TH Mojolicious::Routes::Route 3 "2014-02-21" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Routes::Route 3 "2014-07-31" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -204,13 +204,17 @@ current parent if necessary.
 .Ve
 .SS "any"
 .IX Subsection "any"
-.Vb 2
+.Vb 5
+\&  my $route = $r\->any(\*(Aq/:foo\*(Aq);
 \&  my $route = $r\->any(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->any(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->any(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 \&  my $route = $r\->any([qw(GET POST)] => \*(Aq/:foo\*(Aq => sub {...});
 .Ve
 .PP
-Generate route matching any of the listed \s-1HTTP\s0 request methods or all. See
-also the Mojolicious::Lite tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching any of the listed \s-1HTTP\s0
+request methods or all. See also the Mojolicious::Lite tutorial for many
+more argument variations.
 .PP
 .Vb 1
 \&  $r\->any(\*(Aq/user\*(Aq)\->to(\*(Aquser#whatever\*(Aq);
@@ -224,7 +228,8 @@ also the Mojolicious::Lite tutorial for more argument variations.
 \&  my $bridge = $r\->bridge(format => 0);
 .Ve
 .PP
-Generate bridge route with optional pattern and restrictive placeholders.
+Low-level generator for bridge routes, returns a Mojolicious::Routes::Route
+object.
 .PP
 .Vb 3
 \&  my $auth = $r\->bridge(\*(Aq/user\*(Aq)\->to(\*(Aquser#auth\*(Aq);
@@ -233,12 +238,16 @@ Generate bridge route with optional pattern and restrictive placeholders.
 .Ve
 .SS "delete"
 .IX Subsection "delete"
-.Vb 1
+.Vb 4
+\&  my $route = $r\->delete(\*(Aq/:foo\*(Aq);
 \&  my $route = $r\->delete(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->delete(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->delete(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate route matching only \s-1DELETE\s0 requests. See also the
-Mojolicious::Lite tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`DELETE\*(C'\fR
+requests. See also the Mojolicious::Lite tutorial for many more argument
+variations.
 .PP
 .Vb 1
 \&  $r\->delete(\*(Aq/user\*(Aq)\->to(\*(Aquser#remove\*(Aq);
@@ -268,12 +277,15 @@ generated ones.
 .Ve
 .SS "get"
 .IX Subsection "get"
-.Vb 1
+.Vb 4
+\&  my $route = $r\->get(\*(Aq/:foo\*(Aq);
 \&  my $route = $r\->get(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->get(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->get(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate route matching only \s-1GET\s0 requests. See also the Mojolicious::Lite
-tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`GET\*(C'\fR requests.
+See also the Mojolicious::Lite tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->get(\*(Aq/user\*(Aq)\->to(\*(Aquser#show\*(Aq);
@@ -338,12 +350,16 @@ Construct a new Mojolicious::Routes::Route object and \*(L"parse\*(R" pattern
 if necessary.
 .SS "options"
 .IX Subsection "options"
-.Vb 1
+.Vb 4
+\&  my $route = $r\->options(\*(Aq/:foo\*(Aq);
 \&  my $route = $r\->options(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->options(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->options(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate route matching only \s-1OPTIONS\s0 requests. See also the
-Mojolicious::Lite tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`OPTIONS\*(C'\fR
+requests. See also the Mojolicious::Lite tutorial for many more argument
+variations.
 .PP
 .Vb 1
 \&  $r\->options(\*(Aq/user\*(Aq)\->to(\*(Aquser#overview\*(Aq);
@@ -374,36 +390,45 @@ routing cache, since conditions are too complex for caching.
 Parse pattern.
 .SS "patch"
 .IX Subsection "patch"
-.Vb 1
+.Vb 4
+\&  my $route = $r\->patch(\*(Aq/:foo\*(Aq);
 \&  my $route = $r\->patch(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->patch(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->patch(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate route matching only \s-1PATCH\s0 requests. See also the Mojolicious::Lite
-tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`PATCH\*(C'\fR requests.
+See also the Mojolicious::Lite tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->patch(\*(Aq/user\*(Aq)\->to(\*(Aquser#update\*(Aq);
 .Ve
 .SS "post"
 .IX Subsection "post"
-.Vb 1
+.Vb 4
+\&  my $route = $r\->post(\*(Aq/:foo\*(Aq);
 \&  my $route = $r\->post(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->post(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->post(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate route matching only \s-1POST\s0 requests. See also the Mojolicious::Lite
-tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`POST\*(C'\fR requests.
+See also the Mojolicious::Lite tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->post(\*(Aq/user\*(Aq)\->to(\*(Aquser#create\*(Aq);
 .Ve
 .SS "put"
 .IX Subsection "put"
-.Vb 1
+.Vb 4
+\&  my $route = $r\->put(\*(Aq/:foo\*(Aq);
 \&  my $route = $r\->put(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->put(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->put(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate route matching only \s-1PUT\s0 requests. See also the Mojolicious::Lite
-tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`PUT\*(C'\fR requests.
+See also the Mojolicious::Lite tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->put(\*(Aq/user\*(Aq)\->to(\*(Aquser#replace\*(Aq);
@@ -451,8 +476,8 @@ The Mojolicious::Routes object this route is an descendent of.
 \&  my $route = $r\->route(format => 0);
 .Ve
 .PP
-Generate route matching all \s-1HTTP\s0 request methods with optional pattern and
-restrictive placeholders.
+Low-level generator for routes matching all \s-1HTTP\s0 request methods, returns a
+Mojolicious::Routes::Route object.
 .SS "to"
 .IX Subsection "to"
 .Vb 12
@@ -480,13 +505,15 @@ Set default parameters for this route.
 Stringify the whole route.
 .SS "under"
 .IX Subsection "under"
-.Vb 2
+.Vb 4
 \&  my $bridge = $r\->under(sub {...});
-\&  my $bridge = $r\->under(\*(Aq/:foo\*(Aq);
+\&  my $bridge = $r\->under(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $bridge = $r\->under(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/]);
+\&  my $bridge = $r\->under({format => 0});
 .Ve
 .PP
-Generate bridge route. See also the Mojolicious::Lite tutorial for more
-argument variations.
+Generate Mojolicious::Routes::Route object for bridge route. See also the
+Mojolicious::Lite tutorial for many more argument variations.
 .PP
 .Vb 3
 \&  my $auth = $r\->under(\*(Aq/user\*(Aq)\->to(\*(Aquser#auth\*(Aq);
@@ -510,12 +537,16 @@ restrictions.
 .Ve
 .SS "websocket"
 .IX Subsection "websocket"
-.Vb 1
-\&  my $ws = $r\->websocket(\*(Aq/:foo\*(Aq => sub {...});
+.Vb 4
+\&  my $route = $r\->websocket(\*(Aq/:foo\*(Aq);
+\&  my $route = $r\->websocket(\*(Aq/:foo\*(Aq => sub {...});
+\&  my $route = $r\->websocket(\*(Aq/:foo\*(Aq => {foo => \*(Aqbar\*(Aq} => sub {...});
+\&  my $route = $r\->websocket(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate route matching only WebSocket handshakes. See also the
-Mojolicious::Lite tutorial for more argument variations.
+Generate Mojolicious::Routes::Route object matching only WebSocket
+handshakes. See also the Mojolicious::Lite tutorial for many more argument
+variations.
 .PP
 .Vb 1
 \&  $r\->websocket(\*(Aq/echo\*(Aq)\->to(\*(Aqexample#echo\*(Aq);
@@ -523,7 +554,7 @@ Mojolicious::Lite tutorial for more argument variations.
 .SH "AUTOLOAD"
 .IX Header "AUTOLOAD"
 In addition to the \*(L"\s-1ATTRIBUTES\s0\*(R" and \*(L"\s-1METHODS\s0\*(R" above you can also call
-shortcuts on Mojolicious::Routes::Route objects.
+shortcuts provided by \*(L"root\*(R" on Mojolicious::Routes::Route objects.
 .PP
 .Vb 4
 \&  $r\->root\->add_shortcut(firefox => sub {

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Message::Request 3"
-.TH Mojo::Message::Request 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Message::Request 3 "2014-08-07" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -155,7 +155,9 @@ Mojo::Message::Request \- HTTP request
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Mojo::Message::Request is a container for \s-1HTTP\s0 requests based on
-<\s-1RFC\s0 2616> and
+<\s-1RFC\s0 7230>,
+<\s-1RFC\s0 7231>,
+<\s-1RFC\s0 7231> and
 <\s-1RFC\s0 2817>.
 .SH "EVENTS"
 .IX Header "EVENTS"
@@ -203,6 +205,14 @@ Direct access to the \f(CW\*(C`CGI\*(C'\fR or \f(CW\*(C`PSGI\*(C'\fR environment
 \&  say $req\->url\->to_abs\->host;
 \&  say $req\->url\->to_abs\->path;
 .Ve
+.SS "reverse_proxy"
+.IX Subsection "reverse_proxy"
+.Vb 2
+\&  my $bool = $req\->reverse_proxy;
+\&  $req     = $req\->reverse_proxy($bool);
+.Ve
+.PP
+Request has been performed through a reverse proxy.
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Message::Request inherits all methods from Mojo::Message and
@@ -267,27 +277,32 @@ Check if connection is secure.
 Check \f(CW\*(C`X\-Requested\-With\*(C'\fR header for \f(CW\*(C`XMLHttpRequest\*(C'\fR value.
 .SS "param"
 .IX Subsection "param"
-.Vb 3
-\&  my @names = $req\->param;
-\&  my $foo   = $req\->param(\*(Aqfoo\*(Aq);
-\&  my @foo   = $req\->param(\*(Aqfoo\*(Aq);
+.Vb 4
+\&  my @names       = $req\->param;
+\&  my $foo         = $req\->param(\*(Aqfoo\*(Aq);
+\&  my @foo         = $req\->param(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $req\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
 .Ve
 .PP
-Access \s-1GET\s0 and \s-1POST\s0 parameters. Note that this method caches all data, so it
-should not be called before the entire request body has been received. Parts
-of the request body need to be loaded into memory to parse \s-1POST\s0 parameters, so
-you have to make sure it is not excessively large.
+Access \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`POST\*(C'\fR parameters extracted from the query string and
+\&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body.
+Note that this method caches all data, so it should not be called before the
+entire request body has been received. Parts of the request body need to be
+loaded into memory to parse \f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is
+not excessively large, there's a 10MB limit by default.
 .SS "params"
 .IX Subsection "params"
 .Vb 1
 \&  my $params = $req\->params;
 .Ve
 .PP
-All \s-1GET\s0 and \s-1POST\s0 parameters, usually a Mojo::Parameters object. Note that
-this method caches all data, so it should not be called before the entire
-request body has been received. Parts of the request body need to be loaded
-into memory to parse \s-1POST\s0 parameters, so you have to make sure it is not
-excessively large.
+All \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`POST\*(C'\fR parameters extracted from the query string and
+\&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body,
+usually a Mojo::Parameters object. Note that this method caches all data,
+so it should not be called before the entire request body has been received.
+Parts of the request body need to be loaded into memory to parse \f(CW\*(C`POST\*(C'\fR
+parameters, so you have to make sure it is not excessively large, there's a
+10MB limit by default.
 .PP
 .Vb 2
 \&  # Get parameter value
@@ -322,7 +337,7 @@ Proxy \s-1URL\s0 for request.
 \&  my $params = $req\->query_params;
 .Ve
 .PP
-All \s-1GET\s0 parameters, usually a Mojo::Parameters object.
+All \f(CW\*(C`GET\*(C'\fR parameters, usually a Mojo::Parameters object.
 .PP
 .Vb 2
 \&  # Turn GET parameters to hash and extract value

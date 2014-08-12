@@ -65,9 +65,10 @@ sub run {
   $verbose = 1 if $method eq 'HEAD';
   STDOUT->autoflush(1);
   my $tx = $ua->start($ua->build_tx($method, $url, \%headers, $content));
-  my ($err, $code) = $tx->error;
+  my $err = $tx->error;
   $url = encode 'UTF-8', $url;
-  warn qq{Problem loading URL "$url". ($err)\n} if $err && !$code;
+  warn qq{Problem loading URL "$url". ($err->{message})\n}
+    if $err && !$err->{code};
 
   # JSON Pointer
   return unless defined $selector;
@@ -90,32 +91,30 @@ sub _say { length && say encode('UTF-8', $_) for @_ }
 sub _select {
   my ($buffer, $selector, $charset, @args) = @_;
 
+  # Keep a strong reference to the root
   $buffer = decode($charset, $buffer) // $buffer if $charset;
-  my $results = Mojo::DOM->new($buffer)->find($selector);
+  my $dom     = Mojo::DOM->new($buffer);
+  my $results = $dom->find($selector);
 
   while (defined(my $command = shift @args)) {
 
     # Number
-    ($results = [$results->[$command]])->[0] ? next : return
-      if $command =~ /^\d+$/;
+    ($results = $results->slice($command)) and next if $command =~ /^\d+$/;
 
     # Text
-    return _say(map { $_->text } @$results) if $command eq 'text';
+    return _say($results->text->each) if $command eq 'text';
 
     # All text
-    return _say(map { $_->all_text } @$results) if $command eq 'all';
+    return _say($results->all_text->each) if $command eq 'all';
 
     # Attribute
-    if ($command eq 'attr') {
-      return unless my $name = shift @args;
-      return _say(map { $_->attr->{$name} } @$results);
-    }
+    return _say($results->attr($args[0] // '')->each) if $command eq 'attr';
 
     # Unknown
     die qq{Unknown command "$command".\n};
   }
 
-  _say(@$results);
+  _say($results->each);
 }
 
 1;
@@ -133,7 +132,7 @@ Mojolicious::Command::get - Get command
     ./myapp.pl get /
     mojo get mojolicio.us
     mojo get -v -r google.com
-    mojo get -v -H 'Host: mojolicious.org' -H 'DNT: 1' mojolicio.us
+    mojo get -v -H 'Host: mojolicious.org' -H 'Accept: */*' mojolicio.us
     mojo get -M POST -c 'trololo' mojolicio.us
     mojo get mojolicio.us 'head > title' text
     mojo get mojolicio.us .footer all

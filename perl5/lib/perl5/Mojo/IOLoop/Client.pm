@@ -3,6 +3,7 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Errno 'EINPROGRESS';
 use IO::Socket::INET;
+use Mojo::IOLoop;
 use Scalar::Util 'weaken';
 use Socket qw(IPPROTO_TCP SO_ERROR TCP_NODELAY);
 
@@ -14,14 +15,18 @@ use constant IPV6 => $ENV{MOJO_NO_IPV6}
 # TLS support requires IO::Socket::SSL
 use constant TLS => $ENV{MOJO_NO_TLS}
   ? 0
-  : eval 'use IO::Socket::SSL 1.75 (); 1';
+  : eval 'use IO::Socket::SSL 1.84 (); 1';
 use constant TLS_READ  => TLS ? IO::Socket::SSL::SSL_WANT_READ()  : 0;
 use constant TLS_WRITE => TLS ? IO::Socket::SSL::SSL_WANT_WRITE() : 0;
 
-has reactor => sub {
-  require Mojo::IOLoop;
-  Mojo::IOLoop->singleton->reactor;
-};
+# SOCKS support requires IO::Socket::Socks
+use constant SOCKS => $ENV{MOJO_NO_SOCKS}
+  ? 0
+  : eval 'use IO::Socket::Socks 0.64 (); 1';
+use constant SOCKS_READ  => SOCKS ? IO::Socket::Socks::SOCKS_WANT_READ()  : 0;
+use constant SOCKS_WRITE => SOCKS ? IO::Socket::Socks::SOCKS_WANT_WRITE() : 0;
+
+has reactor => sub { Mojo::IOLoop->singleton->reactor };
 
 sub DESTROY { shift->_cleanup }
 
@@ -44,12 +49,13 @@ sub _connect {
 
   my $handle;
   my $reactor = $self->reactor;
-  my $address = $args->{address} ||= 'localhost';
+  my $address = $args->{socks_address} || ($args->{address} ||= 'localhost');
+  my $port = $args->{socks_port} || $args->{port} || ($args->{tls} ? 443 : 80);
   unless ($handle = $self->{handle} = $args->{handle}) {
     my %options = (
       Blocking => 0,
       PeerAddr => $address eq 'localhost' ? '127.0.0.1' : $address,
-      PeerPort => $args->{port} || ($args->{tls} ? 443 : 80)
+      PeerPort => $port
     );
     $options{LocalAddr} = $args->{local_address} if $args->{local_address};
     $options{PeerAddr} =~ s/[\[\]]//g if $options{PeerAddr};
@@ -65,7 +71,37 @@ sub _connect {
 
   # Wait for handle to become writable
   weaken $self;
-  $reactor->io($handle => sub { $self->_try($args) })->watch($handle, 0, 1);
+  $reactor->io($handle => sub { $self->_ready($args) })->watch($handle, 0, 1);
+}
+
+sub _ready {
+  my ($self, $args) = @_;
+
+  # Retry or handle exceptions
+  my $handle = $self->{handle};
+  return $! == EINPROGRESS ? undef : $self->emit(error => $!)
+    if $handle->isa('IO::Socket::IP') && !$handle->connect;
+  return $self->emit(error => $! = $handle->sockopt(SO_ERROR))
+    unless $handle->connected;
+
+  # Disable Nagle's algorithm
+  setsockopt $handle, IPPROTO_TCP, TCP_NODELAY, 1;
+
+  $self->_try_socks($args);
+}
+
+sub _socks {
+  my ($self, $args) = @_;
+
+  # Connected
+  my $handle = $self->{handle};
+  return $self->_try_tls($args) if $handle->ready;
+
+  # Switch between reading and writing
+  my $err = $IO::Socket::Socks::SOCKS_ERROR;
+  if    ($err == SOCKS_READ)  { $self->reactor->watch($handle, 1, 0) }
+  elsif ($err == SOCKS_WRITE) { $self->reactor->watch($handle, 1, 1) }
+  else                        { $self->emit(error => $err) }
 }
 
 sub _tls {
@@ -82,22 +118,35 @@ sub _tls {
   elsif ($err == TLS_WRITE) { $self->reactor->watch($handle, 1, 1) }
 }
 
-sub _try {
+sub _try_socks {
   my ($self, $args) = @_;
 
-  # Retry or handle exceptions
   my $handle = $self->{handle};
-  return $! == EINPROGRESS ? undef : $self->emit(error => $!)
-    if $handle->isa('IO::Socket::IP') && !$handle->connect;
-  return $self->emit(error => $! = $handle->sockopt(SO_ERROR))
-    unless $handle->connected;
+  return $self->_try_tls($args) unless $args->{socks_address};
+  return $self->emit(
+    error => 'IO::Socket::Socks 0.64 required for SOCKS support')
+    unless SOCKS;
 
-  # Disable Nagle's algorithm
-  setsockopt $handle, IPPROTO_TCP, TCP_NODELAY, 1;
+  my %options
+    = (ConnectAddr => $args->{address}, ConnectPort => $args->{port});
+  @options{qw(AuthType Username Password)}
+    = ('userpass', @$args{qw(socks_user socks_pass)})
+    if $args->{socks_user};
+  my $reactor = $self->reactor;
+  $reactor->remove($handle);
+  return $self->emit(error => 'SOCKS upgrade failed')
+    unless IO::Socket::Socks->start_SOCKS($handle, %options);
+  weaken $self;
+  $reactor->io($handle => sub { $self->_socks($args) })->watch($handle, 0, 1);
+}
 
+sub _try_tls {
+  my ($self, $args) = @_;
+
+  my $handle = $self->{handle};
   return $self->_cleanup->emit_safe(connect => $handle)
     if !$args->{tls} || $handle->isa('IO::Socket::SSL');
-  return $self->emit(error => 'IO::Socket::SSL 1.75 required for TLS support')
+  return $self->emit(error => 'IO::Socket::SSL 1.84 required for TLS support')
     unless TLS;
 
   # Upgrade
@@ -105,10 +154,10 @@ sub _try {
   my %options = (
     SSL_ca_file => $args->{tls_ca}
       && -T $args->{tls_ca} ? $args->{tls_ca} : undef,
-    SSL_cert_file       => $args->{tls_cert},
-    SSL_error_trap      => sub { $self->_cleanup->emit(error => $_[1]) },
-    SSL_hostname        => $args->{address},
-    SSL_key_file        => $args->{tls_key},
+    SSL_cert_file  => $args->{tls_cert},
+    SSL_error_trap => sub { $self->emit(error => $_[1]) },
+    SSL_hostname   => IO::Socket::SSL->can_client_sni ? $args->{address} : '',
+    SSL_key_file   => $args->{tls_key},
     SSL_startHandshake  => 0,
     SSL_verify_mode     => $args->{tls_ca} ? 0x01 : 0x00,
     SSL_verifycn_name   => $args->{address},
@@ -117,7 +166,7 @@ sub _try {
   my $reactor = $self->reactor;
   $reactor->remove($handle);
   return $self->emit(error => 'TLS upgrade failed')
-    unless $handle = IO::Socket::SSL->start_SSL($handle, %options);
+    unless IO::Socket::SSL->start_SSL($handle, %options);
   $reactor->io($handle => sub { $self->_tls })->watch($handle, 0, 1);
 }
 
@@ -184,7 +233,7 @@ L<Mojo::IOLoop::Client> implements the following attributes.
   my $reactor = $client->reactor;
   $client     = $client->reactor(Mojo::Reactor::Poll->new);
 
-Low level event reactor, defaults to the C<reactor> attribute value of the
+Low-level event reactor, defaults to the C<reactor> attribute value of the
 global L<Mojo::IOLoop> singleton.
 
 =head1 METHODS
@@ -197,7 +246,7 @@ implements the following new ones.
   $client->connect(address => '127.0.0.1', port => 3000);
 
 Open a socket connection to a remote host. Note that TLS support depends on
-L<IO::Socket::SSL> (1.75+) and IPv6 support on L<IO::Socket::IP> (0.20+).
+L<IO::Socket::SSL> (1.84+) and IPv6 support on L<IO::Socket::IP> (0.20+).
 
 These options are currently available:
 
@@ -226,6 +275,30 @@ Local address to bind to.
   port => 80
 
 Port to connect to, defaults to C<80> or C<443> with C<tls> option.
+
+=item socks_address
+
+  socks_address => '127.0.0.1'
+
+Address or host name of SOCKS5 proxy server to use for connection.
+
+=item socks_pass
+
+  socks_pass => 'secr3t'
+
+Password to use for SOCKS5 authentication.
+
+=item socks_port
+
+  socks_port => 9050
+
+Port of SOCKS5 proxy server to use for connection.
+
+=item socks_user
+
+  socks_user => 'sri'
+
+Username to use for SOCKS5 authentication.
 
 =item timeout
 

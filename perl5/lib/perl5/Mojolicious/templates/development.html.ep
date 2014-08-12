@@ -8,7 +8,7 @@
     %= javascript '/mojo/jquery/jquery.js'
     %= javascript '/mojo/prettify/run_prettify.js'
     %= stylesheet '/mojo/prettify/prettify-mojo-dark.css'
-    %= stylesheet begin
+    <style>
       a img { border: 0 }
       body {
         background: url(<%= url_for '/mojo/pinstripe-light.png' %>);
@@ -70,17 +70,17 @@
       }
       .value { padding-left: 1em }
       .wide { width: 100% }
-      #footer {
-        padding-top: 1em;
-        text-align: center;
-      }
-      #nothing { padding-top: 60px }
-      #showcase > pre {
+      #error {
         font: 1.5em 'Helvetica Neue', Helvetica, sans-serif;
         font-weight: 300;
         margin: 0;
         text-shadow: #333 0 1px 0;
       }
+      #footer {
+        padding-top: 1em;
+        text-align: center;
+      }
+      #nothing { padding-top: 60px }
       #showcase table { margin-top: 1em }
       #showcase td {
         padding-top: 0;
@@ -111,11 +111,11 @@
         max-width: 1000px;
         margin: 0 auto;
       }
-    % end
+    </style>
   </head>
   <body>
     %= include inline => app->renderer->_bundled('mojobar')
-    %= javascript begin
+    <script>
       function mojoDrawer (handle, drawer) {
         $(handle).click(function() {
           $(drawer).slideToggle('slow');
@@ -129,7 +129,7 @@
         mojoDrawer('#trace', '#frames');
         mojoDrawer('#more', '#infos');
       });
-    % end
+    </script>
     <div id="wrapperlicious">
       % my $kv = begin
         % my ($key, $value) = @_;
@@ -150,7 +150,7 @@
           % end
         % end
         <div id="showcase" class="box code spaced">
-          <pre><%= $exception->message %></pre>
+          <pre id="error"><%= $exception->message %></pre>
           <div id="context" class="more">
             <table>
               % for my $line (@{$exception->lines_before}) {
@@ -177,7 +177,7 @@
               </table>
             </div>
             <div class="tap">tap for more</div>
-            %= javascript begin
+            <script>
               var current = '#context';
               $('#showcase').click(function() {
                 $(current).slideToggle('slow', function() {
@@ -191,7 +191,7 @@
                 });
               });
               $('#insight').toggle();
-            % end
+            </script>
           % }
         </div>
         <div id="trace" class="box spaced">
@@ -216,8 +216,8 @@
           <h1>Page not found... yet!</h1>
           <p>
             None of these routes could generate a response for your
-            <code><%= $self->req->method %></code> request for
-            <code><%= $self->req->url->path->to_route %></code>, maybe you need
+            <code><%= $c->req->method %></code> request for
+            <code><%= $c->req->url->path->to_route %></code>, maybe you need
             to add a new one?
           </p>
           % my $walk = begin
@@ -254,7 +254,7 @@
       % }
       <div id="request" class="box infobox spaced">
         <table>
-          % my $req = $self->req;
+          % my $req = $c->req;
           %= $kv->(Method => $req->method)
           % my $url = $req->url;
           %= $kv->(URL => $url->to_string)
@@ -263,8 +263,8 @@
           %= $kv->(Stash => dumper $snapshot)
           %= $kv->(Session => dumper session)
           %= $kv->(Version => $req->version)
-          % for my $name (sort @{$self->req->headers->names}) {
-            % my $value = $self->req->headers->header($name);
+          % for my $name (sort @{$c->req->headers->names}) {
+            % my $value = $c->req->headers->header($name);
             %= $kv->($name, $value)
           % }
         </table>
@@ -296,12 +296,9 @@
         <div id="log" class="box infobox spaced">
           <table>
             % for my $msg (@{app->log->history}) {
-              % my ($time, $level, @lines) = @$msg;
-              % $time = localtime $time;
-              % my $lines = join "\n", @lines;
               <tr>
                 <td class="striped value wide">
-                  <pre>[<%= $time %>] [<%= $level %>] <%= $lines %></pre>
+                  <pre><%= app->log->format->(@$msg) %></pre>
                 </td>
               </tr>
             % }

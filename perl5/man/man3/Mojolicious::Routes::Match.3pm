@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Routes::Match 3"
-.TH Mojolicious::Routes::Match 3 "2014-02-21" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Routes::Match 3 "2014-08-11" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -151,8 +151,8 @@ Mojolicious::Routes::Match \- Find routes
 \&  say $match\->stack\->[0]{action};
 \&
 \&  # Render
-\&  say $match\->path_for;
-\&  say $match\->path_for(action => \*(Aqbaz\*(Aq);
+\&  say $match\->path_for\->{path};
+\&  say $match\->path_for(action => \*(Aqbaz\*(Aq)\->{path};
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -208,19 +208,13 @@ Match controller and options against \*(L"root\*(R" to find appropriate
 \&\*(L"endpoint\*(R".
 .SS "path_for"
 .IX Subsection "path_for"
-.Vb 12
-\&  my $path        = $match\->path_for;
-\&  my $path        = $match\->path_for(foo => \*(Aqbar\*(Aq);
-\&  my $path        = $match\->path_for({foo => \*(Aqbar\*(Aq});
-\&  my $path        = $match\->path_for(\*(Aqnamed\*(Aq);
-\&  my $path        = $match\->path_for(\*(Aqnamed\*(Aq, foo => \*(Aqbar\*(Aq);
-\&  my $path        = $match\->path_for(\*(Aqnamed\*(Aq, {foo => \*(Aqbar\*(Aq});
-\&  my ($path, $ws) = $match\->path_for;
-\&  my ($path, $ws) = $match\->path_for(foo => \*(Aqbar\*(Aq);
-\&  my ($path, $ws) = $match\->path_for({foo => \*(Aqbar\*(Aq});
-\&  my ($path, $ws) = $match\->path_for(\*(Aqnamed\*(Aq);
-\&  my ($path, $ws) = $match\->path_for(\*(Aqnamed\*(Aq, foo => \*(Aqbar\*(Aq);
-\&  my ($path, $ws) = $match\->path_for(\*(Aqnamed\*(Aq, {foo => \*(Aqbar\*(Aq});
+.Vb 6
+\&  my $info = $match\->path_for;
+\&  my $info = $match\->path_for(foo => \*(Aqbar\*(Aq);
+\&  my $info = $match\->path_for({foo => \*(Aqbar\*(Aq});
+\&  my $info = $match\->path_for(\*(Aqnamed\*(Aq);
+\&  my $info = $match\->path_for(\*(Aqnamed\*(Aq, foo => \*(Aqbar\*(Aq);
+\&  my $info = $match\->path_for(\*(Aqnamed\*(Aq, {foo => \*(Aqbar\*(Aq});
 .Ve
 .PP
 Render matching route with parameters into path.

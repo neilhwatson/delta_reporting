@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Transaction 3"
-.TH Mojo::Transaction 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Transaction 3 "2014-08-07" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -269,12 +269,12 @@ in a subclass.
 Connection identifier or socket.
 .SS "error"
 .IX Subsection "error"
-.Vb 2
-\&  my $err          = $tx\->error;
-\&  my ($err, $code) = $tx\->error;
+.Vb 1
+\&  my $err = $tx\->error;
 .Ve
 .PP
-Error and code.
+Return transaction error or \f(CW\*(C`undef\*(C'\fR if there is no error, commonly used
+together with \*(L"success\*(R".
 .SS "is_finished"
 .IX Subsection "is_finished"
 .Vb 1
@@ -344,12 +344,13 @@ Returns the Mojo::Message::Response object from \*(L"res\*(R" if transaction
 was successful or \f(CW\*(C`undef\*(C'\fR otherwise. Connection and parser errors have only a
 message in \*(L"error\*(R", 400 and 500 responses also a code.
 .PP
-.Vb 6
+.Vb 7
 \&  # Sensible exception handling
 \&  if (my $res = $tx\->success) { say $res\->body }
 \&  else {
-\&    my ($err, $code) = $tx\->error;
-\&    say $code ? "$code response: $err" : "Connection error: $err";
+\&    my $err = $tx\->error;
+\&    die "$err\->{code} response: $err\->{message}" if $err\->{code};
+\&    die "Connection error: $err\->{message}";
 \&  }
 .Ve
 .SH "SEE ALSO"

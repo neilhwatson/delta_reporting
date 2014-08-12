@@ -124,13 +124,13 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Reactor 3"
-.TH Mojo::Reactor 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Reactor 3 "2014-07-26" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Mojo::Reactor \- Low level event reactor base class
+Mojo::Reactor \- Low\-level event reactor base class
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .Vb 2
@@ -145,6 +145,7 @@ Mojo::Reactor \- Low level event reactor base class
 \&  sub one_tick   {...}
 \&  sub recurring  {...}
 \&  sub remove     {...}
+\&  sub reset      {...}
 \&  sub start      {...}
 \&  sub stop       {...}
 \&  sub timer      {...}
@@ -152,7 +153,7 @@ Mojo::Reactor \- Low level event reactor base class
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Reactor is an abstract base class for low level event reactors.
+Mojo::Reactor is an abstract base class for low-level event reactors.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::Reactor inherits all events from Mojo::EventEmitter and can emit
@@ -194,7 +195,7 @@ Restart active timer. Meant to be overloaded in a subclass.
 .Ve
 .PP
 Detect and load the best reactor implementation available, will try the value
-of the \s-1MOJO_REACTOR\s0 environment variable, Mojo::Reactor::EV or
+of the \f(CW\*(C`MOJO_REACTOR\*(C'\fR environment variable, Mojo::Reactor::EV or
 Mojo::Reactor::Poll.
 .PP
 .Vb 2
@@ -271,6 +272,13 @@ amount of time in seconds. Meant to be overloaded in a subclass.
 .Ve
 .PP
 Remove handle or timer. Meant to be overloaded in a subclass.
+.SS "reset"
+.IX Subsection "reset"
+.Vb 1
+\&  $reactor\->reset;
+.Ve
+.PP
+Remove all handles and timers. Meant to be overloaded in a subclass.
 .SS "start"
 .IX Subsection "start"
 .Vb 1

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Routes 3"
-.TH Mojolicious::Routes 3 "2014-02-21" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Routes 3 "2014-08-11" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -205,7 +205,7 @@ Namespaces to load controllers from.
 .PP
 .Vb 2
 \&  # Add another namespace to load controllers from
-\&  push @{$r\->namespaces}, \*(AqMyApp::Controller\*(Aq;
+\&  push @{$r\->namespaces}, \*(AqMyApp::MyController\*(Aq;
 .Ve
 .SS "shortcuts"
 .IX Subsection "shortcuts"
@@ -246,14 +246,15 @@ Automatic rendering.
 \&  $r\->continue(Mojolicious::Controller\->new);
 .Ve
 .PP
-Continue dispatch chain.
+Continue dispatch chain and emit the hook \*(L"around_action\*(R" in Mojolicious for
+every action.
 .SS "dispatch"
 .IX Subsection "dispatch"
 .Vb 1
 \&  my $bool = $r\->dispatch(Mojolicious::Controller\->new);
 .Ve
 .PP
-Match routes with Mojolicious::Routes::Match and dispatch.
+Match routes with \*(L"match\*(R" and dispatch with \*(L"continue\*(R".
 .SS "hide"
 .IX Subsection "hide"
 .Vb 1
@@ -276,6 +277,13 @@ Check if controller attribute or method is hidden from router.
 .PP
 Find route by name with \*(L"find\*(R" in Mojolicious::Routes::Route and cache all
 results for future lookups.
+.SS "match"
+.IX Subsection "match"
+.Vb 1
+\&  $r\->match(Mojolicious::Controller\->new);
+.Ve
+.PP
+Match routes with Mojolicious::Routes::Match.
 .SS "route"
 .IX Subsection "route"
 .Vb 4
@@ -285,7 +293,8 @@ results for future lookups.
 \&  my $route = $r\->route(format => 0);
 .Ve
 .PP
-Generate route matching all \s-1HTTP\s0 request methods.
+Low-level generator for routes matching all \s-1HTTP\s0 request methods, returns a
+Mojolicious::Routes::Route object.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

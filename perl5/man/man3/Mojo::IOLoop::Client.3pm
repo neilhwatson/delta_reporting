@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::IOLoop::Client 3"
-.TH Mojo::IOLoop::Client 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::IOLoop::Client 3 "2014-08-10" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -188,7 +188,7 @@ Mojo::IOLoop::Client implements the following attributes.
 \&  $client     = $client\->reactor(Mojo::Reactor::Poll\->new);
 .Ve
 .PP
-Low level event reactor, defaults to the \f(CW\*(C`reactor\*(C'\fR attribute value of the
+Low-level event reactor, defaults to the \f(CW\*(C`reactor\*(C'\fR attribute value of the
 global Mojo::IOLoop singleton.
 .SH "METHODS"
 .IX Header "METHODS"
@@ -201,7 +201,7 @@ implements the following new ones.
 .Ve
 .PP
 Open a socket connection to a remote host. Note that \s-1TLS\s0 support depends on
-IO::Socket::SSL (1.75+) and IPv6 support on IO::Socket::IP (0.20+).
+IO::Socket::SSL (1.84+) and IPv6 support on IO::Socket::IP (0.20+).
 .PP
 These options are currently available:
 .IP "address" 2
@@ -232,6 +232,34 @@ Local address to bind to.
 .Ve
 .Sp
 Port to connect to, defaults to \f(CW80\fR or \f(CW443\fR with \f(CW\*(C`tls\*(C'\fR option.
+.IP "socks_address" 2
+.IX Item "socks_address"
+.Vb 1
+\&  socks_address => \*(Aq127.0.0.1\*(Aq
+.Ve
+.Sp
+Address or host name of \s-1SOCKS5\s0 proxy server to use for connection.
+.IP "socks_pass" 2
+.IX Item "socks_pass"
+.Vb 1
+\&  socks_pass => \*(Aqsecr3t\*(Aq
+.Ve
+.Sp
+Password to use for \s-1SOCKS5\s0 authentication.
+.IP "socks_port" 2
+.IX Item "socks_port"
+.Vb 1
+\&  socks_port => 9050
+.Ve
+.Sp
+Port of \s-1SOCKS5\s0 proxy server to use for connection.
+.IP "socks_user" 2
+.IX Item "socks_user"
+.Vb 1
+\&  socks_user => \*(Aqsri\*(Aq
+.Ve
+.Sp
+Username to use for \s-1SOCKS5\s0 authentication.
 .IP "timeout" 2
 .IX Item "timeout"
 .Vb 1

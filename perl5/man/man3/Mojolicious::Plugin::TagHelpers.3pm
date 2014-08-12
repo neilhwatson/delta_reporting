@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Plugin::TagHelpers 3"
-.TH Mojolicious::Plugin::TagHelpers 3 "2014-02-23" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Plugin::TagHelpers 3 "2014-07-30" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -180,8 +180,8 @@ Mojolicious::Plugin::TagHelpers implements the following helpers.
 \&  %= check_box employed => 1, disabled => \*(Aqdisabled\*(Aq
 .Ve
 .PP
-Generate checkbox input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`checkbox\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 2
 \&  <input name="employed" type="checkbox" value="1" />
@@ -195,8 +195,8 @@ picked up and shown as default.
 \&  %= color_field background => \*(Aq#ffffff\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate color input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`color\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="background" type="color" />
@@ -209,7 +209,7 @@ picked up and shown as default.
 \&  %= csrf_field
 .Ve
 .PP
-Generate hidden input element with
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`hidden\*(C'\fR with
 \&\*(L"csrf_token\*(R" in Mojolicious::Plugin::DefaultHelpers.
 .PP
 .Vb 1
@@ -223,8 +223,8 @@ Generate hidden input element with
 \&  %= date_field end => \*(Aq2012\-12\-21\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate date input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`date\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="end" type="date" />
@@ -239,8 +239,8 @@ picked up and shown as default.
 \&  %= datetime_field end => \*(Aq2012\-12\-21T23:59:59Z\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate datetime input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`datetime\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="end" type="datetime" />
@@ -255,8 +255,8 @@ picked up and shown as default.
 \&  %= email_field notify => \*(Aqnospam@example.com\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate email input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`email\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="notify" type="email" />
@@ -270,7 +270,7 @@ picked up and shown as default.
 \&  %= file_field \*(Aqavatar\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate file input element.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`file\*(C'\fR.
 .PP
 .Vb 2
 \&  <input name="avatar" type="file" />
@@ -297,25 +297,25 @@ Generate file input element.
 \&  % end
 .Ve
 .PP
-Generate portable form tag with \*(L"url_for\*(R" in Mojolicious::Controller. For
-routes that allow \s-1POST\s0 but not \s-1GET\s0, a \f(CW\*(C`method\*(C'\fR attribute will be
+Generate portable \f(CW\*(C`form\*(C'\fR tag with \*(L"url_for\*(R" in Mojolicious::Controller. For
+routes that allow \f(CW\*(C`POST\*(C'\fR but not \f(CW\*(C`GET\*(C'\fR, a \f(CW\*(C`method\*(C'\fR attribute will be
 automatically added.
 .PP
 .Vb 10
 \&  <form action="/path/to/login">
-\&    <input name="first_name" />
+\&    <input name="first_name" type="text" />
 \&    <input value="Ok" type="submit" />
 \&  </form>
 \&  <form action="/path/to/login.txt" method="POST">
-\&    <input name="first_name" />
+\&    <input name="first_name" type="text" />
 \&    <input value="Ok" type="submit" />
 \&  </form>
 \&  <form action="/path/to/login" enctype="multipart/form\-data">
-\&    <input disabled="disabled" name="first_name" />
+\&    <input disabled="disabled" name="first_name" type="text" />
 \&    <input value="Ok" type="submit" />
 \&  </form>
 \&  <form action="http://example.com/login" method="POST">
-\&    <input name="first_name" />
+\&    <input name="first_name" type="text" />
 \&    <input value="Ok" type="submit" />
 \&  </form>
 .Ve
@@ -326,7 +326,7 @@ automatically added.
 \&  %= hidden_field foo => \*(Aqbar\*(Aq, id => \*(Aqbar\*(Aq
 .Ve
 .PP
-Generate hidden input element.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`hidden\*(C'\fR.
 .PP
 .Vb 2
 \&  <input name="foo" type="hidden" value="bar" />
@@ -339,7 +339,7 @@ Generate hidden input element.
 \&  %= image \*(Aq/images/foo.png\*(Aq, alt => \*(AqFoo\*(Aq
 .Ve
 .PP
-Generate portable img tag.
+Generate portable \f(CW\*(C`img\*(C'\fR tag.
 .PP
 .Vb 2
 \&  <img src="/path/to/images/foo.png" />
@@ -353,8 +353,8 @@ Generate portable img tag.
 \&  %= input_tag \*(Aqemployed\*(Aq, type => \*(Aqcheckbox\*(Aq
 .Ve
 .PP
-Generate form input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag. Previous input values will automatically get picked up
+and shown as default.
 .PP
 .Vb 3
 \&  <input name="first_name" />
@@ -370,7 +370,7 @@ picked up and shown as default.
 \&  % end
 .Ve
 .PP
-Generate portable script tag for \f(CW\*(C`Javascript\*(C'\fR asset.
+Generate portable \f(CW\*(C`script\*(C'\fR tag for JavaScript asset.
 .PP
 .Vb 4
 \&  <script src="/path/to/script.js" />
@@ -391,7 +391,7 @@ Generate portable script tag for \f(CW\*(C`Javascript\*(C'\fR asset.
 \&  % end
 .Ve
 .PP
-Generate label.
+Generate \f(CW\*(C`label\*(C'\fR tag.
 .PP
 .Vb 8
 \&  <label for="first_name">First name</label>
@@ -418,8 +418,8 @@ Generate label.
 \&  <%= link_to url_for\->query(foo => \*(Aqbar\*(Aq)\->to_abs => begin %>Retry<% end %>
 .Ve
 .PP
-Generate portable link with \*(L"url_for\*(R" in Mojolicious::Controller, defaults to
-using the capitalized link target as content.
+Generate portable \f(CW\*(C`a\*(C'\fR tag with \*(L"url_for\*(R" in Mojolicious::Controller, defaults
+to using the capitalized link target as content.
 .PP
 .Vb 10
 \&  <a href="/path/to/index">Home</a>
@@ -441,8 +441,8 @@ using the capitalized link target as content.
 \&  %= month_field vacation => \*(Aq2012\-12\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate month input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`month\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="vacation" type="month" />
@@ -457,8 +457,8 @@ picked up and shown as default.
 \&  %= number_field age => 25, id => \*(Aqfoo\*(Aq, min => 0, max => 200
 .Ve
 .PP
-Generate number input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`number\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="age" type="number" />
@@ -472,7 +472,7 @@ picked up and shown as default.
 \&  %= password_field \*(Aqpass\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate password input element.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`password\*(C'\fR.
 .PP
 .Vb 2
 \&  <input name="pass" type="password" />
@@ -485,8 +485,8 @@ Generate password input element.
 \&  %= radio_button country => \*(Aqgermany\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate radio input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`radio\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 2
 \&  <input name="country" type="radio" value="germany" />
@@ -500,8 +500,8 @@ picked up and shown as default.
 \&  %= range_field age => 25, id => \*(Aqfoo\*(Aq, min => 0, max => 200
 .Ve
 .PP
-Generate range input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`range\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="age" type="range" />
@@ -516,8 +516,8 @@ picked up and shown as default.
 \&  %= search_field q => \*(Aqperl\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate search input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`search\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="q" type="search" />
@@ -534,8 +534,8 @@ picked up and shown as default.
 \&  %= select_field country => [c(EU => [qw(de en)]), c(Asia => [qw(cn jp)])]
 .Ve
 .PP
-Generate select and option elements from array references and optgroup
-elements from Mojo::Collection objects. Previous input values will
+Generate \f(CW\*(C`select\*(C'\fR and \f(CW\*(C`option\*(C'\fR tags from array references and \f(CW\*(C`optgroup\*(C'\fR
+tags from Mojo::Collection objects. Previous input values will
 automatically get picked up and shown as default.
 .PP
 .Vb 10
@@ -577,7 +577,7 @@ automatically get picked up and shown as default.
 \&  % end
 .Ve
 .PP
-Generate portable style or link tag for \f(CW\*(C`CSS\*(C'\fR asset.
+Generate portable \f(CW\*(C`style\*(C'\fR or \f(CW\*(C`link\*(C'\fR tag for \s-1CSS\s0 asset.
 .PP
 .Vb 4
 \&  <link href="/path/to/foo.css" rel="stylesheet" />
@@ -592,7 +592,7 @@ Generate portable style or link tag for \f(CW\*(C`CSS\*(C'\fR asset.
 \&  %= submit_button \*(AqOk!\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate submit input element.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`submit\*(C'\fR.
 .PP
 .Vb 2
 \&  <input type="submit" value="Ok" />
@@ -640,9 +640,9 @@ Alias for \*(L"tag\*(R".
 Very useful for reuse in more specific tag helpers.
 .PP
 .Vb 3
-\&  $self\->tag(\*(Aqdiv\*(Aq);
-\&  $self\->tag(\*(Aqdiv\*(Aq, id => \*(Aqfoo\*(Aq);
-\&  $self\->tag(div => sub { \*(AqContent\*(Aq });
+\&  $c\->tag(\*(Aqdiv\*(Aq);
+\&  $c\->tag(\*(Aqdiv\*(Aq, id => \*(Aqfoo\*(Aq);
+\&  $c\->tag(div => sub { \*(AqContent\*(Aq });
 .Ve
 .PP
 Results are automatically wrapped in Mojo::ByteStream objects to prevent
@@ -666,8 +666,8 @@ Same as \*(L"tag\*(R", but adds the class \f(CW\*(C`field\-with\-error\*(C'\fR.
 \&  %= tel_field work => \*(Aq123456789\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate tel input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`tel\*(C'\fR. Previous input values will automatically
+get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="work" type="tel" />
@@ -685,7 +685,7 @@ picked up and shown as default.
 \&  % end
 .Ve
 .PP
-Generate textarea element. Previous input values will automatically get picked
+Generate \f(CW\*(C`textarea\*(C'\fR tag. Previous input values will automatically get picked
 up and shown as default.
 .PP
 .Vb 6
@@ -704,8 +704,8 @@ up and shown as default.
 \&  %= text_field first_name => \*(AqDefault name\*(Aq, class => \*(Aquser\*(Aq
 .Ve
 .PP
-Generate text input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`text\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="first_name" type="text" />
@@ -720,8 +720,8 @@ picked up and shown as default.
 \&  %= time_field start => \*(Aq23:59:59\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate time input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`time\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="start" type="time" />
@@ -736,8 +736,8 @@ picked up and shown as default.
 \&  %= url_field address => \*(Aqhttp://mojolicio.us\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate url input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`url\*(C'\fR. Previous input values will automatically
+get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="address" type="url" />
@@ -752,8 +752,8 @@ picked up and shown as default.
 \&  %= week_field vacation => \*(Aq2012\-W17\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate week input element. Previous input values will automatically get
-picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`week\*(C'\fR. Previous input values will
+automatically get picked up and shown as default.
 .PP
 .Vb 3
 \&  <input name="vacation" type="week" />

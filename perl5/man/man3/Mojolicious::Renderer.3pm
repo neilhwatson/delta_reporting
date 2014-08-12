@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Renderer 3"
-.TH Mojolicious::Renderer 3 "2014-03-04" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Renderer 3 "2014-08-10" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -137,8 +137,8 @@ Mojolicious::Renderer \- Generate dynamic content
 \&  use Mojolicious::Renderer;
 \&
 \&  my $renderer = Mojolicious::Renderer\->new;
-\&  push @{$renderer\->classes}, \*(AqMyApp::Foo\*(Aq;
-\&  push @{renderer\->paths}, \*(Aq/home/sri/templates\*(Aq;
+\&  push @{$renderer\->classes}, \*(AqMyApp::Controller::Foo\*(Aq;
+\&  push @{$renderer\->paths}, \*(Aq/home/sri/templates\*(Aq;
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -239,7 +239,7 @@ implements the following new ones.
 .Ve
 .PP
 Select best possible representation for Mojolicious::Controller object from
-\&\f(CW\*(C`Accept\*(C'\fR request header, \f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \s-1GET/POST\s0
+\&\f(CW\*(C`Accept\*(C'\fR request header, \f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \f(CW\*(C`GET\*(C'\fR/\f(CW\*(C`POST\*(C'\fR
 parameter, defaults to returning the first extension if no preference could be
 detected. Since browsers often don't really know what they actually want,
 unspecific \f(CW\*(C`Accept\*(C'\fR request headers with more than one \s-1MIME\s0 type will be
@@ -270,6 +270,15 @@ Register a new helper.
 .Ve
 .PP
 Get a \f(CW\*(C`DATA\*(C'\fR section template by name, usually used by handlers.
+.SS "get_helper"
+.IX Subsection "get_helper"
+.Vb 1
+\&  my $helper = $renderer\->get_helper(\*(Aqurl_for\*(Aq);
+.Ve
+.PP
+Get a helper by full name, generate a helper dynamically for a prefix or
+return \f(CW\*(C`undef\*(C'\fR if no helper or prefix could be found. Generated helpers
+return a proxy object on which nested helpers can be called.
 .SS "render"
 .IX Subsection "render"
 .Vb 5

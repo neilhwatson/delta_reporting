@@ -114,7 +114,7 @@ Very Perl-ish and minimalistic template system.
 
 =item L<Test::Mojo>
 
-Test driven development toolkit for web applications.
+Testing toolkit for web applications.
 
 =item L<ojo>
 
@@ -132,6 +132,10 @@ designed to be used with it and are being developed under the same umbrella.
 =item L<Mango>
 
 Pure-Perl non-blocking I/O MongoDB driver.
+
+=item L<Minion>
+
+Job queue.
 
 =back
 

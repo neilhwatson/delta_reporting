@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Server 3"
-.TH Mojo::Server 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Server 3 "2014-07-25" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -186,6 +186,31 @@ Mojo::Server implements the following attributes.
 .Ve
 .PP
 Application this server handles, defaults to a Mojo::HelloWorld object.
+.SS "group"
+.IX Subsection "group"
+.Vb 2
+\&  my $group = $server\->group;
+\&  $server   = $server\->group(\*(Aqusers\*(Aq);
+.Ve
+.PP
+Group for server process.
+.SS "reverse_proxy"
+.IX Subsection "reverse_proxy"
+.Vb 2
+\&  my $bool = $server\->reverse_proxy;
+\&  $server  = $server\->reverse_proxy($bool);
+.Ve
+.PP
+This server operates behind a reverse proxy, defaults to the value of the
+\&\f(CW\*(C`MOJO_REVERSE_PROXY\*(C'\fR environment variable.
+.SS "user"
+.IX Subsection "user"
+.Vb 2
+\&  my $user = $server\->user;
+\&  $server  = $server\->user(\*(Aqweb\*(Aq);
+.Ve
+.PP
+User for the server process.
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Server inherits all methods from Mojo::EventEmitter and implements
@@ -204,6 +229,13 @@ Build application from class.
 .Ve
 .PP
 Let application build a transaction.
+.SS "daemonize"
+.IX Subsection "daemonize"
+.Vb 1
+\&  $server\->daemonize;
+.Ve
+.PP
+Daemonize server process.
 .SS "load_app"
 .IX Subsection "load_app"
 .Vb 1
@@ -230,6 +262,13 @@ with default request handling.
 .Ve
 .PP
 Run server. Meant to be overloaded in a subclass.
+.SS "setuidgid"
+.IX Subsection "setuidgid"
+.Vb 1
+\&  $server = $server\->setuidgid;
+.Ve
+.PP
+Set \*(L"user\*(R" and \*(L"group\*(R" for process.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

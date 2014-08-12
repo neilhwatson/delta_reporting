@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Headers 3"
-.TH Mojo::Headers 3 "2014-02-23" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Headers 3 "2014-08-05" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -152,7 +152,8 @@ Mojo::Headers \- Headers
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Mojo::Headers is a container for \s-1HTTP\s0 headers based on
-<\s-1RFC\s0 2616>.
+<\s-1RFC\s0 7230> and
+<\s-1RFC\s0 7231>.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojo::Headers implements the following attributes.
@@ -164,7 +165,7 @@ Mojo::Headers implements the following attributes.
 .Ve
 .PP
 Maximum header line size in bytes, defaults to the value of the
-\&\s-1MOJO_MAX_LINE_SIZE\s0 environment variable or \f(CW10240\fR.
+\&\f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable or \f(CW10240\fR (10KB).
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Headers inherits all methods from Mojo::Base and implements the
@@ -211,10 +212,9 @@ Shortcut for the \f(CW\*(C`Accept\-Language\*(C'\fR header.
 Shortcut for the \f(CW\*(C`Accept\-Ranges\*(C'\fR header.
 .SS "add"
 .IX Subsection "add"
-.Vb 3
+.Vb 2
 \&  $headers = $headers\->add(Foo => \*(Aqone value\*(Aq);
 \&  $headers = $headers\->add(Foo => \*(Aqfirst value\*(Aq, \*(Aqsecond value\*(Aq);
-\&  $headers = $headers\->add(Foo => [\*(Aqfirst line\*(Aq, \*(Aqsecond line\*(Aq]);
 .Ve
 .PP
 Add one or more header values with one or more lines.
@@ -348,7 +348,7 @@ but is very commonly used.
 .IX Subsection "etag"
 .Vb 2
 \&  my $etag = $headers\->etag;
-\&  $headers = $headers\->etag(\*(Aqabc321\*(Aq);
+\&  $headers = $headers\->etag(\*(Aq"abc321"\*(Aq);
 .Ve
 .PP
 Shortcut for the \f(CW\*(C`ETag\*(C'\fR header.
@@ -379,25 +379,13 @@ Shortcut for the \f(CW\*(C`Expires\*(C'\fR header.
 Parse headers from a hash reference, an empty hash removes all headers.
 .SS "header"
 .IX Subsection "header"
-.Vb 5
-\&  my $value  = $headers\->header(\*(AqFoo\*(Aq);
-\&  my @values = $headers\->header(\*(AqFoo\*(Aq);
-\&  $headers   = $headers\->header(Foo => \*(Aqone value\*(Aq);
-\&  $headers   = $headers\->header(Foo => \*(Aqfirst value\*(Aq, \*(Aqsecond value\*(Aq);
-\&  $headers   = $headers\->header(Foo => [\*(Aqfirst line\*(Aq, \*(Aqsecond line\*(Aq]);
+.Vb 3
+\&  my $value = $headers\->header(\*(AqFoo\*(Aq);
+\&  $headers  = $headers\->header(Foo => \*(Aqone value\*(Aq);
+\&  $headers  = $headers\->header(Foo => \*(Aqfirst value\*(Aq, \*(Aqsecond value\*(Aq);
 .Ve
 .PP
 Get or replace the current header values.
-.PP
-.Vb 3
-\&  # Multiple headers with the same name
-\&  for my $header ($headers\->header(\*(AqSet\-Cookie\*(Aq)) {
-\&    say \*(AqSet\-Cookie:\*(Aq;
-\&
-\&    # Multiple lines per header
-\&    say for @$header;
-\&  }
-.Ve
 .SS "host"
 .IX Subsection "host"
 .Vb 2
@@ -414,6 +402,14 @@ Shortcut for the \f(CW\*(C`Host\*(C'\fR header.
 .Ve
 .PP
 Shortcut for the \f(CW\*(C`If\-Modified\-Since\*(C'\fR header.
+.SS "if_none_match"
+.IX Subsection "if_none_match"
+.Vb 2
+\&  my $etag = $headers\->if_none_match;
+\&  $headers = $headers\->if_none_match(\*(Aq"abc321"\*(Aq);
+.Ve
+.PP
+Shortcut for the \f(CW\*(C`If\-None\-Match\*(C'\fR header.
 .SS "is_finished"
 .IX Subsection "is_finished"
 .Vb 1
@@ -615,8 +611,8 @@ Shortcut for the \f(CW\*(C`TE\*(C'\fR header.
 \&  my $multi  = $headers\->to_hash(1);
 .Ve
 .PP
-Turn headers into hash reference, nested array references to represent
-multiple headers with the same name are disabled by default.
+Turn headers into hash reference, array references to represent multiple
+headers with the same name are disabled by default.
 .PP
 .Vb 1
 \&  say $headers\->to_hash\->{DNT};

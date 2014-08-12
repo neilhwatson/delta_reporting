@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::UserAgent::Proxy 3"
-.TH Mojo::UserAgent::Proxy 3 "2014-02-07" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::UserAgent::Proxy 3 "2014-07-31" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -149,16 +149,16 @@ Mojo::UserAgent::Proxy implements the following attributes.
 .SS "http"
 .IX Subsection "http"
 .Vb 2
-\&  my $http = $ua\->http;
-\&  $ua      = $ua\->http(\*(Aqhttp://sri:secret@127.0.0.1:8080\*(Aq);
+\&  my $http = $proxy\->http;
+\&  $proxy   = $proxy\->http(\*(Aqsocks://sri:secret@127.0.0.1:8080\*(Aq);
 .Ve
 .PP
 Proxy server to use for \s-1HTTP\s0 and WebSocket requests.
 .SS "https"
 .IX Subsection "https"
 .Vb 2
-\&  my $https = $ua\->https;
-\&  $ua       = $ua\->https(\*(Aqhttp://sri:secret@127.0.0.1:8080\*(Aq);
+\&  my $https = $proxy\->https;
+\&  $proxy    = $proxy\->https(\*(Aqhttp://sri:secret@127.0.0.1:8080\*(Aq);
 .Ve
 .PP
 Proxy server to use for \s-1HTTPS\s0 and WebSocket requests.
@@ -166,7 +166,7 @@ Proxy server to use for \s-1HTTPS\s0 and WebSocket requests.
 .IX Subsection "not"
 .Vb 2
 \&  my $not = $proxy\->not;
-\&  $ua     = $proxy\->not([qw(localhost intranet.mojolicio.us)]);
+\&  $proxy  = $proxy\->not([qw(localhost intranet.mojolicio.us)]);
 .Ve
 .PP
 Domains that don't require a proxy server to be used.
@@ -180,9 +180,9 @@ implements the following new ones.
 \&  $proxy = $proxy\->detect;
 .Ve
 .PP
-Check environment variables \s-1HTTP_PROXY\s0, http_proxy, \s-1HTTPS_PROXY\s0, https_proxy,
-\&\s-1NO_PROXY\s0 and no_proxy for proxy information. Automatic proxy detection can be
-enabled with the \s-1MOJO_PROXY\s0 environment variable.
+Check environment variables \f(CW\*(C`HTTP_PROXY\*(C'\fR, \f(CW\*(C`http_proxy\*(C'\fR, \f(CW\*(C`HTTPS_PROXY\*(C'\fR,
+\&\f(CW\*(C`https_proxy\*(C'\fR, \f(CW\*(C`NO_PROXY\*(C'\fR and \f(CW\*(C`no_proxy\*(C'\fR for proxy information. Automatic
+proxy detection can be enabled with the \f(CW\*(C`MOJO_PROXY\*(C'\fR environment variable.
 .SS "inject"
 .IX Subsection "inject"
 .Vb 1

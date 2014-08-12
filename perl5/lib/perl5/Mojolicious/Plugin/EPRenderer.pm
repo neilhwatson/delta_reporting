@@ -2,7 +2,7 @@ package Mojolicious::Plugin::EPRenderer;
 use Mojo::Base 'Mojolicious::Plugin';
 
 use Mojo::Template;
-use Mojo::Util qw(encode md5_sum monkey_patch steady_time);
+use Mojo::Util qw(encode md5_sum monkey_patch);
 
 sub register {
   my ($self, $app, $conf) = @_;
@@ -16,10 +16,10 @@ sub register {
       my ($renderer, $c, $output, $options) = @_;
 
       # Generate name
-      my $path = $options->{inline} || $renderer->template_path($options);
-      return undef unless defined $path;
+      my $name = $options->{inline} || $renderer->template_name($options);
+      return undef unless defined $name;
       my @keys = sort grep {/^\w+$/} keys %{$c->stash};
-      my $id = encode 'UTF-8', join(',', $path, @keys);
+      my $id = encode 'UTF-8', join(',', $name, @keys);
       my $key = $options->{cache} = md5_sum $id;
 
       # Cache template for "epl" handler
@@ -33,7 +33,7 @@ sub register {
           unless $self->{helpers};
 
         # Stash values (every time)
-        my $prepend = 'my $self = shift; my $_S = $self->stash;';
+        my $prepend = 'my $self = my $c = shift; my $_S = $c->stash;';
         $prepend .= " my \$$_ = \$_S->{'$_'};" for @keys;
 
         $cache->set($key => $mt->prepend($prepend . $mt->prepend));

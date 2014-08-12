@@ -1,6 +1,8 @@
 package Mojolicious::Routes::Match;
 use Mojo::Base -base;
 
+use Mojo::Util;
+
 has current => 0;
 has [qw(endpoint root)];
 has stack => sub { [] };
@@ -8,40 +10,42 @@ has stack => sub { [] };
 sub match { $_[0]->_match($_[0]->root, $_[1], $_[2]) }
 
 sub path_for {
-  my ($self, $name, %values) = (shift, _values(@_));
+  my ($self, $name, %values) = (shift, Mojo::Util::_options(@_));
 
   # Current route
   my $endpoint;
   if ($name && $name eq 'current' || !$name) {
-    return unless $endpoint = $self->endpoint;
+    return {} unless $endpoint = $self->endpoint;
   }
 
   # Find endpoint
-  else { return $name unless $endpoint = $self->root->lookup($name) }
+  else { return {path => $name} unless $endpoint = $self->root->lookup($name) }
 
   # Merge values (clear format)
   my $captures = $self->stack->[-1] || {};
   %values = (%$captures, format => undef, %values);
   my $pattern = $endpoint->pattern;
   $values{format}
-    = defined $captures->{format}
+    //= defined $captures->{format}
     ? $captures->{format}
     : $pattern->defaults->{format}
     if $pattern->constraints->{format};
 
   my $path = $endpoint->render('', \%values);
-  return wantarray ? ($path, $endpoint->has_websocket) : $path;
+  return {path => $path, websocket => $endpoint->has_websocket};
 }
 
 sub _match {
   my ($self, $r, $c, $options) = @_;
 
   # Pattern
-  my $path = $options->{path};
-  return
-    unless my $captures = $r->pattern->match_partial(\$path, $r->is_endpoint);
+  my $path    = $options->{path};
+  my $partial = $r->partial;
+  my $detect  = (my $endpoint = $r->is_endpoint) && !$partial;
+  return unless my $captures = $r->pattern->match_partial(\$path, $detect);
   local $options->{path} = $path;
-  $captures = $self->{captures} = {%{$self->{captures} || {}}, %$captures};
+  local @{$self->{captures} ||= {}}{keys %$captures} = values %$captures;
+  $captures = $self->{captures};
 
   # Method
   my $methods = $r->via;
@@ -61,14 +65,13 @@ sub _match {
 
   # Partial
   my $empty = !length $path || $path eq '/';
-  if ($r->partial) {
+  if ($partial) {
     $captures->{path} = $path;
     $self->endpoint($r);
     $empty = 1;
   }
 
   # Endpoint (or bridge)
-  my $endpoint = $r->is_endpoint;
   if (($endpoint && $empty) || $r->inline) {
     push @{$self->stack}, {%$captures};
     if ($endpoint && $empty) {
@@ -91,18 +94,6 @@ sub _match {
     if   ($r->parent) { $self->stack([@$snapshot])->{captures} = $captures }
     else              { $self->stack([])->{captures}           = {} }
   }
-}
-
-sub _values {
-
-  # Hash or name (one)
-  return ref $_[0] eq 'HASH' ? (undef, %{shift()}) : @_ if @_ == 1;
-
-  # Name and values (odd)
-  return shift, @_ if @_ % 2;
-
-  # Name and hash or just values (even)
-  return ref $_[1] eq 'HASH' ? (shift, %{shift()}) : (undef, @_);
 }
 
 1;
@@ -132,8 +123,8 @@ Mojolicious::Routes::Match - Find routes
   say $match->stack->[0]{action};
 
   # Render
-  say $match->path_for;
-  say $match->path_for(action => 'baz');
+  say $match->path_for->{path};
+  say $match->path_for(action => 'baz')->{path};
 
 =head1 DESCRIPTION
 
@@ -187,18 +178,12 @@ L</"endpoint">.
 
 =head2 path_for
 
-  my $path        = $match->path_for;
-  my $path        = $match->path_for(foo => 'bar');
-  my $path        = $match->path_for({foo => 'bar'});
-  my $path        = $match->path_for('named');
-  my $path        = $match->path_for('named', foo => 'bar');
-  my $path        = $match->path_for('named', {foo => 'bar'});
-  my ($path, $ws) = $match->path_for;
-  my ($path, $ws) = $match->path_for(foo => 'bar');
-  my ($path, $ws) = $match->path_for({foo => 'bar'});
-  my ($path, $ws) = $match->path_for('named');
-  my ($path, $ws) = $match->path_for('named', foo => 'bar');
-  my ($path, $ws) = $match->path_for('named', {foo => 'bar'});
+  my $info = $match->path_for;
+  my $info = $match->path_for(foo => 'bar');
+  my $info = $match->path_for({foo => 'bar'});
+  my $info = $match->path_for('named');
+  my $info = $match->path_for('named', foo => 'bar');
+  my $info = $match->path_for('named', {foo => 'bar'});
 
 Render matching route with parameters into path.
 

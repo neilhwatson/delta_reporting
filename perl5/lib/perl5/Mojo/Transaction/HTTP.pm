@@ -35,11 +35,12 @@ sub keep_alive {
   my $res_conn = lc($res->headers->connection // '');
   return undef if $req_conn eq 'close' || $res_conn eq 'close';
 
-  # Keep-alive
-  return 1 if $req_conn eq 'keep-alive' || $res_conn eq 'keep-alive';
+  # Keep-alive is optional for 1.0
+  return $res_conn eq 'keep-alive' if $res->version eq '1.0';
+  return $req_conn eq 'keep-alive' if $req->version eq '1.0';
 
-  # No keep-alive for 1.0
-  return !($req->version eq '1.0' || $res->version eq '1.0');
+  # Keep-alive is the default for 1.1
+  return 1;
 }
 
 sub redirects {
@@ -84,7 +85,7 @@ sub _body {
 
   # Finished
   $self->{state} = $finish ? 'finished' : 'read'
-    if $self->{write} <= 0 || (defined $buffer && !length $buffer);
+    if $self->{write} <= 0 || defined $buffer && !length $buffer;
 
   return defined $buffer ? $buffer : '';
 }
@@ -200,7 +201,8 @@ Mojo::Transaction::HTTP - HTTP transaction
 =head1 DESCRIPTION
 
 L<Mojo::Transaction::HTTP> is a container for HTTP transactions based on
-L<RFC 2616|http://tools.ietf.org/html/rfc2616>.
+L<RFC 7230|http://tools.ietf.org/html/rfc7230> and
+L<RFC 7231|http://tools.ietf.org/html/rfc7231>.
 
 =head1 EVENTS
 

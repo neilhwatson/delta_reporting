@@ -14,7 +14,7 @@ use List::Util 'first';
 use Mojo::Collection;
 use Mojo::DOM::CSS;
 use Mojo::DOM::HTML;
-use Mojo::Util qw(deprecated squish);
+use Mojo::Util 'squish';
 use Scalar::Util qw(blessed weaken);
 
 sub AUTOLOAD {
@@ -60,7 +60,8 @@ sub attr {
   return $attrs->{$_[0]} // '' unless @_ > 1 || ref $_[0];
 
   # Set
-  %$attrs = (%$attrs, %{ref $_[0] ? $_[0] : {@_}});
+  my $values = ref $_[0] ? $_[0] : {@_};
+  @$attrs{keys %$values} = values %$values;
 
   return $self;
 }
@@ -84,13 +85,6 @@ sub content {
   return $self->tree->[1] unless @_;
   $self->tree->[1] = shift;
   return $self;
-}
-
-# DEPRECATED in Top Hat!
-sub content_xml {
-  deprecated
-    'Mojo::DOM::content_xml is DEPRECATED in favor of Mojo::DOM::content';
-  shift->content;
 }
 
 sub contents { $_[0]->_collect(_nodes($_[0]->tree)) }
@@ -153,13 +147,6 @@ sub replace {
   return $self->_replace($self->_parent, $tree, $self->_parse("$new"));
 }
 
-# DEPRECATED in Top Hat!
-sub replace_content {
-  deprecated
-    'Mojo::DOM::replace_content is DEPRECATED in favor of Mojo::DOM::content';
-  shift->content(@_);
-}
-
 sub root {
   my $self = shift;
   return $self unless my $tree = $self->_ancestors(1);
@@ -178,50 +165,7 @@ sub tap { shift->Mojo::Base::tap(@_) }
 
 sub text { shift->_all_text(0, @_) }
 
-# DEPRECATED in Top Hat!
-sub text_after {
-  deprecated
-    'Mojo::DOM::text_after is DEPRECATED in favor of Mojo::DOM::contents';
-  my ($self, $trim) = @_;
-
-  return '' if (my $tree = $self->tree)->[0] ne 'tag';
-
-  my (@nodes, $started);
-  for my $n (_nodes($tree->[3])) {
-    ++$started and next if $n eq $tree;
-    next unless $started;
-    last if $n->[0] eq 'tag';
-    push @nodes, $n;
-  }
-
-  return _text(\@nodes, 0, _trim($tree->[3], $trim));
-}
-
-# DEPRECATED in Top Hat!
-sub text_before {
-  deprecated
-    'Mojo::DOM::text_before is DEPRECATED in favor of Mojo::DOM::contents';
-  my ($self, $trim) = @_;
-
-  return '' if (my $tree = $self->tree)->[0] ne 'tag';
-
-  my @nodes;
-  for my $n (_nodes($tree->[3])) {
-    last if $n eq $tree;
-    @nodes = $n->[0] eq 'tag' ? () : (@nodes, $n);
-  }
-
-  return _text(\@nodes, 0, _trim($tree->[3], $trim));
-}
-
 sub to_string { shift->_delegate('render') }
-
-# DEPRECATED in Top Hat!
-sub to_xml {
-  deprecated
-    'Mojo::DOM::to_xml is DEPRECATED in favor of Mojo::DOM::to_string';
-  shift->to_string;
-}
 
 sub tree { shift->_delegate(tree => @_) }
 
@@ -231,6 +175,24 @@ sub type {
   return $tree->[1] unless $type;
   $tree->[1] = $type;
   return $self;
+}
+
+sub val {
+  my $self = shift;
+
+  # "option"
+  my $type = $self->type;
+  return Mojo::Collection->new($self->{value} // $self->text)
+    if $type eq 'option';
+
+  # "select"
+  return $self->find('option[selected]')->val->flatten if $type eq 'select';
+
+  # "textarea"
+  return Mojo::Collection->new($self->text) if $type eq 'textarea';
+
+  # "input" or "button"
+  return Mojo::Collection->new($self->{value} // ());
 }
 
 sub wrap         { shift->_wrap(0, @_) }
@@ -255,8 +217,16 @@ sub _all {
 }
 
 sub _all_text {
-  my $tree = shift->tree;
-  return _text([_nodes($tree)], shift, _trim($tree, @_));
+  my ($self, $recurse, $trim) = @_;
+
+  # Detect "pre" tag
+  my $tree = $self->tree;
+  if (!defined $trim || $trim) {
+    $trim = 1;
+    $_->[1] eq 'pre' and $trim = 0 for $self->_ancestors, $tree;
+  }
+
+  return _text([_nodes($tree)], $recurse, $trim);
 }
 
 sub _ancestors {
@@ -363,7 +333,7 @@ sub _siblings {
 
 sub _start { $_[0][0] eq 'root' ? 1 : 4 }
 
-sub _tag { $_[0]->new->tree($_[1])->xml($_[2]) }
+sub _tag { shift->new->tree(shift)->xml(shift) }
 
 sub _text {
   my ($nodes, $recurse, $trim) = @_;
@@ -382,7 +352,8 @@ sub _text {
     # Nested tag
     my $content = '';
     if ($type eq 'tag' && $recurse) {
-      $content = _text([_nodes($n)], 1, _trim($n, $trim));
+      no warnings 'recursion';
+      $content = _text([_nodes($n)], 1, $n->[1] eq 'pre' ? 0 : $trim);
     }
 
     # Text
@@ -399,21 +370,6 @@ sub _text {
   }
 
   return $text;
-}
-
-sub _trim {
-  my ($n, $trim) = @_;
-
-  # Disabled
-  return 0 unless $n && ($trim = defined $trim ? $trim : 1);
-
-  # Detect "pre" tag
-  while ($n->[0] eq 'tag') {
-    return 0 if $n->[1] eq 'pre';
-    last unless $n = $n->[3];
-  }
-
-  return 1;
 }
 
 sub _wrap {
@@ -466,11 +422,11 @@ Mojo::DOM - Minimalistic HTML/XML DOM parser with CSS selectors
   say $dom->div->children('p')->first->{id};
 
   # Iterate
-  $dom->find('p[id]')->each(sub { say shift->{id} });
+  $dom->find('p[id]')->each(sub { say $_->{id} });
 
   # Loop
   for my $e ($dom->find('p[id]')->each) {
-    say $e->text;
+    say $e->{id}, ':', $e->text;
   }
 
   # Modify
@@ -567,13 +523,17 @@ Append HTML/XML fragment to this node.
 
   $dom = $dom->append_content('<p>I ♥ Mojolicious!</p>');
 
-Append new content to this node's content.
+Append HTML/XML fragment or raw content (depending on node type) to this
+node's content.
 
   # "<div><h1>AB</h1></div>"
   $dom->parse('<div><h1>A</h1></div>')->at('h1')->append_content('B')->root;
 
   # "<!-- A B --><br>"
   $dom->parse('<!-- A --><br>')->contents->first->append_content('B ')->root;
+
+  # "<p>A<i>B</i></p>"
+  $dom->parse('<p>A</p>')->at('p')->append_content('<i>B</i>')->root;
 
 =head2 at
 
@@ -588,10 +548,10 @@ from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
 
 =head2 attr
 
-  my $attrs = $dom->attr;
-  my $foo   = $dom->attr('foo');
-  $dom      = $dom->attr({foo => 'bar'});
-  $dom      = $dom->attr(foo => 'bar');
+  my $hash = $dom->attr;
+  my $foo  = $dom->attr('foo');
+  $dom     = $dom->attr({foo => 'bar'});
+  $dom     = $dom->attr(foo => 'bar');
 
 This element's attributes.
 
@@ -615,7 +575,8 @@ All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
   my $str = $dom->content;
   $dom    = $dom->content('<p>I ♥ Mojolicious!</p>');
 
-Return this node's content or replace it with new content.
+Return this node's content or replace it with HTML/XML fragment or raw content
+(depending on node type).
 
   # "<b>test</b>"
   $dom->parse('<div><b>test</b></div>')->div->content;
@@ -631,6 +592,9 @@ Return this node's content or replace it with new content.
 
   # "<!-- B --><br>"
   $dom->parse('<!-- A --><br>')->contents->first->content(' B ')->root;
+
+  # "<p><i>B</i></p>"
+  $dom->parse('<p>A</p>')->at('p')->content('<i>B</i>')->root;
 
 =head2 contents
 
@@ -658,7 +622,12 @@ All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
 
   # Extract information from multiple elements
   my @headers = $dom->find('h1, h2, h3')->text->each;
-  my @links   = $dom->find('a[href]')->attr('href')->each;
+
+  # Count all the different tags
+  my $hash = $dom->find('*')->type->reduce(sub { $a->{$b}++; $a }, {});
+
+  # Find elements with a class that contains dots
+  my @divs = $dom->find('div.foo\.bar')->each;
 
 =head2 match
 
@@ -748,13 +717,17 @@ Prepend HTML/XML fragment to this node.
 
   $dom = $dom->prepend_content('<p>I ♥ Mojolicious!</p>');
 
-Prepend new content to this node's content.
+Prepend HTML/XML fragment or raw content (depending on node type) to this
+node's content.
 
   # "<div><h2>AB</h2></div>"
   $dom->parse('<div><h2>B</h2></div>')->at('h2')->prepend_content('A')->root;
 
   # "<!-- A B --><br>"
   $dom->parse('<!-- B --><br>')->contents->first->prepend_content(' A')->root;
+
+  # "<p><i>B</i>A</p>"
+  $dom->parse('<p>A</p>')->at('p')->prepend_content('<i>B</i>')->root;
 
 =head2 previous
 
@@ -874,6 +847,24 @@ This element's type.
 
   # List types of child elements
   say $dom->children->type;
+
+=head2 val
+
+  my $collection = $dom->val;
+
+Extract values from C<button>, C<input>, C<option>, C<select> or C<textarea>
+element and return a L<Mojo::Collection> object containing these values. In
+the case of C<select>, find all C<option> elements it contains that have a
+C<selected> attribute and extract their values.
+
+  # "b"
+  $dom->parse('<input name="a" value="b">')->at('input')->val;
+
+  # "c"
+  $dom->parse('<option value="c">C</option>')->at('option')->val;
+
+  # "d"
+  $dom->parse('<option>d</option>')->at('option')->val;
 
 =head2 wrap
 

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides::Cookbook 3"
-.TH Mojolicious::Guides::Cookbook 3 "2014-03-03" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides::Cookbook 3 "2014-08-07" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -289,7 +289,7 @@ losing a single incoming connection, just by running the command above again.
 .PP
 You might also want to enable proxy support if you're using Hypnotoad behind a
 reverse proxy. This allows Mojolicious to automatically pick up the
-\&\f(CW\*(C`X\-Forwarded\-For\*(C'\fR and \f(CW\*(C`X\-Forwarded\-HTTPS\*(C'\fR headers.
+\&\f(CW\*(C`X\-Forwarded\-For\*(C'\fR and \f(CW\*(C`X\-Forwarded\-Proto\*(C'\fR headers.
 .PP
 .Vb 2
 \&  # myapp.conf
@@ -320,8 +320,9 @@ Just remember that both web servers need to be started with the \f(CW\*(C`reuse\
 parameter.
 .SS "Nginx"
 .IX Subsection "Nginx"
-One of the most popular setups these days is Hypnotoad behind an Nginx reverse
-proxy, which even supports WebSockets in newer versions.
+One of the most popular setups these days is Hypnotoad behind an
+<Nginx> reverse proxy, which even supports WebSockets in
+newer versions.
 .PP
 .Vb 10
 \&  upstream myapp {
@@ -337,14 +338,14 @@ proxy, which even supports WebSockets in newer versions.
 \&      proxy_set_header Connection "upgrade";
 \&      proxy_set_header Host $host;
 \&      proxy_set_header X\-Forwarded\-For $proxy_add_x_forwarded_for;
-\&      proxy_set_header X\-Forwarded\-HTTPS 0;
+\&      proxy_set_header X\-Forwarded\-Proto "http";
 \&    }
 \&  }
 .Ve
 .SS "Apache/mod_proxy"
 .IX Subsection "Apache/mod_proxy"
-Another good reverse proxy is Apache with \f(CW\*(C`mod_proxy\*(C'\fR, the configuration
-looks quite similar to the Nginx one above.
+Another good reverse proxy is <Apache> with
+\&\f(CW\*(C`mod_proxy\*(C'\fR, the configuration looks quite similar to the Nginx one above.
 .PP
 .Vb 12
 \&  <VirtualHost *:80>
@@ -357,13 +358,16 @@ looks quite similar to the Nginx one above.
 \&    ProxyPreserveHost On
 \&    ProxyPass / http://localhost:8080/ keepalive=On
 \&    ProxyPassReverse / http://localhost:8080/
-\&    RequestHeader set X\-Forwarded\-HTTPS "0"
+\&    RequestHeader set X\-Forwarded\-Proto "http"
 \&  </VirtualHost>
 .Ve
 .SS "Apache/CGI"
 .IX Subsection "Apache/CGI"
 \&\f(CW\*(C`CGI\*(C'\fR is supported out of the box and your Mojolicious application will
-automatically detect that it is executed as a \f(CW\*(C`CGI\*(C'\fR script.
+automatically detect that it is executed as a \f(CW\*(C`CGI\*(C'\fR script. It's use in
+production environments is discouraged though, because as a result of how
+\&\f(CW\*(C`CGI\*(C'\fR works, it is very slow and many web servers are making it exceptionally
+hard to configure properly.
 .PP
 .Vb 1
 \&  ScriptAlias / /home/sri/myapp/script/myapp/
@@ -376,9 +380,8 @@ helpers and adapters to web servers. \s-1PSGI\s0 and Plack are inspired by
 Python's \s-1WSGI\s0 and Ruby's Rack. Mojolicious applications are ridiculously
 simple to deploy with Plack.
 .PP
-.Vb 2
+.Vb 1
 \&  $ plackup ./script/myapp
-\&  HTTP::Server::PSGI: Accepting connections at http://0:5000/
 .Ve
 .PP
 Plack provides many server and protocol adapters for you to choose from,
@@ -388,12 +391,19 @@ such as \f(CW\*(C`FCGI\*(C'\fR, \f(CW\*(C`uWSGI\*(C'\fR and \f(CW\*(C`mod_perl\*
 \&  $ plackup ./script/myapp \-s FCGI \-l /tmp/myapp.sock
 .Ve
 .PP
-If an older server adapter is not be able to correctly detect the application
-home directory, you can simply use the \s-1MOJO_HOME\s0 environment variable.
+The \f(CW\*(C`MOJO_REVERSE_PROXY\*(C'\fR environment variable can be used to enable proxy
+support, this allows Mojolicious to automatically pick up the
+\&\f(CW\*(C`X\-Forwarded\-For\*(C'\fR and \f(CW\*(C`X\-Forwarded\-Proto\*(C'\fR headers.
 .PP
-.Vb 2
+.Vb 1
+\&  $ MOJO_REVERSE_PROXY=1 plackup ./script/myapp
+.Ve
+.PP
+If an older server adapter is not be able to correctly detect the application
+home directory, you can simply use the \f(CW\*(C`MOJO_HOME\*(C'\fR environment variable.
+.PP
+.Vb 1
 \&  $ MOJO_HOME=/home/sri/myapp plackup ./script/myapp
-\&  HTTP::Server::PSGI: Accepting connections at http://0:5000/
 .Ve
 .PP
 There is no need for a \f(CW\*(C`.psgi\*(C'\fR file, just point the server adapter at your
@@ -421,8 +431,8 @@ But you could even use middleware right in your application.
 \&  use Plack::Builder;
 \&
 \&  get \*(Aq/welcome\*(Aq => sub {
-\&    my $self = shift;
-\&    $self\->render(text => \*(AqHello Mojo!\*(Aq);
+\&    my $c = shift;
+\&    $c\->render(text => \*(AqHello Mojo!\*(Aq);
 \&  };
 \&
 \&  builder {
@@ -439,11 +449,11 @@ you can use the hook \*(L"before_dispatch\*(R" in Mojolicious to rewrite incomin
 requests.
 .PP
 .Vb 6
-\&  # Change scheme if "X\-Forwarded\-Protocol" header is set to "https"
+\&  # Change scheme if "X\-Forwarded\-HTTPS" header is set
 \&  app\->hook(before_dispatch => sub {
 \&    my $c = shift;
 \&    $c\->req\->url\->base\->scheme(\*(Aqhttps\*(Aq)
-\&      if $c\->req\->headers\->header(\*(AqX\-Forwarded\-Protocol\*(Aq) eq \*(Aqhttps\*(Aq;
+\&      if $c\->req\->headers\->header(\*(AqX\-Forwarded\-HTTPS\*(Aq);
 \&  });
 .Ve
 .PP
@@ -481,6 +491,7 @@ with this little Mojo::Server based mock server you can just embed them.
 \&  say for @{$app\->static\->paths};
 \&  say $app\->config\->{secret_identity};
 \&  say $app\->dumper({just => \*(Aqa helper test\*(Aq});
+\&  say $app\->build_controller\->render_to_string(template => \*(Aqfoo\*(Aq);
 .Ve
 .PP
 The plugin Mojolicious::Plugin::Mount uses this functionality to allow you
@@ -536,10 +547,10 @@ latency backend web services.
 \&
 \&  # Search MetaCPAN for "mojolicious"
 \&  get \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
-\&    $self\->ua\->get(\*(Aqapi.metacpan.org/v0/module/_search?q=mojolicious\*(Aq => sub {
+\&    my $c = shift;
+\&    $c\->ua\->get(\*(Aqapi.metacpan.org/v0/module/_search?q=mojolicious\*(Aq => sub {
 \&      my ($ua, $tx) = @_;
-\&      $self\->render(\*(Aqmetacpan\*(Aq, hits => $tx\->res\->json\->{hits}{hits});
+\&      $c\->render(\*(Aqmetacpan\*(Aq, hits => $tx\->res\->json\->{hits}{hits});
 \&    });
 \&  };
 \&
@@ -559,34 +570,34 @@ latency backend web services.
 .Ve
 .PP
 Multiple events such as concurrent requests can be easily synchronized with
-\&\*(L"delay\*(R" in Mojo::IOLoop, which can help you avoid deep nested closures that
-often result from continuation-passing style.
+\&\*(L"delay\*(R" in Mojolicious::Plugin::DefaultHelpers, which can help you avoid deep
+nested closures and memory leaks that often result from continuation-passing
+style.
 .PP
-.Vb 3
+.Vb 2
 \&  use Mojolicious::Lite;
-\&  use Mojo::IOLoop;
 \&  use Mojo::URL;
 \&
 \&  # Search MetaCPAN for "mojo" and "mango"
 \&  get \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Prepare response in two steps
-\&    Mojo::IOLoop\->delay(
+\&    $c\->delay(
 \&
 \&      # Concurrent requests
 \&      sub {
 \&        my $delay = shift;
 \&        my $url   = Mojo::URL\->new(\*(Aqapi.metacpan.org/v0/module/_search\*(Aq);
 \&        $url\->query({sort => \*(Aqdate:desc\*(Aq});
-\&        $self\->ua\->get($url\->clone\->query({q => \*(Aqmojo\*(Aq})  => $delay\->begin);
-\&        $self\->ua\->get($url\->clone\->query({q => \*(Aqmango\*(Aq}) => $delay\->begin);
+\&        $c\->ua\->get($url\->clone\->query({q => \*(Aqmojo\*(Aq})  => $delay\->begin);
+\&        $c\->ua\->get($url\->clone\->query({q => \*(Aqmango\*(Aq}) => $delay\->begin);
 \&      },
 \&
 \&      # Delayed rendering
 \&      sub {
 \&        my ($delay, $mojo, $mango) = @_;
-\&        $self\->render(json => {
+\&        $c\->render(json => {
 \&          mojo  => $mojo\->res\->json(\*(Aq/hits/hits/0/_source/release\*(Aq),
 \&          mango => $mango\->res\->json(\*(Aq/hits/hits/0/_source/release\*(Aq)
 \&        });
@@ -609,9 +620,9 @@ processed concurrently.
 \&
 \&  # Wait 3 seconds before rendering a response
 \&  get \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&    Mojo::IOLoop\->timer(3 => sub {
-\&      $self\->render(text => \*(AqDelayed by 3 seconds!\*(Aq);
+\&      $c\->render(text => \*(AqDelayed by 3 seconds!\*(Aq);
 \&    });
 \&  };
 \&
@@ -628,17 +639,17 @@ emitted.
 \&
 \&  # Count to 5 in 1 second steps
 \&  get \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Start recurring timer
 \&    my $i = 1;
 \&    my $id = Mojo::IOLoop\->recurring(1 => sub {
-\&      $self\->write_chunk($i);
-\&      $self\->finish if $i++ == 5;
+\&      $c\->write_chunk($i);
+\&      $c\->finish if $i++ == 5;
 \&    });
 \&
 \&    # Stop recurring timer
-\&    $self\->on(finish => sub { Mojo::IOLoop\->remove($id) });
+\&    $c\->on(finish => sub { Mojo::IOLoop\->remove($id) });
 \&  };
 \&
 \&  app\->start;
@@ -662,14 +673,14 @@ created at startup time.
 \&
 \&  # Show current title
 \&  get \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
-\&    $self\->render(json => {title => $title});
+\&    my $c = shift;
+\&    $c\->render(json => {title => $title});
 \&  };
 \&
 \&  app\->start;
 .Ve
 .PP
-Since timers and other low level event watchers are also independent from
+Since timers and other low-level event watchers are also independent from
 applications, errors can't get logged automatically, you can change that by
 subscribing to the event \*(L"error\*(R" in Mojo::Reactor.
 .PP
@@ -691,33 +702,32 @@ events such as \*(L"message\*(R" in Mojo::Transaction::WebSocket with the method
 \&\*(L"on\*(R" in Mojolicious::Controller and return them with
 \&\*(L"send\*(R" in Mojolicious::Controller.
 .PP
-.Vb 2
+.Vb 1
 \&  use Mojolicious::Lite;
-\&  use Mojo::IOLoop;
 \&
 \&  # Template with browser\-side code
 \&  get \*(Aq/\*(Aq => \*(Aqindex\*(Aq;
 \&
 \&  # WebSocket echo service
 \&  websocket \*(Aq/echo\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Opened
-\&    $self\->app\->log\->debug(\*(AqWebSocket opened.\*(Aq);
+\&    $c\->app\->log\->debug(\*(AqWebSocket opened.\*(Aq);
 \&
 \&    # Increase inactivity timeout for connection a bit
-\&    Mojo::IOLoop\->stream($self\->tx\->connection)\->timeout(300);
+\&    $c\->inactivity_timeout(300);
 \&
 \&    # Incoming message
-\&    $self\->on(message => sub {
-\&      my ($self, $msg) = @_;
-\&      $self\->send("echo: $msg");
+\&    $c\->on(message => sub {
+\&      my ($c, $msg) = @_;
+\&      $c\->send("echo: $msg");
 \&    });
 \&
 \&    # Closed
-\&    $self\->on(finish => sub {
-\&      my ($self, $code, $reason) = @_;
-\&      $self\->app\->log\->debug("WebSocket closed with status $code.");
+\&    $c\->on(finish => sub {
+\&      my ($c, $code, $reason) = @_;
+\&      $c\->app\->log\->debug("WebSocket closed with status $code.");
 \&    });
 \&  };
 \&
@@ -748,6 +758,15 @@ events such as \*(L"message\*(R" in Mojo::Transaction::WebSocket with the method
 .PP
 The event \*(L"finish\*(R" in Mojo::Transaction::WebSocket will be emitted right after
 the WebSocket connection has been closed.
+.PP
+.Vb 1
+\&  $c\->tx\->with_compression;
+.Ve
+.PP
+You can activate \f(CW\*(C`permessage\-deflate\*(C'\fR compression with
+\&\*(L"with_compression\*(R" in Mojo::Transaction::WebSocket, this can result in much
+better performance, but also increases memory usage by up to 300KB per
+connection.
 .SS "Testing WebSocket web services"
 .IX Subsection "Testing WebSocket web services"
 While the message flow on WebSocket connections can be rather dynamic, it
@@ -787,33 +806,32 @@ clients. It is uni-directional, that means you will have to use Ajax requests
 for sending data from clients to servers, the advantage however is low
 infrastructure requirements, since it reuses the \s-1HTTP\s0 protocol for transport.
 .PP
-.Vb 2
+.Vb 1
 \&  use Mojolicious::Lite;
-\&  use Mojo::IOLoop;
 \&
 \&  # Template with browser\-side code
 \&  get \*(Aq/\*(Aq => \*(Aqindex\*(Aq;
 \&
 \&  # EventSource for log messages
 \&  get \*(Aq/events\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Increase inactivity timeout for connection a bit
-\&    Mojo::IOLoop\->stream($self\->tx\->connection)\->timeout(300);
+\&    $c\->inactivity_timeout(300);
 \&
 \&    # Change content type
-\&    $self\->res\->headers\->content_type(\*(Aqtext/event\-stream\*(Aq);
+\&    $c\->res\->headers\->content_type(\*(Aqtext/event\-stream\*(Aq);
 \&
 \&    # Subscribe to "message" event and forward "log" events to browser
-\&    my $cb = $self\->app\->log\->on(message => sub {
+\&    my $cb = $c\->app\->log\->on(message => sub {
 \&      my ($log, $level, @lines) = @_;
-\&      $self\->write("event:log\endata: [$level] @lines\en\en");
+\&      $c\->write("event:log\endata: [$level] @lines\en\en");
 \&    });
 \&
 \&    # Unsubscribe from "message" event again once we are done
-\&    $self\->on(finish => sub {
-\&      my $self = shift;
-\&      $self\->app\->log\->unsubscribe(message => $cb);
+\&    $c\->on(finish => sub {
+\&      my $c = shift;
+\&      $c\->app\->log\->unsubscribe(message => $cb);
 \&    });
 \&  };
 \&
@@ -850,42 +868,42 @@ which can be combined to solve some of hardest problems in web development.
 \&  use Mojolicious::Lite;
 \&  use Scalar::Util \*(Aqweaken\*(Aq;
 \&
-\&  # Emit "request" event early for requests that get upgraded to multipart
+\&  # Intercept multipart uploads and log each chunk received
 \&  hook after_build_tx => sub {
 \&    my $tx = shift;
+\&
+\&    # Subscribe to "upgrade" event to indentify multipart uploads
 \&    weaken $tx;
-\&    $tx\->req\->content\->on(upgrade => sub { $tx\->emit(\*(Aqrequest\*(Aq) });
+\&    $tx\->req\->content\->on(upgrade => sub {
+\&      my ($single, $multi) = @_;
+\&      return unless $tx\->req\->url\->path\->contains(\*(Aq/upload\*(Aq);
+\&
+\&      # Subscribe to "part" event to find the right one
+\&      $multi\->on(part => sub {
+\&        my ($multi, $single) = @_;
+\&
+\&        # Subscribe to "body" event of part to make sure we have all headers
+\&        $single\->on(body => sub {
+\&          my $single = shift;
+\&
+\&          # Make sure we have the right part and replace "read" event
+\&          return unless $single\->headers\->content_disposition =~ /example/;
+\&          $single\->unsubscribe(\*(Aqread\*(Aq)\->on(read => sub {
+\&            my ($single, $bytes) = @_;
+\&
+\&            # Log size of every chunk we receive
+\&            app\->log\->debug(length($bytes) . \*(Aq bytes uploaded.\*(Aq);
+\&          });
+\&        });
+\&      });
+\&    });
 \&  };
 \&
 \&  # Upload form in DATA section
 \&  get \*(Aq/\*(Aq => \*(Aqindex\*(Aq;
 \&
-\&  # Streaming multipart upload (invoked twice, due to early "request" event)
-\&  post \*(Aq/upload\*(Aq => sub {
-\&    my $self = shift;
-\&
-\&    # First invocation, subscribe to "part" event to find the right one
-\&    return $self\->req\->content\->on(part => sub {
-\&      my ($multi, $single) = @_;
-\&
-\&      # Subscribe to "body" event of part to make sure we have all headers
-\&      $single\->on(body => sub {
-\&        my $single = shift;
-\&
-\&        # Make sure we have the right part and replace "read" event
-\&        return unless $single\->headers\->content_disposition =~ /example/;
-\&        $single\->unsubscribe(\*(Aqread\*(Aq)\->on(read => sub {
-\&          my ($single, $bytes) = @_;
-\&
-\&          # Log size of every chunk we receive
-\&          $self\->app\->log\->debug(length($bytes) . \*(Aq bytes uploaded.\*(Aq);
-\&        });
-\&      });
-\&    }) unless $self\->req\->is_finished;
-\&
-\&    # Second invocation, render response
-\&    $self\->render(text => \*(AqUpload was successful.\*(Aq);
-\&  };
+\&  # Streaming multipart upload
+\&  post \*(Aq/upload\*(Aq => {text => \*(AqUpload was successful.\*(Aq};
 \&
 \&  app\->start;
 \&  _\|_DATA_\|_
@@ -915,10 +933,10 @@ allows other event loops like AnyEvent to just work.
 \&
 \&  # Wait 3 seconds before rendering a response
 \&  get \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&    my $w;
 \&    $w = AE::timer 3, 0, sub {
-\&      $self\->render(text => \*(AqDelayed by 3 seconds!\*(Aq);
+\&      $c\->render(text => \*(AqDelayed by 3 seconds!\*(Aq);
 \&      undef $w;
 \&    };
 \&  };
@@ -965,14 +983,16 @@ application.
 .Ve
 .SH "USER AGENT"
 .IX Header "USER AGENT"
-When we say Mojolicious is a web framework we actually mean it.
+When we say Mojolicious is a web framework we actually mean it, with
+Mojo::UserAgent there's a full featured \s-1HTTP\s0 and WebSocket user agent built
+right in.
 .SS "Web scraping"
 .IX Subsection "Web scraping"
 Scraping information from web sites has never been this much fun before. The
 built-in \s-1HTML/XML\s0 parser Mojo::DOM is accessible through
 \&\*(L"dom\*(R" in Mojo::Message and supports all \s-1CSS\s0 selectors that make sense for a
-standalone parser, it can be a very powerful tool especially for unit testing
-web application.
+standalone parser, it can be a very powerful tool especially for testing web
+application.
 .PP
 .Vb 1
 \&  use Mojo::UserAgent;
@@ -1022,7 +1042,8 @@ implementation Mojo::JSON built right in, it is accessible through
 .Ve
 .SS "Basic authentication"
 .IX Subsection "Basic authentication"
-You can just add username and password to the \s-1URL\s0.
+You can just add username and password to the \s-1URL\s0, an \f(CW\*(C`Authorization\*(C'\fR header
+will be automatically generated.
 .PP
 .Vb 1
 \&  use Mojo::UserAgent;
@@ -1103,7 +1124,7 @@ For more information about available content generators see also
 .IX Subsection "Large file downloads"
 When downloading large files with Mojo::UserAgent you don't have to worry
 about memory usage at all, because it will automatically stream everything
-above \f(CW\*(C`250KB\*(C'\fR into a temporary file, which can then be moved into a permanent
+above 250KB into a temporary file, which can then be moved into a permanent
 file with \*(L"move_to\*(R" in Mojo::Asset::File.
 .PP
 .Vb 1
@@ -1115,8 +1136,9 @@ file with \*(L"move_to\*(R" in Mojo::Asset::File.
 \&  $tx\->res\->content\->asset\->move_to(\*(Aqmojo.tar.gz\*(Aq);
 .Ve
 .PP
-To protect you from excessively large files there is also a limit of \f(CW\*(C`10MB\*(C'\fR
-by default, which you can tweak with the \s-1MOJO_MAX_MESSAGE_SIZE\s0 environment
+To protect you from excessively large files there is also a limit of 10MB by
+default, which you can tweak with the attribute
+\&\*(L"max_message_size\*(R" in Mojo::Message or \f(CW\*(C`MOJO_MAX_MESSAGE_SIZE\*(C'\fR environment
 variable.
 .PP
 .Vb 2
@@ -1164,8 +1186,8 @@ Mojo::UserAgent makes it actually easy.
 .Ve
 .PP
 The event \*(L"read\*(R" in Mojo::Content will be emitted for every chunk of data that
-is received, even \f(CW\*(C`chunked\*(C'\fR encoding will be handled transparently if
-necessary.
+is received, even \f(CW\*(C`chunked\*(C'\fR encoding and gzip compression will be handled
+transparently if necessary.
 .SS "Streaming request"
 .IX Subsection "Streaming request"
 Sending a streaming request is almost just as easy.
@@ -1233,32 +1255,19 @@ synchronize multiple non-blocking requests.
 \&  use Mojo::UserAgent;
 \&  use Mojo::IOLoop;
 \&
-\&  # Synchronize non\-blocking requests and capture results
+\&  # Synchronize non\-blocking requests
 \&  my $ua    = Mojo::UserAgent\->new;
-\&  my $delay = Mojo::IOLoop\->delay;
-\&  $ua\->get(\*(Aqhttp://metacpan.org/search?q=mojo\*(Aq  => $delay\->begin);
-\&  $ua\->get(\*(Aqhttp://metacpan.org/search?q=mango\*(Aq => $delay\->begin);
-\&  my ($mojo, $mango) = $delay\->wait;
-.Ve
-.PP
-The event \*(L"finish\*(R" in Mojo::IOLoop::Delay can be used for code that needs to
-be able to work standalone as well as inside an already running event loop.
-.PP
-.Vb 2
-\&  use Mojo::UserAgent;
-\&  use Mojo::IOLoop;
-\&
-\&  # Synchronize non\-blocking requests portably
-\&  my $ua    = Mojo::UserAgent\->new;
-\&  my $delay = Mojo::IOLoop\->delay;
-\&  $delay\->on(finish => sub {
+\&  my $delay = Mojo::IOLoop\->delay(sub {
 \&    my ($delay, $mojo, $mango) = @_;
 \&    ...
 \&  });
 \&  $ua\->get(\*(Aqhttp://metacpan.org/search?q=mojo\*(Aq  => $delay\->begin);
 \&  $ua\->get(\*(Aqhttp://metacpan.org/search?q=mango\*(Aq => $delay\->begin);
-\&  $delay\->wait unless Mojo::IOLoop\->is_running;
+\&  $delay\->wait;
 .Ve
+.PP
+The call to \*(L"wait\*(R" in Mojo::IOLoop::Delay makes this code portable, it can now
+work inside an already running event loop or start one on demand.
 .SS "WebSockets"
 .IX Subsection "WebSockets"
 WebSockets are not just for the server-side, you can use
@@ -1370,6 +1379,34 @@ choice.
 .SH "APPLICATIONS"
 .IX Header "APPLICATIONS"
 Fun Mojolicious application hacks for all occasions.
+.SS "Basic authentication"
+.IX Subsection "Basic authentication"
+Basic authentication data will be automatically extracted from the
+\&\f(CW\*(C`Authorization\*(C'\fR header.
+.PP
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => sub {
+\&    my $c = shift;
+\&
+\&    # Check for username "Bender" and password "rocks"
+\&    return $c\->render(text => \*(AqHello Bender!\*(Aq)
+\&      if $c\->req\->url\->to_abs\->userinfo eq \*(AqBender:rocks\*(Aq;
+\&
+\&    # Require authentication
+\&    $c\->res\->headers\->www_authenticate(\*(AqBasic\*(Aq);
+\&    $c\->render(text => \*(AqAuthentication required!\*(Aq, status => 401);
+\&  };
+\&
+\&  app\->start;
+.Ve
+.PP
+This can be combined with \s-1TLS\s0 for a secure authentication mechanism.
+.PP
+.Vb 1
+\&  $ ./myapp.pl daemon \-l https://*:3000?cert=./server.crt&key=./server.key
+.Ve
 .SS "Adding a configuration file"
 .IX Subsection "Adding a configuration file"
 Adding a configuration file to your application is as easy as adding a file to
@@ -1411,6 +1448,53 @@ the helper \*(L"config\*(R" in Mojolicious::Plugin::DefaultHelpers
 .PP
 Alternatively you can also use configuration files in the \s-1JSON\s0 format with
 Mojolicious::Plugin::JSONConfig.
+.SS "Adding a plugin to your application"
+.IX Subsection "Adding a plugin to your application"
+To organize your code better and to prevent helpers from cluttering your
+application, you can use application specific plugins.
+.PP
+.Vb 2
+\&  $ mkdir \-p lib/MyApp/Plugin
+\&  $ touch lib/MyApp/Plugin/MyHelpers.pm
+.Ve
+.PP
+They work just like normal plugins and are also subclasses of
+Mojolicious::Plugin.
+.PP
+.Vb 2
+\&  package MyApp::Plugin::MyHelpers;
+\&  use Mojo::Base \*(AqMojolicious::Plugin\*(Aq;
+\&
+\&  sub register {
+\&    my ($self, $app) = @_;
+\&    $app\->helper(render_with_header => sub {
+\&      my ($c, @args) = @_;
+\&      $c\->res\->headers\->header(\*(AqX\-Mojo\*(Aq => \*(AqI <3 Mojolicious!\*(Aq)
+\&      $c\->render(@args);
+\&    });
+\&  }
+\&
+\&  1;
+.Ve
+.PP
+You can have as many application specific plugins as you like, the only
+difference to normal plugins is that you load them using their full class
+name.
+.PP
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  use lib \*(Aqlib\*(Aq;
+\&
+\&  plugin \*(AqMyApp::Plugin::MyHelpers\*(Aq;
+\&
+\&  get \*(Aq/\*(Aq => sub {
+\&    my $c = shift;
+\&    $c\->render_with_header(text => \*(AqI X Mojolicious!\*(Aq);
+\&  };
+\&
+\&  app\->start;
+.Ve
 .SS "Adding commands to Mojolicious"
 .IX Subsection "Adding commands to Mojolicious"
 By now you've probably used many of the built-in commands described in
@@ -1425,17 +1509,18 @@ that they will be picked up automatically by the command line interface?
 \&  has usage       => "Usage: APPLICATION spy [TARGET]\en";
 \&
 \&  sub run {
-\&    my ($self, $target) = @_;
+\&    my ($self, @args) = @_;
 \&
 \&    # Leak secret passphrases
-\&    say for @{$self\->app\->secrets} if $target eq \*(Aqsecrets\*(Aq;
+\&    say for @{$self\->app\->secrets} if $args[0] eq \*(Aqsecrets\*(Aq;
 \&  }
 \&
 \&  1;
 .Ve
 .PP
-There are many more useful attributes and methods in Mojolicious::Command
-that you can use or overload.
+Command line arguments are passed right through and there are many useful
+attributes and methods in Mojolicious::Command that you can use or
+overload.
 .PP
 .Vb 2
 \&  $ mojo spy secrets
@@ -1445,8 +1530,8 @@ that you can use or overload.
 \&  secr3t
 .Ve
 .PP
-And to make your commands application specific, just put them in a different
-namespace.
+And to make your commands application specific, just add a custom namespace to
+\&\*(L"namespaces\*(R" in Mojolicious::Commands.
 .PP
 .Vb 3
 \&  # Application
@@ -1539,7 +1624,7 @@ That's really everything, now you can package your application like any other
 \&  $ make dist
 .Ve
 .PP
-And if you have a \f(CW\*(C`PAUSE\*(C'\fR account (which can be requested at
+And if you have a \s-1PAUSE\s0 account (which can be requested at
 <http://pause.perl.org>) even upload it.
 .PP
 .Vb 1

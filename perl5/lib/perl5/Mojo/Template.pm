@@ -59,7 +59,7 @@ sub build {
         unless ($multi) {
 
           # Escaped
-          if (($op eq 'escp' && !$escape) || ($op eq 'expr' && $escape)) {
+          if ($op eq 'escp' && !$escape || $op eq 'expr' && $escape) {
             $lines[-1] .= "\$_M .= _escape";
             $lines[-1] .= " scalar $value" if length $value;
           }
@@ -85,7 +85,7 @@ sub build {
     }
   }
 
-  return $self->code($self->_wrap(\@lines))->tree([]);
+  return $self->code(join "\n", @lines)->tree([]);
 }
 
 sub compile {
@@ -93,9 +93,7 @@ sub compile {
 
   # Compile with line directive
   return undef unless my $code = $self->code;
-  my $name = $self->name;
-  $name =~ y/"//d;
-  my $compiled = eval qq{#line 1 "$name"\n$code};
+  my $compiled = eval $self->_wrap($code);
   $self->compiled($compiled) and return undef unless $@;
 
   # Use local stacktrace for compile exceptions
@@ -242,10 +240,16 @@ sub render_file {
   $self->name($path) unless defined $self->{name};
   my $template = slurp $path;
   my $encoding = $self->encoding;
-  croak qq{Template "$path" has invalid encoding.}
+  croak qq{Template "$path" has invalid encoding}
     if $encoding && !defined($template = decode $encoding, $template);
 
   return $self->render($template, @_);
+}
+
+sub _line {
+  my $name = shift->name;
+  $name =~ y/"//d;
+  return qq{#line @{[shift]} "$name"};
 }
 
 sub _trim {
@@ -269,7 +273,7 @@ sub _trim {
 }
 
 sub _wrap {
-  my ($self, $lines) = @_;
+  my ($self, $code) = @_;
 
   # Escape function
   my $escape = $self->escape;
@@ -279,12 +283,12 @@ sub _wrap {
   };
 
   # Wrap lines
-  my $first = $lines->[0] ||= '';
-  $lines->[0] = "package @{[$self->namespace]}; use Mojo::Base -strict;";
-  $lines->[0]  .= "sub { my \$_M = ''; @{[$self->prepend]}; do { $first";
-  $lines->[-1] .= "@{[$self->append]}; \$_M } };";
+  my $num = () = $code =~ /\n/g;
+  my $head = $self->_line(1);
+  $head .= "\npackage @{[$self->namespace]}; use Mojo::Base -strict;";
+  $code = "$head sub { my \$_M = ''; @{[$self->prepend]}; do { $code\n";
+  $code .= $self->_line($num + 1) . "\n@{[$self->append]}; \$_M } };";
 
-  my $code = join "\n", @$lines;
   warn "-- Code for @{[$self->name]}\n@{[encode 'UTF-8', $code]}\n\n" if DEBUG;
   return $code;
 }
@@ -369,6 +373,11 @@ L<Mojo::ByteStream> objects are always excluded from automatic escaping.
   % use Mojo::ByteStream 'b';
   <%= b('<div>excluded!</div>') %>
 
+Whitespace characters around tags can be trimmed by adding an additional equal
+sign to the end of a tag.
+
+  <%= All whitespace characters around this expression will be trimmed =%>
+
 Newline characters can be escaped with a backslash.
 
   This is <%= 1 + 1 %> a\
@@ -380,10 +389,6 @@ backslash.
   This will <%= 1 + 1 %> result\\
   in multiple\\
   lines
-
-Whitespace characters around tags can be trimmed with a special tag ending.
-
-  <%= All whitespace characters around this expression will be trimmed =%>
 
 You can capture whole template blocks for reuse later with the C<begin> and
 C<end> keywords.
@@ -497,10 +502,15 @@ Encoding used for template files.
 =head2 escape
 
   my $cb = $mt->escape;
-  $mt    = $mt->escape(sub { reverse $_[0] });
+  $mt    = $mt->escape(sub {...});
 
 A callback used to escape the results of escaped expressions, defaults to
 L<Mojo::Util/"xml_escape">.
+
+  $mt->escape(sub {
+    my $str = shift;
+    return reverse $str;
+  });
 
 =head2 escape_mark
 
@@ -660,8 +670,8 @@ Render template file.
 
 =head1 DEBUGGING
 
-You can set the MOJO_TEMPLATE_DEBUG environment variable to get some advanced
-diagnostics information printed to C<STDERR>.
+You can set the C<MOJO_TEMPLATE_DEBUG> environment variable to get some
+advanced diagnostics information printed to C<STDERR>.
 
   MOJO_TEMPLATE_DEBUG=1
 

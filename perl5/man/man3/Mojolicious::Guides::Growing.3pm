@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides::Growing 3"
-.TH Mojolicious::Guides::Growing 3 "2014-02-18" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides::Growing 3 "2014-08-06" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -152,7 +152,7 @@ presentation and input.
 .Ve
 .PP
 A slightly modified version of the pattern moving some application logic into
-the \f(CW\*(C`controller\*(C'\fR is the foundation of pretty much every web framework these
+the \fIcontroller\fR is the foundation of pretty much every web framework these
 days, including Mojolicious.
 .PP
 .Vb 7
@@ -165,9 +165,9 @@ days, including Mojolicious.
 \&              +\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+     +\-\-\-\-\-\-\-+
 .Ve
 .PP
-The \f(CW\*(C`controller\*(C'\fR receives a request from a user, passes incoming data to the
-\&\f(CW\*(C`model\*(C'\fR and retrieves data from it, which then gets turned into an actual
-response by the \f(CW\*(C`view\*(C'\fR. But note that this pattern is just a guideline that
+The \fIcontroller\fR receives a request from a user, passes incoming data to the
+\&\fImodel\fR and retrieves data from it, which then gets turned into an actual
+response by the \fIview\fR. But note that this pattern is just a guideline that
 most of the time results in cleaner more maintainable code, not a rule that
 should be followed at all costs.
 .SS "REpresentational State Transfer"
@@ -176,8 +176,8 @@ should be followed at all costs.
 as the web. While it can be applied to many protocols it is most commonly used
 with \s-1HTTP\s0 these days. In \s-1REST\s0 terms, when you are opening a \s-1URL\s0 like
 \&\f(CW\*(C`http://mojolicio.us/foo\*(C'\fR with your browser, you are basically asking the web
-server for the \s-1HTML\s0 \f(CW\*(C`representation\*(C'\fR of the \f(CW\*(C`http://mojolicio.us/foo\*(C'\fR
-\&\f(CW\*(C`resource\*(C'\fR.
+server for the \s-1HTML\s0 \fIrepresentation\fR of the \f(CW\*(C`http://mojolicio.us/foo\*(C'\fR
+\&\fIresource\fR.
 .PP
 .Vb 5
 \&  +\-\-\-\-\-\-\-\-+                                +\-\-\-\-\-\-\-\-+
@@ -210,8 +210,9 @@ all session state is kept client-side.
 \&  +\-\-\-\-\-\-\-\-\-+                        +\-\-\-\-\-\-\-\-\-\-\-\-+
 .Ve
 .PP
-While \s-1HTTP\s0 methods such as \s-1PUT\s0, \s-1GET\s0 and \s-1DELETE\s0 are not directly part of \s-1REST\s0
-they go very well with it and are commonly used to manipulate \f(CW\*(C`resources\*(C'\fR.
+While \s-1HTTP\s0 methods such as \f(CW\*(C`PUT\*(C'\fR, \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`DELETE\*(C'\fR are not directly part
+of \s-1REST\s0 they go very well with it and are commonly used to manipulate
+\&\fIresources\fR.
 .SS "Sessions"
 .IX Subsection "Sessions"
 \&\s-1HTTP\s0 was designed as a stateless protocol, web servers don't know anything
@@ -246,16 +247,16 @@ ids were exchanged between browser and web server in the form of cookies.
 .Ve
 .PP
 In Mojolicious however we are taking this concept one step further by
-storing everything \f(CW\*(C`JSON\*(C'\fR serialized and \f(CW\*(C`Base64\*(C'\fR encoded in \f(CW\*(C`HMAC\-SHA1\*(C'\fR
-signed cookies, which is more compatible with the \s-1REST\s0 philosophy and reduces
+storing everything \s-1JSON\s0 serialized and Base64 encoded in \s-1HMAC\-SHA1\s0 signed
+cookies, which is more compatible with the \s-1REST\s0 philosophy and reduces
 infrastructure requirements.
-.SS "Test Driven Development"
-.IX Subsection "Test Driven Development"
+.SS "Test-Driven Development"
+.IX Subsection "Test-Driven Development"
 \&\s-1TDD\s0 is a software development process where the developer starts writing
 failing test cases that define the desired functionality and then moves on to
 producing code that passes these tests. There are many advantages such as
 always having good test coverage and code being designed for testability,
-which will in turn often prevent future changes from breaking old code. Most
+which will in turn often prevent future changes from breaking old code. Much
 of Mojolicious was developed using \s-1TDD\s0.
 .SH "PROTOTYPE"
 .IX Header "PROTOTYPE"
@@ -282,7 +283,8 @@ organized \s-1CPAN\s0 distribution to maximize maintainability.
 \&  |\- lib                     # Library directory
 \&  |  |\- MyApp.pm             # Application class
 \&  |  +\- MyApp                # Application namespace
-\&  |     +\- Example.pm        # Controller class
+\&  |     +\- Controller        # Controller namespace
+\&  |        +\- Example.pm     # Controller class
 \&  |\- t                       # Test directory
 \&  |  +\- basic.t              # Random test
 \&  |\- log                     # Log directory
@@ -296,7 +298,9 @@ organized \s-1CPAN\s0 distribution to maximize maintainability.
 \&        +\- welcome.html.ep   # Template for "welcome" action
 .Ve
 .PP
-Both application skeletons can be automatically generated.
+Both application skeletons can be automatically generated with the commands
+Mojolicious::Command::generate::lite_app and
+Mojolicious::Command::generate::app.
 .PP
 .Vb 2
 \&  $ mojo generate lite_app myapp.pl
@@ -320,8 +324,8 @@ This will be the foundation for our login manager example application.
 \&  use Mojolicious::Lite;
 \&
 \&  get \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
-\&    $self\->render(text => \*(AqHello world!\*(Aq);
+\&    my $c = shift;
+\&    $c\->render(text => \*(AqHello world!\*(Aq);
 \&  };
 \&
 \&  app\->start;
@@ -344,16 +348,18 @@ business logic, that means Mojolicious is by design entirely model layer
 agnostic and you just use whatever Perl modules you like most.
 .PP
 .Vb 3
-\&  $ mkdir lib
-\&  $ touch lib/MyUsers.pm
-\&  $ chmod 644 lib/MyUsers.pm
+\&  $ mkdir \-p lib/MyApp/Model
+\&  $ touch lib/MyApp/Model/Users.pm
+\&  $ chmod 644 lib/MyApp/Model/Users.pm
 .Ve
 .PP
 Our login manager will simply use a plain old Perl module abstracting away all
-logic related to matching usernames and passwords.
+logic related to matching usernames and passwords. The name
+\&\f(CW\*(C`MyApp::Model::Users\*(C'\fR is an arbitrary choice, and is simply used to make the
+separation of concerns more visible.
 .PP
 .Vb 1
-\&  package MyUsers;
+\&  package MyApp::Model::Users;
 \&
 \&  use strict;
 \&  use warnings;
@@ -380,44 +386,45 @@ logic related to matching usernames and passwords.
 .Ve
 .PP
 A simple helper can be registered with the function
-\&\*(L"helper\*(R" in Mojolicious::Lite to make our \f(CW\*(C`model\*(C'\fR available to all actions
-and templates.
+\&\*(L"helper\*(R" in Mojolicious::Lite to make our model available to all actions and
+templates.
 .PP
 .Vb 2
 \&  #!/usr/bin/env perl
 \&  use Mojolicious::Lite;
 \&
 \&  use lib \*(Aqlib\*(Aq;
-\&  use MyUsers;
+\&  use MyApp::Model::Users;
 \&
 \&  # Helper to lazy initialize and store our model object
-\&  helper users => sub { state $users = MyUsers\->new };
+\&  helper users => sub { state $users = MyApp::Model::Users\->new };
 \&
 \&  # /?user=sri&pass=secr3t
 \&  any \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Query parameters
-\&    my $user = $self\->param(\*(Aquser\*(Aq) || \*(Aq\*(Aq;
-\&    my $pass = $self\->param(\*(Aqpass\*(Aq) || \*(Aq\*(Aq;
+\&    my $user = $c\->param(\*(Aquser\*(Aq) || \*(Aq\*(Aq;
+\&    my $pass = $c\->param(\*(Aqpass\*(Aq) || \*(Aq\*(Aq;
 \&
 \&    # Check password
-\&    return $self\->render(text => "Welcome $user.")
-\&      if $self\->users\->check($user, $pass);
+\&    return $c\->render(text => "Welcome $user.")
+\&      if $c\->users\->check($user, $pass);
 \&
 \&    # Failed
-\&    $self\->render(text => \*(AqWrong username or password.\*(Aq);
+\&    $c\->render(text => \*(AqWrong username or password.\*(Aq);
 \&  };
 \&
 \&  app\->start;
 .Ve
 .PP
 The method \*(L"param\*(R" in Mojolicious::Controller is used to access query
-parameters, \s-1POST\s0 parameters, file uploads and route placeholders, all at once.
+parameters, \f(CW\*(C`POST\*(C'\fR parameters, file uploads and route placeholders, all at
+once.
 .SS "Testing"
 .IX Subsection "Testing"
-In Mojolicious we take test driven development very serious and try to
-promote it wherever we can.
+In Mojolicious we take testing very serious and try to make it a pleasant
+experience.
 .PP
 .Vb 3
 \&  $ mkdir t
@@ -464,8 +471,8 @@ on Mojo::DOM.
 \&  done_testing();
 .Ve
 .PP
-From now on you can always check your progress by running these unit tests
-against your application.
+Your application won't pass these tests, but from now on you can use them to
+check your progress with the command Mojolicious::Command::test.
 .PP
 .Vb 3
 \&  $ ./myapp.pl test
@@ -473,7 +480,8 @@ against your application.
 \&  $ ./myapp.pl test \-v t/login.t
 .Ve
 .PP
-Or perform quick requests right from the command line.
+Or perform quick requests right from the command line with
+Mojolicious::Command::get.
 .PP
 .Vb 2
 \&  $ ./myapp.pl get /
@@ -507,26 +515,26 @@ required, but we suggest setting a more secure passphrase with
 \&  app\->secrets([\*(AqMojolicious rocks\*(Aq]);
 .Ve
 .PP
-This passphrase is used by the \f(CW\*(C`HMAC\-SHA1\*(C'\fR algorithm to make signed cookies
+This passphrase is used by the \s-1HMAC\-SHA1\s0 algorithm to make signed cookies
 secure and can be changed at any time to invalidate all existing sessions.
 .PP
 .Vb 2
-\&  $self\->session(user => \*(Aqsri\*(Aq);
-\&  my $user = $self\->session(\*(Aquser\*(Aq);
+\&  $c\->session(user => \*(Aqsri\*(Aq);
+\&  my $user = $c\->session(\*(Aquser\*(Aq);
 .Ve
 .PP
 By default all sessions expire after one hour, for more control you can use
 the \f(CW\*(C`expiration\*(C'\fR session value to set an expiration date in seconds from now.
 .PP
 .Vb 1
-\&  $self\->session(expiration => 3600);
+\&  $c\->session(expiration => 3600);
 .Ve
 .PP
 And the whole session can be deleted by using the \f(CW\*(C`expires\*(C'\fR session value to
 set an absolute expiration date in the past.
 .PP
 .Vb 1
-\&  $self\->session(expires => 1);
+\&  $c\->session(expires => 1);
 .Ve
 .PP
 For data that should only be visible on the next request, like a confirmation
@@ -534,59 +542,59 @@ message after a 302 redirect, you can use the flash, accessible through the
 method \*(L"flash\*(R" in Mojolicious::Controller.
 .PP
 .Vb 2
-\&  $self\->flash(message => \*(AqEverything is fine.\*(Aq);
-\&  $self\->redirect_to(\*(Aqgoodbye\*(Aq);
+\&  $c\->flash(message => \*(AqEverything is fine.\*(Aq);
+\&  $c\->redirect_to(\*(Aqgoodbye\*(Aq);
 .Ve
 .PP
 Just remember that all session data gets serialized with Mojo::JSON and
-stored in \f(CW\*(C`HMAC\-SHA1\*(C'\fR signed cookies, which usually have a 4096 byte limit,
-depending on browser.
+stored in \s-1HMAC\-SHA1\s0 signed cookies, which usually have a \f(CW4096\fR byte (4KB)
+limit, depending on browser.
 .SS "Final prototype"
 .IX Subsection "Final prototype"
-A final \f(CW\*(C`myapp.pl\*(C'\fR prototype passing all of the unit tests above could look
-like this.
+A final \f(CW\*(C`myapp.pl\*(C'\fR prototype passing all of the tests above could look like
+this.
 .PP
 .Vb 2
 \&  #!/usr/bin/env perl
 \&  use Mojolicious::Lite;
 \&
 \&  use lib \*(Aqlib\*(Aq;
-\&  use MyUsers;
+\&  use MyApp::Model::Users;
 \&
 \&  # Make signed cookies secure
 \&  app\->secrets([\*(AqMojolicious rocks\*(Aq]);
 \&
-\&  helper users => sub { state $users = MyUsers\->new };
+\&  helper users => sub { state $users = MyApp::Model::Users\->new };
 \&
 \&  # Main login action
 \&  any \*(Aq/\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Query or POST parameters
-\&    my $user = $self\->param(\*(Aquser\*(Aq) || \*(Aq\*(Aq;
-\&    my $pass = $self\->param(\*(Aqpass\*(Aq) || \*(Aq\*(Aq;
+\&    my $user = $c\->param(\*(Aquser\*(Aq) || \*(Aq\*(Aq;
+\&    my $pass = $c\->param(\*(Aqpass\*(Aq) || \*(Aq\*(Aq;
 \&
 \&    # Check password and render "index.html.ep" if necessary
-\&    return $self\->render unless $self\->users\->check($user, $pass);
+\&    return $c\->render unless $c\->users\->check($user, $pass);
 \&
 \&    # Store username in session
-\&    $self\->session(user => $user);
+\&    $c\->session(user => $user);
 \&
 \&    # Store a friendly message for the next page in flash
-\&    $self\->flash(message => \*(AqThanks for logging in.\*(Aq);
+\&    $c\->flash(message => \*(AqThanks for logging in.\*(Aq);
 \&
 \&    # Redirect to protected page with a 302 response
-\&    $self\->redirect_to(\*(Aqprotected\*(Aq);
+\&    $c\->redirect_to(\*(Aqprotected\*(Aq);
 \&  } => \*(Aqindex\*(Aq;
 \&
 \&  # Make sure user is logged in for actions in this group
 \&  group {
 \&    under sub {
-\&      my $self = shift;
+\&      my $c = shift;
 \&
 \&      # Redirect to main page with a 302 response if user is not logged in
-\&      return 1 if $self\->session(\*(Aquser\*(Aq);
-\&      $self\->redirect_to(\*(Aqindex\*(Aq);
+\&      return 1 if $c\->session(\*(Aquser\*(Aq);
+\&      $c\->redirect_to(\*(Aqindex\*(Aq);
 \&      return undef;
 \&    };
 \&
@@ -596,13 +604,13 @@ like this.
 \&
 \&  # Logout action
 \&  get \*(Aq/logout\*(Aq => sub {
-\&    my $self = shift;
+\&    my $c = shift;
 \&
 \&    # Expire and in turn clear session automatically
-\&    $self\->session(expires => 1);
+\&    $c\->session(expires => 1);
 \&
 \&    # Redirect to main page with a 302 response
-\&    $self\->redirect_to(\*(Aqindex\*(Aq);
+\&    $c\->redirect_to(\*(Aqindex\*(Aq);
 \&  };
 \&
 \&  app\->start;
@@ -649,7 +657,7 @@ possibilities.
 .IX Subsection "Inflating templates"
 All templates and static files inlined in the \f(CW\*(C`DATA\*(C'\fR section can be
 automatically turned into separate files in the \f(CW\*(C`templates\*(C'\fR and \f(CW\*(C`public\*(C'\fR
-directories.
+directories with the command Mojolicious::Command::inflate.
 .PP
 .Vb 1
 \&  $ ./myapp.pl inflate
@@ -675,40 +683,40 @@ actual action code needs to be changed.
 \&  package MyApp;
 \&  use Mojo::Base \*(AqMojolicious\*(Aq;
 \&
-\&  use MyUsers;
+\&  use MyApp::Model::Users;
 \&
 \&  sub startup {
 \&    my $self = shift;
 \&
 \&    $self\->secrets([\*(AqMojolicious rocks\*(Aq]);
-\&    $self\->helper(users => sub { state $users = MyUsers\->new });
+\&    $self\->helper(users => sub { state $users = MyApp::Model::Users\->new });
 \&
 \&    my $r = $self\->routes;
 \&
 \&    $r\->any(\*(Aq/\*(Aq => sub {
-\&      my $self = shift;
+\&      my $c = shift;
 \&
-\&      my $user = $self\->param(\*(Aquser\*(Aq) || \*(Aq\*(Aq;
-\&      my $pass = $self\->param(\*(Aqpass\*(Aq) || \*(Aq\*(Aq;
-\&      return $self\->render unless $self\->users\->check($user, $pass);
+\&      my $user = $c\->param(\*(Aquser\*(Aq) || \*(Aq\*(Aq;
+\&      my $pass = $c\->param(\*(Aqpass\*(Aq) || \*(Aq\*(Aq;
+\&      return $c\->render unless $c\->users\->check($user, $pass);
 \&
-\&      $self\->session(user => $user);
-\&      $self\->flash(message => \*(AqThanks for logging in.\*(Aq);
-\&      $self\->redirect_to(\*(Aqprotected\*(Aq);
+\&      $c\->session(user => $user);
+\&      $c\->flash(message => \*(AqThanks for logging in.\*(Aq);
+\&      $c\->redirect_to(\*(Aqprotected\*(Aq);
 \&    } => \*(Aqindex\*(Aq);
 \&
 \&    my $logged_in = $r\->under(sub {
-\&      my $self = shift;
-\&      return 1 if $self\->session(\*(Aquser\*(Aq);
-\&      $self\->redirect_to(\*(Aqindex\*(Aq);
+\&      my $c = shift;
+\&      return 1 if $c\->session(\*(Aquser\*(Aq);
+\&      $c\->redirect_to(\*(Aqindex\*(Aq);
 \&      return undef;
 \&    });
 \&    $logged_in\->get(\*(Aq/protected\*(Aq);
 \&
 \&    $r\->get(\*(Aq/logout\*(Aq => sub {
-\&      my $self = shift;
-\&      $self\->session(expires => 1);
-\&      $self\->redirect_to(\*(Aqindex\*(Aq);
+\&      my $c = shift;
+\&      $c\->session(expires => 1);
+\&      $c\->redirect_to(\*(Aqindex\*(Aq);
 \&    });
 \&  }
 \&
@@ -721,7 +729,7 @@ applications can use nested routes they have no need for \f(CW\*(C`group\*(C'\fR
 .SS "Simplified application script"
 .IX Subsection "Simplified application script"
 \&\f(CW\*(C`myapp.pl\*(C'\fR itself can now be turned into a simplified application script to
-allow running unit tests again.
+allow running tests again.
 .PP
 .Vb 1
 \&  #!/usr/bin/env perl
@@ -741,15 +749,16 @@ Hybrid routes are a nice intermediate step, but to maximize maintainability it
 makes sense to split our action code from its routing information.
 .PP
 .Vb 3
-\&  $ mkdir lib/MyApp
-\&  $ touch lib/MyApp/Login.pm
-\&  $ chmod 644 lib/MyApp/Login.pm
+\&  $ mkdir lib/MyApp/Controller
+\&  $ touch lib/MyApp/Controller/Login.pm
+\&  $ chmod 644 lib/MyApp/Controller/Login.pm
 .Ve
 .PP
-Once again the actual action code does not change at all.
+Once again the actual action code does not need to change, we just rename
+\&\f(CW$c\fR to \f(CW$self\fR since the controller is now the invocant.
 .PP
 .Vb 2
-\&  package MyApp::Login;
+\&  package MyApp::Controller::Login;
 \&  use Mojo::Base \*(AqMojolicious::Controller\*(Aq;
 \&
 \&  sub index {
@@ -791,13 +800,13 @@ information.
 \&  package MyApp;
 \&  use Mojo::Base \*(AqMojolicious\*(Aq;
 \&
-\&  use MyUsers;
+\&  use MyApp::Model::Users;
 \&
 \&  sub startup {
 \&    my $self = shift;
 \&
 \&    $self\->secrets([\*(AqMojolicious rocks\*(Aq]);
-\&    $self\->helper(users => sub { state $users = MyUsers\->new });
+\&    $self\->helper(users => sub { state $users = MyApp::Model::Users\->new });
 \&
 \&    my $r = $self\->routes;
 \&    $r\->any(\*(Aq/\*(Aq)\->to(\*(Aqlogin#index\*(Aq)\->name(\*(Aqindex\*(Aq);
@@ -813,8 +822,8 @@ Mojolicious::Routes allows many route variations, choose whatever you like
 most.
 .SS "Templates"
 .IX Subsection "Templates"
-Templates are usually bound to controllers, so they need to be moved into the
-appropriate directories.
+Templates are our views, and usually bound to controllers, so they need to be
+moved into the appropriate directories.
 .PP
 .Vb 3
 \&  $ mkdir templates/login
@@ -880,8 +889,8 @@ Normal Mojolicious applications are a little easier to test, so
 \&  done_testing();
 .Ve
 .PP
-Test driven development takes a little getting used to, but is very well worth
-it!
+Test-driven development takes a little getting used to, but can be a very
+powerful tool.
 .SH "MORE"
 .IX Header "MORE"
 You can continue with Mojolicious::Guides now or take a look at the

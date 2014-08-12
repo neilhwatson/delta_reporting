@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Server::Morbo 3"
-.TH Mojo::Server::Morbo 3 "2014-02-25" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Server::Morbo 3 "2014-07-31" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -155,11 +155,12 @@ To start applications with it you can use the morbo script.
 \&  Server available at http://127.0.0.1:3000.
 .Ve
 .PP
-For better scalability (epoll, kqueue) and to provide IPv6 as well as \s-1TLS\s0
-support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+) and
-IO::Socket::SSL (1.75+) will be used automatically by Mojo::IOLoop if
-they are installed. Individual features can also be disabled with the
-\&\s-1MOJO_NO_IPV6\s0 and \s-1MOJO_NO_TLS\s0 environment variables.
+For better scalability (epoll, kqueue) and to provide IPv6, \s-1SOCKS5\s0 as well as
+\&\s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+),
+IO::Socket::Socks (0.64+) and IO::Socket::SSL (1.84+) will be used
+automatically if they are installed. Individual features can also be disabled
+with the \f(CW\*(C`MOJO_NO_IPV6\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and \f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment
+variables.
 .PP
 See \*(L"\s-1DEPLOYMENT\s0\*(R" in Mojolicious::Guides::Cookbook for more.
 .SH "ATTRIBUTES"
@@ -179,13 +180,14 @@ directory.
 .IX Header "METHODS"
 Mojo::Server::Morbo inherits all methods from Mojo::Base and implements
 the following new ones.
-.SS "check_file"
-.IX Subsection "check_file"
+.SS "check"
+.IX Subsection "check"
 .Vb 1
-\&  my $bool = $morbo\->check_file(\*(Aq/home/sri/lib/MyApp.pm\*(Aq);
+\&  my $file = $morbo\->check;
 .Ve
 .PP
-Check if file has been modified since last check.
+Check if file from \*(L"watch\*(R" has been modified since last check and return
+its name or \f(CW\*(C`undef\*(C'\fR if there have been no changes.
 .SS "run"
 .IX Subsection "run"
 .Vb 1

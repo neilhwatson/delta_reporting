@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Content 3"
-.TH Mojo::Content 3 "2014-02-11" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Content 3 "2014-07-31" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -144,7 +144,8 @@ Mojo::Content \- HTTP content base class
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Mojo::Content is an abstract base class for \s-1HTTP\s0 content based on
-<\s-1RFC\s0 2616>.
+<\s-1RFC\s0 7230> and
+<\s-1RFC\s0 7231>.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::Content inherits all events from Mojo::EventEmitter and can emit
@@ -212,6 +213,14 @@ Mojo::Content implements the following attributes.
 .Ve
 .PP
 Try to detect when relaxed parsing is necessary.
+.SS "expect_close"
+.IX Subsection "expect_close"
+.Vb 2
+\&  my $bool = $content\->expect_close;
+\&  $content = $content\->expect_close($bool);
+.Ve
+.PP
+Expect a response that is terminated with a connection close.
 .SS "headers"
 .IX Subsection "headers"
 .Vb 2
@@ -228,7 +237,7 @@ Content headers, defaults to a Mojo::Headers object.
 .Ve
 .PP
 Maximum size in bytes of buffer for content parser, defaults to the value of
-the \s-1MOJO_MAX_BUFFER_SIZE\s0 environment variable or \f(CW262144\fR.
+the \f(CW\*(C`MOJO_MAX_BUFFER_SIZE\*(C'\fR environment variable or \f(CW262144\fR (256KB).
 .SS "max_leftover_size"
 .IX Subsection "max_leftover_size"
 .Vb 2
@@ -237,7 +246,8 @@ the \s-1MOJO_MAX_BUFFER_SIZE\s0 environment variable or \f(CW262144\fR.
 .Ve
 .PP
 Maximum size in bytes of buffer for pipelined \s-1HTTP\s0 requests, defaults to the
-value of the \s-1MOJO_MAX_LEFTOVER_SIZE\s0 environment variable or \f(CW262144\fR.
+value of the \f(CW\*(C`MOJO_MAX_LEFTOVER_SIZE\*(C'\fR environment variable or \f(CW262144\fR
+(256KB).
 .SS "relaxed"
 .IX Subsection "relaxed"
 .Vb 2
@@ -351,7 +361,7 @@ Check if content is chunked.
 \&  my $bool = $content\->is_compressed;
 .Ve
 .PP
-Check if content is \f(CW\*(C`gzip\*(C'\fR compressed.
+Check if content is gzip compressed.
 .SS "is_dynamic"
 .IX Subsection "is_dynamic"
 .Vb 1

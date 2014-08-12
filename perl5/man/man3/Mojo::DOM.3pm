@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::DOM 3"
-.TH Mojo::DOM 3 "2014-03-01" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::DOM 3 "2014-08-10" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -149,11 +149,11 @@ Mojo::DOM \- Minimalistic HTML/XML DOM parser with CSS selectors
 \&  say $dom\->div\->children(\*(Aqp\*(Aq)\->first\->{id};
 \&
 \&  # Iterate
-\&  $dom\->find(\*(Aqp[id]\*(Aq)\->each(sub { say shift\->{id} });
+\&  $dom\->find(\*(Aqp[id]\*(Aq)\->each(sub { say $_\->{id} });
 \&
 \&  # Loop
 \&  for my $e ($dom\->find(\*(Aqp[id]\*(Aq)\->each) {
-\&    say $e\->text;
+\&    say $e\->{id}, \*(Aq:\*(Aq, $e\->text;
 \&  }
 \&
 \&  # Modify
@@ -267,7 +267,8 @@ Append \s-1HTML/XML\s0 fragment to this node.
 \&  $dom = $dom\->append_content(\*(Aq<p>I X Mojolicious!</p>\*(Aq);
 .Ve
 .PP
-Append new content to this node's content.
+Append \s-1HTML/XML\s0 fragment or raw content (depending on node type) to this
+node's content.
 .PP
 .Vb 2
 \&  # "<div><h1>AB</h1></div>"
@@ -275,6 +276,9 @@ Append new content to this node's content.
 \&
 \&  # "<!\-\- A B \-\-><br>"
 \&  $dom\->parse(\*(Aq<!\-\- A \-\-><br>\*(Aq)\->contents\->first\->append_content(\*(AqB \*(Aq)\->root;
+\&
+\&  # "<p>A<i>B</i></p>"
+\&  $dom\->parse(\*(Aq<p>A</p>\*(Aq)\->at(\*(Aqp\*(Aq)\->append_content(\*(Aq<i>B</i>\*(Aq)\->root;
 .Ve
 .SS "at"
 .IX Subsection "at"
@@ -293,10 +297,10 @@ from \*(L"\s-1SELECTORS\s0\*(R" in Mojo::DOM::CSS are supported.
 .SS "attr"
 .IX Subsection "attr"
 .Vb 4
-\&  my $attrs = $dom\->attr;
-\&  my $foo   = $dom\->attr(\*(Aqfoo\*(Aq);
-\&  $dom      = $dom\->attr({foo => \*(Aqbar\*(Aq});
-\&  $dom      = $dom\->attr(foo => \*(Aqbar\*(Aq);
+\&  my $hash = $dom\->attr;
+\&  my $foo  = $dom\->attr(\*(Aqfoo\*(Aq);
+\&  $dom     = $dom\->attr({foo => \*(Aqbar\*(Aq});
+\&  $dom     = $dom\->attr(foo => \*(Aqbar\*(Aq);
 .Ve
 .PP
 This element's attributes.
@@ -327,7 +331,8 @@ All selectors from \*(L"\s-1SELECTORS\s0\*(R" in Mojo::DOM::CSS are supported.
 \&  $dom    = $dom\->content(\*(Aq<p>I X Mojolicious!</p>\*(Aq);
 .Ve
 .PP
-Return this node's content or replace it with new content.
+Return this node's content or replace it with \s-1HTML/XML\s0 fragment or raw content
+(depending on node type).
 .PP
 .Vb 2
 \&  # "<b>test</b>"
@@ -344,6 +349,9 @@ Return this node's content or replace it with new content.
 \&
 \&  # "<!\-\- B \-\-><br>"
 \&  $dom\->parse(\*(Aq<!\-\- A \-\-><br>\*(Aq)\->contents\->first\->content(\*(Aq B \*(Aq)\->root;
+\&
+\&  # "<p><i>B</i></p>"
+\&  $dom\->parse(\*(Aq<p>A</p>\*(Aq)\->at(\*(Aqp\*(Aq)\->content(\*(Aq<i>B</i>\*(Aq)\->root;
 .Ve
 .SS "contents"
 .IX Subsection "contents"
@@ -377,7 +385,12 @@ All selectors from \*(L"\s-1SELECTORS\s0\*(R" in Mojo::DOM::CSS are supported.
 \&
 \&  # Extract information from multiple elements
 \&  my @headers = $dom\->find(\*(Aqh1, h2, h3\*(Aq)\->text\->each;
-\&  my @links   = $dom\->find(\*(Aqa[href]\*(Aq)\->attr(\*(Aqhref\*(Aq)\->each;
+\&
+\&  # Count all the different tags
+\&  my $hash = $dom\->find(\*(Aq*\*(Aq)\->type\->reduce(sub { $a\->{$b}++; $a }, {});
+\&
+\&  # Find elements with a class that contains dots
+\&  my @divs = $dom\->find(\*(Aqdiv.foo\e.bar\*(Aq)\->each;
 .Ve
 .SS "match"
 .IX Subsection "match"
@@ -488,7 +501,8 @@ Prepend \s-1HTML/XML\s0 fragment to this node.
 \&  $dom = $dom\->prepend_content(\*(Aq<p>I X Mojolicious!</p>\*(Aq);
 .Ve
 .PP
-Prepend new content to this node's content.
+Prepend \s-1HTML/XML\s0 fragment or raw content (depending on node type) to this
+node's content.
 .PP
 .Vb 2
 \&  # "<div><h2>AB</h2></div>"
@@ -496,6 +510,9 @@ Prepend new content to this node's content.
 \&
 \&  # "<!\-\- A B \-\-><br>"
 \&  $dom\->parse(\*(Aq<!\-\- B \-\-><br>\*(Aq)\->contents\->first\->prepend_content(\*(Aq A\*(Aq)\->root;
+\&
+\&  # "<p><i>B</i>A</p>"
+\&  $dom\->parse(\*(Aq<p>A</p>\*(Aq)\->at(\*(Aqp\*(Aq)\->prepend_content(\*(Aq<i>B</i>\*(Aq)\->root;
 .Ve
 .SS "previous"
 .IX Subsection "previous"
@@ -645,6 +662,27 @@ This element's type.
 .Vb 2
 \&  # List types of child elements
 \&  say $dom\->children\->type;
+.Ve
+.SS "val"
+.IX Subsection "val"
+.Vb 1
+\&  my $collection = $dom\->val;
+.Ve
+.PP
+Extract values from \f(CW\*(C`button\*(C'\fR, \f(CW\*(C`input\*(C'\fR, \f(CW\*(C`option\*(C'\fR, \f(CW\*(C`select\*(C'\fR or \f(CW\*(C`textarea\*(C'\fR
+element and return a Mojo::Collection object containing these values. In
+the case of \f(CW\*(C`select\*(C'\fR, find all \f(CW\*(C`option\*(C'\fR elements it contains that have a
+\&\f(CW\*(C`selected\*(C'\fR attribute and extract their values.
+.PP
+.Vb 2
+\&  # "b"
+\&  $dom\->parse(\*(Aq<input name="a" value="b">\*(Aq)\->at(\*(Aqinput\*(Aq)\->val;
+\&
+\&  # "c"
+\&  $dom\->parse(\*(Aq<option value="c">C</option>\*(Aq)\->at(\*(Aqoption\*(Aq)\->val;
+\&
+\&  # "d"
+\&  $dom\->parse(\*(Aq<option>d</option>\*(Aq)\->at(\*(Aqoption\*(Aq)\->val;
 .Ve
 .SS "wrap"
 .IX Subsection "wrap"

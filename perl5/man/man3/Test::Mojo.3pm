@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Test::Mojo 3"
-.TH Test::Mojo 3 "2014-03-03" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Test::Mojo 3 "2014-08-11" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -147,7 +147,8 @@ Test::Mojo \- Testing Mojo!
 \&    \->status_is(200)
 \&    \->header_is(\*(AqServer\*(Aq => \*(AqMojolicious (Perl)\*(Aq)
 \&    \->header_isnt(\*(AqX\-Bender\*(Aq => \*(AqBite my shiny metal ass!\*(Aq)
-\&    \->json_is(\*(Aq/results/4/title\*(Aq => \*(AqPerl rocks!\*(Aq);
+\&    \->json_is(\*(Aq/results/4/title\*(Aq => \*(AqPerl rocks!\*(Aq)
+\&    \->json_like(\*(Aq/results/7/title\*(Aq => qr/Perl/);
 \&
 \&  # WebSocket
 \&  $t\->websocket_ok(\*(Aq/echo\*(Aq)
@@ -256,7 +257,7 @@ following new ones.
 \&  $t      = $t\->app(MyApp\->new);
 .Ve
 .PP
-Access application with \*(L"app\*(R" in Mojo::UserAgent.
+Access application with \*(L"app\*(R" in Mojo::UserAgent::Server.
 .PP
 .Vb 2
 \&  # Change log level
@@ -265,6 +266,10 @@ Access application with \*(L"app\*(R" in Mojo::UserAgent.
 \&  # Test application directly
 \&  is $t\->app\->defaults\->{foo}, \*(Aqbar\*(Aq, \*(Aqright value\*(Aq;
 \&  ok $t\->app\->routes\->find(\*(Aqecho\*(Aq)\->is_websocket, \*(AqWebSocket route\*(Aq;
+\&  my $c = $t\->app\->build_controller;
+\&  ok $c\->render(template => \*(Aqfoo\*(Aq), \*(Aqrendering was successful\*(Aq;
+\&  is $c\->res\->status, 200, \*(Aqright status\*(Aq;
+\&  is $c\->res\->body, \*(AqFoo!\*(Aq, \*(Aqright content\*(Aq;
 \&
 \&  # Change application behavior
 \&  $t\->app\->hook(before_dispatch => sub {
@@ -347,12 +352,12 @@ Opposite of \*(L"content_type_like\*(R".
 .IX Subsection "delete_ok"
 .Vb 4
 \&  $t = $t\->delete_ok(\*(Aq/foo\*(Aq);
-\&  $t = $t\->delete_ok(\*(Aq/foo\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
-\&  $t = $t\->delete_ok(\*(Aq/foo\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
-\&  $t = $t\->delete_ok(\*(Aq/foo\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->delete_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  $t = $t\->delete_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->delete_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform a \s-1DELETE\s0 request and check for transport errors, takes the same
+Perform a \f(CW\*(C`DELETE\*(C'\fR request and check for transport errors, takes the same
 arguments as \*(L"delete\*(R" in Mojo::UserAgent, except for the callback.
 .SS "element_exists"
 .IX Subsection "element_exists"
@@ -391,12 +396,12 @@ Wait for WebSocket connection to be closed gracefully and check status.
 .IX Subsection "get_ok"
 .Vb 4
 \&  $t = $t\->get_ok(\*(Aq/foo\*(Aq);
-\&  $t = $t\->get_ok(\*(Aq/foo\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
-\&  $t = $t\->get_ok(\*(Aq/foo\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
-\&  $t = $t\->get_ok(\*(Aq/foo\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->get_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  $t = $t\->get_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->get_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform a \s-1GET\s0 request and check for transport errors, takes the same
+Perform a \f(CW\*(C`GET\*(C'\fR request and check for transport errors, takes the same
 arguments as \*(L"get\*(R" in Mojo::UserAgent, except for the callback.
 .PP
 .Vb 2
@@ -407,12 +412,12 @@ arguments as \*(L"get\*(R" in Mojo::UserAgent, except for the callback.
 .IX Subsection "head_ok"
 .Vb 4
 \&  $t = $t\->head_ok(\*(Aq/foo\*(Aq);
-\&  $t = $t\->head_ok(\*(Aq/foo\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
-\&  $t = $t\->head_ok(\*(Aq/foo\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
-\&  $t = $t\->head_ok(\*(Aq/foo\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->head_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  $t = $t\->head_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->head_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform a \s-1HEAD\s0 request and check for transport errors, takes the same
+Perform a \f(CW\*(C`HEAD\*(C'\fR request and check for transport errors, takes the same
 arguments as \*(L"head\*(R" in Mojo::UserAgent, except for the callback.
 .SS "header_is"
 .IX Subsection "header_is"
@@ -473,6 +478,15 @@ Opposite of \*(L"json_has\*(R".
 .PP
 Check the value extracted from \s-1JSON\s0 response using the given \s-1JSON\s0 Pointer with
 Mojo::JSON::Pointer, which defaults to the root value if it is omitted.
+.SS "json_like"
+.IX Subsection "json_like"
+.Vb 2
+\&  $t = $t\->json_like(\*(Aq/foo/1\*(Aq => qr/^\ed+$/);
+\&  $t = $t\->json_like(\*(Aq/foo/1\*(Aq => qr/^\ed+$/, \*(Aqright value\*(Aq);
+.Ve
+.PP
+Check the value extracted from \s-1JSON\s0 response using the given \s-1JSON\s0 Pointer with
+Mojo::JSON::Pointer for similar match.
 .SS "json_message_has"
 .IX Subsection "json_message_has"
 .Vb 2
@@ -501,6 +515,31 @@ Opposite of \*(L"json_message_has\*(R".
 Check the value extracted from \s-1JSON\s0 WebSocket message using the given \s-1JSON\s0
 Pointer with Mojo::JSON::Pointer, which defaults to the root value if it is
 omitted.
+.SS "json_message_like"
+.IX Subsection "json_message_like"
+.Vb 2
+\&  $t = $t\->json_message_like(\*(Aq/foo/1\*(Aq => qr/^\ed+$/);
+\&  $t = $t\->json_message_like(\*(Aq/foo/1\*(Aq => qr/^\ed+$/, \*(Aqright value\*(Aq);
+.Ve
+.PP
+Check the value extracted from \s-1JSON\s0 WebSocket message using the given \s-1JSON\s0
+Pointer with Mojo::JSON::Pointer for similar match.
+.SS "json_message_unlike"
+.IX Subsection "json_message_unlike"
+.Vb 2
+\&  $t = $t\->json_message_unlike(\*(Aq/foo/1\*(Aq => qr/^\ed+$/);
+\&  $t = $t\->json_message_unlike(\*(Aq/foo/1\*(Aq => qr/^\ed+$/, \*(Aqdifferent value\*(Aq);
+.Ve
+.PP
+Opposite of \*(L"json_message_like\*(R".
+.SS "json_unlike"
+.IX Subsection "json_unlike"
+.Vb 2
+\&  $t = $t\->json_unlike(\*(Aq/foo/1\*(Aq => qr/^\ed+$/);
+\&  $t = $t\->json_unlike(\*(Aq/foo/1\*(Aq => qr/^\ed+$/, \*(Aqdifferent value\*(Aq);
+.Ve
+.PP
+Opposite of \*(L"json_like\*(R".
 .SS "message_is"
 .IX Subsection "message_is"
 .Vb 4
@@ -571,12 +610,12 @@ Construct a new Test::Mojo object.
 .IX Subsection "options_ok"
 .Vb 4
 \&  $t = $t\->options_ok(\*(Aq/foo\*(Aq);
-\&  $t = $t\->options_ok(\*(Aq/foo\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
-\&  $t = $t\->options_ok(\*(Aq/foo\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
-\&  $t = $t\->options_ok(\*(Aq/foo\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->options_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  $t = $t\->options_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->options_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform a \s-1OPTIONS\s0 request and check for transport errors, takes the same
+Perform a \f(CW\*(C`OPTIONS\*(C'\fR request and check for transport errors, takes the same
 arguments as \*(L"options\*(R" in Mojo::UserAgent, except for the callback.
 .SS "or"
 .IX Subsection "or"
@@ -595,23 +634,23 @@ Invoke callback if the value of \*(L"success\*(R" is false.
 .IX Subsection "patch_ok"
 .Vb 4
 \&  $t = $t\->patch_ok(\*(Aq/foo\*(Aq);
-\&  $t = $t\->patch_ok(\*(Aq/foo\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
-\&  $t = $t\->patch_ok(\*(Aq/foo\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
-\&  $t = $t\->patch_ok(\*(Aq/foo\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->patch_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  $t = $t\->patch_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->patch_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform a \s-1PATCH\s0 request and check for transport errors, takes the same
+Perform a \f(CW\*(C`PATCH\*(C'\fR request and check for transport errors, takes the same
 arguments as \*(L"patch\*(R" in Mojo::UserAgent, except for the callback.
 .SS "post_ok"
 .IX Subsection "post_ok"
 .Vb 4
 \&  $t = $t\->post_ok(\*(Aq/foo\*(Aq);
-\&  $t = $t\->post_ok(\*(Aq/foo\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
-\&  $t = $t\->post_ok(\*(Aq/foo\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
-\&  $t = $t\->post_ok(\*(Aq/foo\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->post_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  $t = $t\->post_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->post_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform a \s-1POST\s0 request and check for transport errors, takes the same
+Perform a \f(CW\*(C`POST\*(C'\fR request and check for transport errors, takes the same
 arguments as \*(L"post\*(R" in Mojo::UserAgent, except for the callback.
 .PP
 .Vb 3
@@ -628,12 +667,12 @@ arguments as \*(L"post\*(R" in Mojo::UserAgent, except for the callback.
 .IX Subsection "put_ok"
 .Vb 4
 \&  $t = $t\->put_ok(\*(Aq/foo\*(Aq);
-\&  $t = $t\->put_ok(\*(Aq/foo\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
-\&  $t = $t\->put_ok(\*(Aq/foo\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
-\&  $t = $t\->put_ok(\*(Aq/foo\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->put_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  $t = $t\->put_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  $t = $t\->put_ok(\*(Aq/foo\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform a \s-1PUT\s0 request and check for transport errors, takes the same
+Perform a \f(CW\*(C`PUT\*(C'\fR request and check for transport errors, takes the same
 arguments as \*(L"put\*(R" in Mojo::UserAgent, except for the callback.
 .SS "request_ok"
 .IX Subsection "request_ok"

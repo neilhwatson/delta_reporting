@@ -8,6 +8,7 @@ use Mojo::Home;
 use Mojo::Log;
 use Mojo::Transaction::HTTP;
 use Mojo::UserAgent;
+use Mojo::Util;
 use Scalar::Util 'weaken';
 
 has home => sub { Mojo::Home->new };
@@ -18,14 +19,12 @@ has ua   => sub {
   my $ua = Mojo::UserAgent->new;
   weaken $ua->server->app($self)->{app};
   weaken $self;
-  $ua->on(error => sub { $self->log->error($_[1]) });
-
-  return $ua;
+  return $ua->catch(sub { $self->log->error($_[1]) });
 };
 
 sub build_tx { Mojo::Transaction::HTTP->new }
 
-sub config { shift->_dict(config => @_) }
+sub config { Mojo::Util::_stash(config => @_) }
 
 sub handler { croak 'Method "handler" not implemented in subclass' }
 
@@ -37,22 +36,6 @@ sub new {
   $home->detect(ref $self) unless @{$home->parts};
   $self->log->path($home->rel_file('log/mojo.log'))
     if -w $home->rel_file('log');
-
-  return $self;
-}
-
-sub _dict {
-  my ($self, $name) = (shift, shift);
-
-  # Hash
-  my $dict = $self->{$name} ||= {};
-  return $dict unless @_;
-
-  # Get
-  return $dict->{$_[0]} unless @_ > 1 || ref $_[0];
-
-  # Set
-  %$dict = (%$dict, %{ref $_[0] ? $_[0] : {@_}});
 
   return $self;
 }
@@ -127,9 +110,7 @@ The logging layer of your application, defaults to a L<Mojo::Log> object.
   $app   = $app->ua(Mojo::UserAgent->new);
 
 A full featured HTTP user agent for use in your applications, defaults to a
-L<Mojo::UserAgent> object. Note that this user agent should not be used in
-plugins, since non-blocking requests that are already in progress will
-interfere with new blocking ones.
+L<Mojo::UserAgent> object.
 
   # Perform blocking request
   say $app->ua->get('example.com')->res->body;

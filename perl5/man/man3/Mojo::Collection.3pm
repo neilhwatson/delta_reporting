@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Collection 3"
-.TH Mojo::Collection 3 "2014-02-13" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Collection 3 "2014-08-05" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -197,7 +197,8 @@ Evaluate callback for each element in collection or return all elements as a
 list if none has been provided. The element will be the first argument passed
 to the callback and is also available as \f(CW$_\fR.
 .PP
-.Vb 4
+.Vb 5
+\&  # Make a numbered list
 \&  $collection\->each(sub {
 \&    my ($e, $count) = @_;
 \&    say "$count: $e";
@@ -216,8 +217,9 @@ return the first one that matched the regular expression, or for which the
 callback returned true. The element will be the first argument passed to the
 callback and is also available as \f(CW$_\fR.
 .PP
-.Vb 1
-\&  my $five = $collection\->first(sub { $_ == 5 });
+.Vb 2
+\&  # Find first value that is greater than 5
+\&  my $greater = $collection\->first(sub { $_ > 5 });
 .Ve
 .SS "flatten"
 .IX Subsection "flatten"
@@ -239,7 +241,8 @@ create a new collection with all elements that matched the regular expression,
 or for which the callback returned true. The element will be the first
 argument passed to the callback and is also available as \f(CW$_\fR.
 .PP
-.Vb 1
+.Vb 2
+\&  # Find all values that contain the word "mojo"
 \&  my $interesting = $collection\->grep(qr/mojo/i);
 .Ve
 .SS "join"
@@ -251,8 +254,9 @@ argument passed to the callback and is also available as \f(CW$_\fR.
 .PP
 Turn collection into Mojo::ByteStream.
 .PP
-.Vb 1
-\&  $collection\->join("\en")\->say;
+.Vb 2
+\&  # Join all values with commas
+\&  $collection\->join(\*(Aq, \*(Aq)\->say;
 .Ve
 .SS "last"
 .IX Subsection "last"
@@ -271,8 +275,9 @@ Evaluate callback for each element in collection and create a new collection
 from the results. The element will be the first argument passed to the
 callback and is also available as \f(CW$_\fR.
 .PP
-.Vb 1
-\&  my $doubled = $collection\->map(sub { $_ * 2 });
+.Vb 2
+\&  # Append the word "mojo" to all values
+\&  my $mojoified = $collection\->map(sub { $_ . \*(Aqmojo\*(Aq });
 .Ve
 .SS "new"
 .IX Subsection "new"
@@ -294,6 +299,23 @@ results.
 .Vb 2
 \&  # Equal to but more convenient than
 \&  my $new = $collection\->map(sub { $_\->$method(@args) });
+.Ve
+.SS "reduce"
+.IX Subsection "reduce"
+.Vb 2
+\&  my $result = $collection\->reduce(sub {...});
+\&  my $result = $collection\->reduce(sub {...}, $initial);
+.Ve
+.PP
+Reduce elements in collection with callback, the first element will be used as
+initial value if none has been provided.
+.PP
+.Vb 2
+\&  # Calculate the sum of all values
+\&  my $sum = $collection\->reduce(sub { $a + $b });
+\&
+\&  # Count how often each value occurs in collection
+\&  my $hash = $collection\->reduce(sub { $a\->{$b}++; $a }, {});
 .Ve
 .SS "reverse"
 .IX Subsection "reverse"
@@ -333,8 +355,9 @@ Number of elements in collection.
 Sort elements based on return value of callback and create a new collection
 from the results.
 .PP
-.Vb 1
-\&  my $insensitive = $collection\->sort(sub { uc(shift) cmp uc(shift) });
+.Vb 2
+\&  # Sort values case insensitive
+\&  my $insensitive = $collection\->sort(sub { uc($a) cmp uc($b) });
 .Ve
 .SS "tap"
 .IX Subsection "tap"
@@ -369,7 +392,7 @@ Mojo::Collection overloads the following operators.
 \&  my $bool = !!$collection;
 .Ve
 .PP
-Always true.
+True or false, depending on if the collection is empty.
 .SS "stringify"
 .IX Subsection "stringify"
 .Vb 1

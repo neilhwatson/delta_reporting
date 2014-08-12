@@ -22,9 +22,7 @@ has multi_accept    => 50;
 has reactor         => sub {
   my $class = Mojo::Reactor::Poll->detect;
   warn "-- Reactor initialized ($class)\n" if DEBUG;
-  my $reactor = $class->new;
-  $reactor->on(error => sub { warn "@{[blessed $_[0]]}: $_[1]" });
-  return $reactor;
+  return $class->new->catch(sub { warn "@{[blessed $_[0]]}: $_[1]" });
 };
 
 # Ignore PIPE signal
@@ -82,16 +80,10 @@ sub client {
 }
 
 sub delay {
-  my $self = _instance(shift);
-
   my $delay = Mojo::IOLoop::Delay->new;
-  weaken $delay->ioloop($self)->{ioloop};
-  @_ > 1 ? $delay->steps(@_) : $delay->once(finish => shift) if @_;
-
-  return $delay;
+  weaken $delay->ioloop(_instance(shift))->{ioloop};
+  return @_ ? $delay->steps(@_) : $delay;
 }
-
-sub generate_port { Mojo::IOLoop::Server->generate_port }
 
 sub is_running { _instance(shift)->reactor->is_running }
 sub next_tick  { _instance(shift)->reactor->next_tick(@_) }
@@ -104,6 +96,14 @@ sub remove {
   my $c = $self->{connections}{$id};
   if ($c && (my $stream = $c->{stream})) { return $stream->close_gracefully }
   $self->_remove($id);
+}
+
+sub reset {
+  my $self = _instance(shift);
+  $self->_remove($_)
+    for keys %{$self->{acceptors}}, keys %{$self->{connections}};
+  $self->reactor->reset;
+  $self->$_ for qw(_stop stop);
 }
 
 sub server {
@@ -163,7 +163,7 @@ sub _accepting {
   return unless $i < $max;
 
   # Acquire accept mutex
-  if (my $cb = $self->lock) { return unless $self->$cb(!$i) }
+  if (my $cb = $self->lock) { return unless $cb->(!$i) }
   $self->_remove(delete $self->{accept});
 
   # Check if multi-accept is desirable
@@ -191,7 +191,7 @@ sub _not_accepting {
   # Release accept mutex
   return unless delete $self->{accepting};
   return unless my $cb = $self->unlock;
-  $self->$cb;
+  $cb->();
 
   $_->stop for values %{$self->{acceptors} || {}};
 }
@@ -303,17 +303,29 @@ L<Mojo::IOLoop> is a very minimalistic event loop based on L<Mojo::Reactor>,
 it has been reduced to the absolute minimal feature set required to build
 solid and scalable non-blocking TCP clients and servers.
 
+Depending on operating system, the default per-process and system-wide file
+descriptor limits are often very low and need to be tuned for better
+scalability. The C<LIBEV_FLAGS> environment variable should also be used to
+select the best possible L<EV> backend, which usually defaults to the not very
+scalable C<select>.
+
+  LIBEV_FLAGS=1   # select
+  LIBEV_FLAGS=2   # poll
+  LIBEV_FLAGS=4   # epoll (Linux)
+  LIBEV_FLAGS=8   # kqueue (*BSD, OS X)
+
 The event loop will be resilient to time jumps if a monotonic clock is
 available through L<Time::HiRes>. A TLS certificate and key are also built
 right in, to make writing test servers as easy as possible. Also note that for
 convenience the C<PIPE> signal will be set to C<IGNORE> when L<Mojo::IOLoop>
 is loaded.
 
-For better scalability (epoll, kqueue) and to provide IPv6 as well as TLS
-support, the optional modules L<EV> (4.0+), L<IO::Socket::IP> (0.20+) and
-L<IO::Socket::SSL> (1.75+) will be used automatically if they are installed.
-Individual features can also be disabled with the MOJO_NO_IPV6 and MOJO_NO_TLS
-environment variables.
+For better scalability (epoll, kqueue) and to provide IPv6, SOCKS5 as well as
+TLS support, the optional modules L<EV> (4.0+), L<IO::Socket::IP> (0.20+),
+L<IO::Socket::Socks> (0.64+) and L<IO::Socket::SSL> (1.84+) will be used
+automatically if they are installed. Individual features can also be disabled
+with the C<MOJO_NO_IPV6>, C<MOJO_NO_SOCKS> and C<MOJO_NO_TLS> environment
+variables.
 
 See L<Mojolicious::Guides::Cookbook/"REAL-TIME WEB"> for more.
 
@@ -340,7 +352,7 @@ processes. The callback should return true or false. Note that exceptions in
 this callback are not captured.
 
   $loop->lock(sub {
-    my ($loop, $blocking) = @_;
+    my $blocking = shift;
 
     # Got the accept mutex, start accepting new connections
     return 1;
@@ -380,7 +392,7 @@ Number of connections to accept at once, defaults to C<50>.
   my $reactor = $loop->reactor;
   $loop       = $loop->reactor(Mojo::Reactor->new);
 
-Low level event reactor, usually a L<Mojo::Reactor::Poll> or
+Low-level event reactor, usually a L<Mojo::Reactor::Poll> or
 L<Mojo::Reactor::EV> object with a default subscriber to the event
 L<Mojo::Reactor/"error">.
 
@@ -438,10 +450,9 @@ L<Mojo::IOLoop::Client/"connect">.
   my $delay = $loop->delay(sub {...}, sub {...});
 
 Build L<Mojo::IOLoop::Delay> object to manage callbacks and control the flow
-of events, which can help you avoid deep nested closures that often result
-from continuation-passing style. A single callback will be treated as a
-subscriber to the event L<Mojo::IOLoop::Delay/"finish">, and multiple ones as
-a chain for L<Mojo::IOLoop::Delay/"steps">.
+of events for this event loop, which can help you avoid deep nested closures
+and memory leaks that often result from continuation-passing style. Callbacks
+will be passed along to L<Mojo::IOLoop::Delay/"steps">.
 
   # Synchronize multiple events
   my $delay = Mojo::IOLoop->delay(sub { say 'BOOM!' });
@@ -452,10 +463,10 @@ a chain for L<Mojo::IOLoop::Delay/"steps">.
       $end->();
     });
   }
-  $delay->wait unless Mojo::IOLoop->is_running;
+  $delay->wait;
 
   # Sequentialize multiple events
-  my $delay = Mojo::IOLoop->delay(
+  Mojo::IOLoop->delay(
 
     # First step (simple timer)
     sub {
@@ -474,15 +485,22 @@ a chain for L<Mojo::IOLoop::Delay/"steps">.
 
     # Third step (the end)
     sub { say 'And done after 5 seconds total.' }
-  );
-  $delay->wait unless Mojo::IOLoop->is_running;
+  )->wait;
 
-=head2 generate_port
-
-  my $port = Mojo::IOLoop->generate_port;
-  my $port = $loop->generate_port;
-
-Find a free TCP port, this is a utility function primarily used for tests.
+  # Handle exceptions in all steps
+  Mojo::IOLoop->delay(
+    sub {
+      my $delay = shift;
+      die 'Intentional error';
+    },
+    sub {
+      my ($delay, @args) = @_;
+      say 'Never actually reached.';
+    }
+  )->catch(sub {
+    my ($delay, $err) = @_;
+    say "Something went wrong: $err";
+  })->wait;
 
 =head2 is_running
 
@@ -543,6 +561,13 @@ amount of time in seconds.
 Remove anything with an id, connections will be dropped gracefully by allowing
 them to finish writing all data in their write buffers.
 
+=head2 reset
+
+  Mojo::IOLoop->reset;
+  $loop->reset;
+
+Remove everything and stop the event loop.
+
 =head2 server
 
   my $id = Mojo::IOLoop->server(port => 3000, sub {...});
@@ -557,6 +582,13 @@ as L<Mojo::IOLoop::Server/"listen">.
     my ($loop, $stream, $id) = @_;
     ...
   });
+
+  # Listen on random port
+  my $id = Mojo::IOLoop->server({address => '127.0.0.1'} => sub {
+    my ($loop, $stream, $id) = @_;
+    ...
+  });
+  my $port = Mojo::IOLoop->acceptor($id)->handle->sockport;
 
 =head2 singleton
 
@@ -620,7 +652,7 @@ seconds.
 
 =head1 DEBUGGING
 
-You can set the MOJO_IOLOOP_DEBUG environment variable to get some advanced
+You can set the C<MOJO_IOLOOP_DEBUG> environment variable to get some advanced
 diagnostics information printed to C<STDERR>.
 
   MOJO_IOLOOP_DEBUG=1

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::UserAgent::Transactor 3"
-.TH Mojo::UserAgent::Transactor 3 "2014-02-26" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::UserAgent::Transactor 3 "2014-08-11" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -153,6 +153,24 @@ Mojo::UserAgent::Transactor \- User agent transactor
 .IX Header "DESCRIPTION"
 Mojo::UserAgent::Transactor is the transaction building and manipulation
 framework used by Mojo::UserAgent.
+.SH "GENERATORS"
+.IX Header "GENERATORS"
+These content generators are available by default.
+.SS "form"
+.IX Subsection "form"
+.Vb 1
+\&  $t\->tx(POST => \*(Aqhttp://example.com\*(Aq => form => {a => \*(Aqb\*(Aq});
+.Ve
+.PP
+Generate query string, \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or
+\&\f(CW\*(C`multipart/form\-data\*(C'\fR content.
+.SS "json"
+.IX Subsection "json"
+.Vb 1
+\&  $t\->tx(PATCH => \*(Aqhttp://example.com\*(Aq => json => {a => \*(Aqb\*(Aq});
+.Ve
+.PP
+Generate \s-1JSON\s0 content with Mojo::JSON.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojo::UserAgent::Transactor implements the following attributes.
@@ -205,7 +223,7 @@ Actual peer for transaction.
 \&  my $tx = $t\->proxy_connect(Mojo::Transaction::HTTP\->new);
 .Ve
 .PP
-Build Mojo::Transaction::HTTP proxy connect request for transaction if
+Build Mojo::Transaction::HTTP proxy \f(CW\*(C`CONNECT\*(C'\fR request for transaction if
 possible.
 .SS "redirect"
 .IX Subsection "redirect"
@@ -220,19 +238,19 @@ Build Mojo::Transaction::HTTP followup request for \f(CW301\fR, \f(CW302\fR, \f(
 .Vb 11
 \&  my $tx = $t\->tx(GET  => \*(Aqexample.com\*(Aq);
 \&  my $tx = $t\->tx(POST => \*(Aqhttp://example.com\*(Aq);
-\&  my $tx = $t\->tx(GET  => \*(Aqhttp://example.com\*(Aq => {DNT => 1});
+\&  my $tx = $t\->tx(GET  => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq});
 \&  my $tx = $t\->tx(PUT  => \*(Aqhttp://example.com\*(Aq => \*(AqHi!\*(Aq);
 \&  my $tx = $t\->tx(PUT  => \*(Aqhttp://example.com\*(Aq => form => {a => \*(Aqb\*(Aq});
 \&  my $tx = $t\->tx(PUT  => \*(Aqhttp://example.com\*(Aq => json => {a => \*(Aqb\*(Aq});
-\&  my $tx = $t\->tx(POST => \*(Aqhttp://example.com\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq);
+\&  my $tx = $t\->tx(POST => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
 \&  my $tx = $t\->tx(
-\&    PUT  => \*(Aqhttp://example.com\*(Aq => {DNT => 1} => form => {a => \*(Aqb\*(Aq});
+\&    PUT  => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
 \&  my $tx = $t\->tx(
-\&    PUT  => \*(Aqhttp://example.com\*(Aq => {DNT => 1} => json => {a => \*(Aqb\*(Aq});
+\&    PUT  => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Versatile general purpose Mojo::Transaction::HTTP transaction builder for
-requests, with support for content generators.
+requests, with support for \*(L"\s-1GENERATORS\s0\*(R".
 .PP
 .Vb 2
 \&  # Generate and inspect custom GET request with DNT header and content
@@ -298,9 +316,9 @@ requests, with support for content generators.
 .Ve
 .PP
 The \f(CW\*(C`form\*(C'\fR content generator will automatically use query parameters for
-\&\s-1GET/HEAD\s0 requests and the \*(L"application/x\-www\-form\-urlencoded\*(R" content type for
-everything else. Both get upgraded automatically to using the
-\&\*(L"multipart/form\-data\*(R" content type when necessary or when the header has been
+\&\f(CW\*(C`GET\*(C'\fR/\f(CW\*(C`HEAD\*(C'\fR requests and the \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR content
+type for everything else. Both get upgraded automatically to using the
+\&\f(CW\*(C`multipart/form\-data\*(C'\fR content type when necessary or when the header has been
 set manually.
 .PP
 .Vb 3

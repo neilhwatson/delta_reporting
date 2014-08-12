@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Parameters 3"
-.TH Mojo::Parameters 3 "2014-02-07" "perl v5.10.1" "User Contributed Perl Documentation"
+.TH Mojo::Parameters 3 "2014-07-11" "perl v5.10.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -219,12 +219,14 @@ Construct a new Mojo::Parameters object and \*(L"parse\*(R" parameters if
 necessary.
 .SS "param"
 .IX Subsection "param"
-.Vb 5
-\&  my @names = $params\->param;
-\&  my $foo   = $params\->param(\*(Aqfoo\*(Aq);
-\&  my @foo   = $params\->param(\*(Aqfoo\*(Aq);
-\&  my $foo   = $params\->param(foo => \*(Aqba&r\*(Aq);
-\&  my @foo   = $params\->param(foo => qw(ba&r baz));
+.Vb 7
+\&  my @names       = $params\->param;
+\&  my $foo         = $params\->param(\*(Aqfoo\*(Aq);
+\&  my @foo         = $params\->param(\*(Aqfoo\*(Aq);
+\&  my ($foo, $bar) = $params\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+\&  $params         = $params\->param(foo => \*(Aqba&r\*(Aq);
+\&  $params         = $params\->param(foo => qw(ba&r baz));
+\&  $params         = $params\->param(foo => [\*(Aqba;r\*(Aq, \*(Aqbaz\*(Aq]);
 .Ve
 .PP
 Check and replace parameter value. Be aware that if you request a parameter by

@@ -1,20 +1,17 @@
 package Mojo::Server::Daemon;
 use Mojo::Base 'Mojo::Server';
 
-use Carp 'croak';
 use Mojo::IOLoop;
 use Mojo::URL;
-use POSIX;
 use Scalar::Util 'weaken';
 
 use constant DEBUG => $ENV{MOJO_DAEMON_DEBUG} || 0;
 
 has acceptors => sub { [] };
-has [qw(backlog group silent user)];
+has [qw(backlog max_clients silent)];
 has inactivity_timeout => sub { $ENV{MOJO_INACTIVITY_TIMEOUT} // 15 };
 has ioloop => sub { Mojo::IOLoop->singleton };
 has listen => sub { [split ',', $ENV{MOJO_LISTEN} || 'http://*:3000'] };
-has max_clients  => 1000;
 has max_requests => 25;
 
 sub DESTROY {
@@ -30,26 +27,6 @@ sub run {
   $self->start->setuidgid->ioloop->start;
 }
 
-sub setuidgid {
-  my $self = shift;
-
-  # Group
-  if (my $group = $self->group) {
-    croak qq{Group "$group" does not exist}
-      unless defined(my $gid = getgrnam $group);
-    POSIX::setgid($gid) or croak qq{Can't switch to group "$group": $!};
-  }
-
-  # User
-  if (my $user = $self->user) {
-    croak qq{User "$user" does not exist}
-      unless defined(my $uid = getpwnam $user);
-    POSIX::setuid($uid) or croak qq{Can't switch to user "$user": $!};
-  }
-
-  return $self;
-}
-
 sub start {
   my $self = shift;
 
@@ -62,7 +39,7 @@ sub start {
 
   # Start listening
   else { $self->_listen($_) for @{$self->listen} }
-  $loop->max_connections($self->max_clients);
+  if (my $max = $self->max_clients) { $loop->max_connections($max) }
 
   return $self;
 }
@@ -135,7 +112,7 @@ sub _finish {
   if (my $ws = $c->{tx} = delete $c->{ws}) {
 
     # Successful upgrade
-    if ($ws->res->code eq '101') {
+    if ($ws->res->code == 101) {
       weaken $self;
       $ws->on(resume => sub { $self->_write($id) });
     }
@@ -165,9 +142,9 @@ sub _listen {
   my $options = {
     address => $url->host,
     backlog => $self->backlog,
-    port    => $url->port,
     reuse   => scalar $query->param('reuse'),
   };
+  if (my $port = $url->port) { $options->{port} = $port }
   $options->{"tls_$_"} = scalar $query->param($_) for qw(ca cert ciphers key);
   my $verify = $query->param('verify');
   $options->{tls_verify} = hex $verify if defined $verify;
@@ -184,13 +161,8 @@ sub _listen {
       $stream->timeout($self->inactivity_timeout);
 
       $stream->on(close => sub { $self->_close($id) });
-      $stream->on(
-        error => sub {
-          return unless $self;
-          $self->app->log->error(pop);
-          $self->_close($id);
-        }
-      );
+      $stream->on(error =>
+          sub { $self && $self->app->log->error(pop) && $self->_close($id) });
       $stream->on(read => sub { $self->_read($id => pop) });
       $stream->on(timeout =>
           sub { $self->app->log->debug('Inactivity timeout.') if $c->{tx} });
@@ -231,13 +203,10 @@ sub _remove {
 sub _write {
   my ($self, $id) = @_;
 
-  # Not writing
+  # Get chunk and write
   return unless my $c  = $self->{connections}{$id};
   return unless my $tx = $c->{tx};
-  return unless $tx->is_writing;
-
-  # Get chunk and write
-  return if $c->{writing}++;
+  return if !$tx->is_writing || $c->{writing}++;
   my $chunk = $tx->server_write;
   delete $c->{writing};
   warn "-- Server >>> Client (@{[$tx->req->url->to_abs]})\n$chunk\n" if DEBUG;
@@ -296,11 +265,12 @@ HTTP and WebSocket server, with IPv6, TLS, Comet (long polling), keep-alive,
 connection pooling, timeout, cookie, multipart and multiple event loop
 support.
 
-For better scalability (epoll, kqueue) and to provide IPv6 as well as TLS
-support, the optional modules L<EV> (4.0+), L<IO::Socket::IP> (0.20+) and
-L<IO::Socket::SSL> (1.75+) will be used automatically by L<Mojo::IOLoop> if
-they are installed. Individual features can also be disabled with the
-MOJO_NO_IPV6 and MOJO_NO_TLS environment variables.
+For better scalability (epoll, kqueue) and to provide IPv6, SOCKS5 as well as
+TLS support, the optional modules L<EV> (4.0+), L<IO::Socket::IP> (0.20+),
+L<IO::Socket::Socks> (0.64+) and L<IO::Socket::SSL> (1.84+) will be used
+automatically if they are installed. Individual features can also be disabled
+with the C<MOJO_NO_IPV6>, C<MOJO_NO_SOCKS> and C<MOJO_NO_TLS> environment
+variables.
 
 See L<Mojolicious::Guides::Cookbook/"DEPLOYMENT"> for more.
 
@@ -327,20 +297,13 @@ Active acceptors.
 
 Listen backlog size, defaults to C<SOMAXCONN>.
 
-=head2 group
-
-  my $group = $daemon->group;
-  $daemon   = $daemon->group('users');
-
-Group for server process.
-
 =head2 inactivity_timeout
 
   my $timeout = $daemon->inactivity_timeout;
   $daemon     = $daemon->inactivity_timeout(5);
 
 Maximum amount of time in seconds a connection can be inactive before getting
-closed, defaults to the value of the MOJO_INACTIVITY_TIMEOUT environment
+closed, defaults to the value of the C<MOJO_INACTIVITY_TIMEOUT> environment
 variable or C<15>. Setting the value to C<0> will allow connections to be
 inactive indefinitely.
 
@@ -358,7 +321,7 @@ L<Mojo::IOLoop> singleton.
   $daemon    = $daemon->listen(['https://localhost:3000']);
 
 List of one or more locations to listen on, defaults to the value of the
-MOJO_LISTEN environment variable or C<http://*:3000>.
+C<MOJO_LISTEN> environment variable or C<http://*:3000>.
 
   # Listen on all IPv4 interfaces
   $daemon->listen(['http://*:3000']);
@@ -405,8 +368,7 @@ Path to the TLS cert file, defaults to a built-in test certificate.
 
   ciphers=AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH
 
-Cipher specification string, defaults to
-C<ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH>.
+Cipher specification string.
 
 =item key
 
@@ -434,7 +396,8 @@ TLS verification mode, defaults to C<0x03>.
   my $max = $daemon->max_clients;
   $daemon = $daemon->max_clients(1000);
 
-Maximum number of concurrent client connections, defaults to C<1000>.
+Maximum number of concurrent client connections, passed along to
+L<Mojo::IOLoop/"max_connections">.
 
 =head2 max_requests
 
@@ -450,13 +413,6 @@ Maximum number of keep-alive requests per connection, defaults to C<25>.
 
 Disable console messages.
 
-=head2 user
-
-  my $user = $daemon->user;
-  $daemon  = $daemon->user('web');
-
-User for the server process.
-
 =head1 METHODS
 
 L<Mojo::Server::Daemon> inherits all methods from L<Mojo::Server> and
@@ -468,17 +424,15 @@ implements the following new ones.
 
 Run server.
 
-=head2 setuidgid
-
-  $daemon = $daemon->setuidgid;
-
-Set user and group for process.
-
 =head2 start
 
   $daemon = $daemon->start;
 
 Start accepting connections.
+
+  # Listen on random port
+  my $id   = $daemon->listen(['http://127.0.0.1'])->start->acceptors->[0];
+  my $port = $daemon->ioloop->acceptor($id)->handle->sockport;
 
 =head2 stop
 
@@ -488,7 +442,7 @@ Stop accepting connections.
 
 =head1 DEBUGGING
 
-You can set the MOJO_DAEMON_DEBUG environment variable to get some advanced
+You can set the C<MOJO_DAEMON_DEBUG> environment variable to get some advanced
 diagnostics information printed to C<STDERR>.
 
   MOJO_DAEMON_DEBUG=1
