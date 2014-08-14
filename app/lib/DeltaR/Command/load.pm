@@ -5,7 +5,6 @@ sub run
 {
    my ($self, $client_log ) = @_;
    my $ret = 1;
-   my $dq = $self->app->dr;
 
    if ( $client_log eq 'usage' )
    {
@@ -13,7 +12,7 @@ sub run
    }
    elsif ( -r $client_log )
    {
-      $ret = $dq->insert_client_log( $client_log );
+      $ret = $self->app->dw->insert_client_log( $client_log );
    }
    else
    {

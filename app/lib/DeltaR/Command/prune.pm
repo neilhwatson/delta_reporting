@@ -4,7 +4,7 @@ use Mojo::Base 'Mojolicious::Command';
 sub run
 {
    my ($self, $target) = @_;
-   my $dq = $self->app->dr;
+   my $dq = $self->app->dw;
 
    if ( $target eq 'delete' )
    {

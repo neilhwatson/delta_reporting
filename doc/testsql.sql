@@ -333,6 +333,7 @@ GROUP BY class
 ;
 */
 
+/*
 SELECT promise_outcome, count( promise_outcome ) FROM
 (
    SELECT promise_outcome FROM agent_log
@@ -341,3 +342,19 @@ SELECT promise_outcome, count( promise_outcome ) FROM
 )
 AS promise_count
 GROUP BY promise_outcome,promise_count;
+*/
+
+-- create security users and group
+CREATE GROUP delta_reporting;
+CREATE USER deltar_ro IN GROUP delta_reporting;
+CREATE USER deltar_rw IN GROUP delta_reporting;
+GRANT SELECT ON agent_log, promise_counts, inventory_table TO GROUP delta_reporting;
+GRANT ALL ON agent_log, promise_counts, inventory_table TO deltar_rw;
+
+/*
+REVOKE ALL ON agent_log, promise_counts, inventory_table FROM GROUP delta_reporting;
+REVOKE ALL ON agent_log, promise_counts, inventory_table FROM deltar_rw;
+DROP USER deltar_ro;
+DROP USER deltar_rw;
+DROP GROUP delta_reporting;
+*/

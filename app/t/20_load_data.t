@@ -31,7 +31,7 @@ foreach my $day ( -7..-2 )
 }
 
 my $t = Test::Mojo->new( 'DeltaR' );
-ok( $t->app->dr->insert_promise_counts( \@historical_trends ),
+ok( $t->app->dw->insert_promise_counts( \@historical_trends ),
    'Load test historical trend data' );
 
 my $shared = retrieve( '/tmp/delta_reporting_test_data' );

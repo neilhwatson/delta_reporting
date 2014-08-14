@@ -18,15 +18,13 @@ sub startup
 ## Helpers
    $self->helper( dbh => sub
    {
-      my $self = shift;
+      my ( $self, %args ) = @_;
       my $db_name = $config->{db_name};
-      my $db_user = $config->{db_user};
-      my $db_pass = $config->{db_pass};
       my $db_host = $config->{db_host};
 
       my $dbh = DBI->connect(
             "DBI:Pg:dbname=$db_name; host=$db_host",
-            "$db_user", "$db_pass",
+            "$args{db_user}", "$args{db_pass}",
             { RaiseError => 1 }
       );
       
@@ -41,12 +39,32 @@ sub startup
          promise_counts  => $config->{promise_counts},
          inventory_table => $config->{inventory_table},
          inventory_limit => $config->{inventory_limit},
-         db_user         => $config->{db_user},
-         db_name         => $config->{db_name},
          delete_age      => $config->{delete_age},
          reduce_age      => $config->{reduce_age},
          record_limit    => $record_limit,
-         dbh             => $self->app->dbh,
+         dbh             => $self->dbh(
+            db_user => $config->{db_user},
+            db_pass => $config->{db_pass},
+         ),
+      );
+      return $dq;
+   });
+
+   $self->helper( dw => sub
+   {
+      my $self = shift;
+      my $dq = DeltaR::Query->new( 
+         agent_table     => $config->{agent_table},
+         promise_counts  => $config->{promise_counts},
+         inventory_table => $config->{inventory_table},
+         inventory_limit => $config->{inventory_limit},
+         delete_age      => $config->{delete_age},
+         reduce_age      => $config->{reduce_age},
+         record_limit    => $record_limit,
+         dbh             => $self->dbh(
+            db_user => $config->{db_wuser},
+            db_pass => $config->{db_wpass},
+         ),
       );
       return $dq;
    });
@@ -124,7 +142,7 @@ sub startup
    $r->get( '/initialize_database' => sub
    {
       my $self = shift;
-      $self->dr->create_tables;
+      $self->dw->create_tables;
    } => '/database_initialized');
    $r->get( '/database_initialized' => 'database_initialized' );
 

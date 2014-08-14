@@ -11,7 +11,7 @@ my $db_name = $t->app->config( 'db_name' );
 ok( $db_name eq 'delta_reporting_test', 'Confirm config test database' )
    or BAIL_OUT( "Config test failed" );
 
-ok( $t->app->dr->drop_tables, 'Drop tables in test database' );
+ok( $t->app->dw->drop_tables, 'Drop tables in test database' );
 
 my $config = copy( $shared->{data}{config}.'.backup', $shared->{data}{config} )
    or do

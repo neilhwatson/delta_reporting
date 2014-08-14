@@ -130,9 +130,11 @@ __DATA__
 
 {
    db_name         => "delta_reporting_test",
-   db_user         => "postgres",
+   db_user         => "deltar_ro",
    db_pass         => "",
-   db_host         => "127.0.0.1",
+   db_wuser        => "deltar_rw",
+   db_wpass        => "",
+   db_host         => "localhost",
    record_limit    => 1000, # Limit the number of records returned by a query.
    agent_table     => "agent_log",
    promise_counts  => "promise_counts",
@@ -145,6 +147,6 @@ __DATA__
    hypnotoad       => {
       proxy          => 1,
       production     => 1,
-      listen         => [ 'http://<ip>:8080' ],
+      listen         => [ 'http://localhost:8080' ],
    },
 };

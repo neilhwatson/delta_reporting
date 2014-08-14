@@ -5,7 +5,7 @@ sub run
 {
    my ( $self, $target ) = @_;
    my $ret = 1;
-   my $dq = $self->app->dr;
+   my $dq = $self->app->dw;
 
    if ( $target && $target eq 'usage' )
    {

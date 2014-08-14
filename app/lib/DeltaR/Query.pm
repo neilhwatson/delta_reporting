@@ -13,8 +13,6 @@ our $agent_table;
 our $promise_counts;
 our $inventory_table;
 our $inventory_limit;
-our $db_user;
-our $db_name;
 our $delete_age;
 our $reduce_age;
 
@@ -27,8 +25,6 @@ sub new
    $promise_counts  = $param{'promise_counts'};
    $inventory_table = $param{'inventory_table'};
    $inventory_limit = $param{'inventory_limit'};
-   $db_user         = $param{'db_user'};
-   $db_name         = $param{'db_name'};
    $delete_age      = $param{'delete_age'};
    $reduce_age      = $param{'reduce_age'};
    $dbh             = $param{'dbh'};
@@ -573,7 +569,7 @@ sub create_tables
    my $self = shift;
 
    my @queries = ( 
-# One
+# 
 "CREATE TABLE $agent_table
 (
 class text,
@@ -592,17 +588,10 @@ WITH (
 OIDS=FALSE
 );",
 
-# Two
-"ALTER TABLE $agent_table
-OWNER TO $db_user;
-COMMENT ON COLUMN $agent_table.\"rowId\" IS 'auto generated row id';
-COMMENT ON COLUMN $agent_table.promise_outcome IS 'result of promise if
-applicable';",
-
-# Three
+#
 "CREATE INDEX client_by_timestamp ON $agent_table USING btree (timestamp, class);",
 
-# Four
+#
 "CREATE TABLE $inventory_table 
 (
    \"rowId\" serial NOT NULL, -- auto generated row id
@@ -612,12 +601,7 @@ WITH (
 OIDS=FALSE
 );",
 
-# Five
-"ALTER TABLE $inventory_table
-OWNER TO $db_user;
-COMMENT ON COLUMN $inventory_table.\"rowId\" IS 'auto generated row id';",
-
-# Six
+#
 "INSERT INTO $inventory_table ( class ) VALUES
 ('am_policy_hub'),
 ('any'),
@@ -642,7 +626,7 @@ COMMENT ON COLUMN $inventory_table.\"rowId\" IS 'auto generated row id';",
 ('zone_%');
 ",
 
-# Seven
+#
 "CREATE TABLE $promise_counts
 (
    rowid serial NOT NULL,
@@ -655,8 +639,14 @@ COMMENT ON COLUMN $inventory_table.\"rowId\" IS 'auto generated row id';",
 WITH ( OIDS=FALSE );
 ",
 
-# Eight
+#
 "CREATE INDEX promise_counts_idx ON $promise_counts USING btree( datestamp );",
+
+#
+"GRANT SELECT ON $agent_table, $promise_counts, $inventory_table TO deltar_ro;",
+
+#
+"GRANT ALL ON $agent_table, $promise_counts, $inventory_table TO deltar_rw;",
 
 );
 
