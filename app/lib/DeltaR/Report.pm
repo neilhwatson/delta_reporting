@@ -8,10 +8,11 @@ sub missing
    my $rows = $self->app->dr->query_missing();
 
    $self->render(
-      title    => "Missing hosts from the past 24 hours",
-      rows     => $rows,
-      columns  => [ 'Hostname', 'IP Address', 'Policy server' ],
-      template => 'report/rtable',
+      title       => "Missing hosts",
+      small_title => "not seen in 24 hours",
+      rows        => $rows,
+      columns     => [ 'Hostname', 'IP Address', 'Policy server' ],
+      template    => 'report/rtable',
    );
 }
 
@@ -21,10 +22,11 @@ sub inventory
    my $rows = $self->app->dr->query_inventory();
 
    $self->render(
-      title    => "Inventory report",
-      rows     => $rows,
-      columns  => [ 'Class','Count' ],
-      template => 'report/rtable',
+      title       => 'Inventory report',
+      small_title => "from the past ". $self->app->config->{inventory_limit} ." minutes",
+      rows        => $rows,
+      columns     => [ 'Class','Count' ],
+      template    => 'report/rtable',
    );
 }
 

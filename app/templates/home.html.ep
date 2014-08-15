@@ -34,7 +34,31 @@
    </div> <!-- col xs and md  -->
 </div> <!-- row -->
 
-<hr>
+<div class="panel-group">
+   <div class="panel panel-default">
+
+      <div class="panel panel-primary">
+         <div class="panel-heading">
+            <h4 class="panel-title">
+               <a data-toggle="collapse" href="#collapseOne">
+                  <span class="glyphicon glyphicon-chevron-down"></span>
+                  Notes
+               </a>
+            </h4>
+         </div> <!-- panel-heading -->
+         <div id="collapseOne" class="panel-collapse collapse out">
+            <div class="panel-body">
+               <ul>
+                  <li>Host counts are from the past <%= $config->{inventory_limit} %> minutes.</li>
+                  <li>Missing hosts not seen in 24 hours.</li>
+                  <li>Promise counts are from the past <%= $config->{inventory_limit} %> minutes.</li>
+               </ul>
+            </div> <!-- panel-body -->
+         </div> <!-- collapseOne -->
+      </div> <!-- panal-#class -->
+
+   </div> <!-- panel-default -->
+</div> <!-- panel-group -->
 
    <h2>Getting started</h2>
 

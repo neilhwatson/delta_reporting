@@ -652,10 +652,16 @@ WITH ( OIDS=FALSE );
 
    foreach my $query ( @queries )
    {
-      my $sth = $dbh->prepare( $query )
-         or die "$dbh->errstr Cannot prepare $query";
-      $sth->execute
-         or die "$dbh->errstr Cannot execute $query";
+      my $sth = $dbh->prepare( $query ) or do 
+      {
+         warn "Cannot prepare [$query], [$dbh->errstr]";
+         die;
+      };
+      $sth->execute or do
+      {
+         warn "Cannot prepare [$query], [$dbh->errstr]";
+         die;
+      };
    }
 }
 
@@ -686,8 +692,11 @@ END
    my $fh;
    if ( open( $fh, "<", "$client_log" ) )
    {
-      my $sth = $dbh->prepare( $query )
-         || die "Cannot prepare insert query ". $dbh->errstr;
+      my $sth = $dbh->prepare( $query ) or do
+      {
+         warn "Cannot prepare insert query [$dbh->errstr]";
+         die;
+      };
 
       undef %record;
       if ( $client_log =~ m:([^/]+)\.log$: )
@@ -718,7 +727,7 @@ END
 
          my $errors = validate_load_inputs( \%record );
          if ( $#{ $errors } > 0 ){
-            foreach my $err ( @{ $errors } ) { warn "validation error ". $err };
+            foreach my $err ( @{ $errors } ) { warn "validation error [$err]" };
             next;
          };
 
@@ -740,7 +749,7 @@ END
          $sth->bind_param( 16, $record{promise_outcome} );
          $sth->bind_param( 17, $record{promisee} );
          $sth->bind_param( 18, $record{policy_server} );
-         $sth->execute || warn "cannot execute load ". $dbh->errstr;
+         $sth->execute or warn "cannot execute load [$dbh->errstr]";
       }
    }
    else

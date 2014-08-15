@@ -69,6 +69,8 @@ sub startup
       return $dq;
    });
 
+   $self->defaults( small_title => '' );
+
 ## Routes
    my $r = $self->routes;
 

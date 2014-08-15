@@ -94,7 +94,7 @@ ok( $config->{db_name} eq 'delta_reporting_test', 'Confirm config test database'
    or BAIL_OUT( "Config test failed" );
 
 $t->ua->max_redirects(1);
-$t->get_ok( '/initialize_database' ) ->status_is(200);
+$t->get_ok( '/initialize_database' ) ->status_is( 200, 'Initialize database' );
 
 done_testing();
 
