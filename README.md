@@ -64,7 +64,7 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 
 1. Install contents of repo to /opt/delta\_reporting/.
 
-1. Configure using DeltaR.conf. Be sure to configure your database properly for authentication and authorization.
+1. Configure using DeltaR.conf. Be sure to configure your database properly for authentication and authorization. Two database users are required. 
 
 1. Copy bin/delta\_reporting script to /etc/init.d. This is your start script. Run it.
 
@@ -99,6 +99,10 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 1. Install bin/dhlogmaker and configure CFEngine to install it on all hosts. /opt/delta\_reporting/bin/dhlogmaker suggested. 
 
 1. Create server access promises that allow the policy server's agent to download from cf-serverd on all agents, including itself, the directory ${sys.workdir}/delta\_reporting. Use of the EFL bundle efl\_server is encouraged.
+
+## Multiple CFEngine servers?
+
+If you have mutiple CFEngine servers, install Delta Reporting on each, but point each to a central database. Now every server loads its client data to the central database and each can report on the data collected from all servers.
 
 ## License ##
 

@@ -133,11 +133,18 @@ sub calc_percent
    my ( %percent, $sum );
    my @values = values %params;
    $sum += $_ for @values;
-   die "Sum is of promises is zero, $!" if ( $sum == 0 );
 
    foreach my $k ( keys %params )
    {
-      $percent{$k} = int( $params{$k} / $sum * 100 );
+      # Guard against divide by zero;
+      if ( $sum == 0 )
+      {
+         $percent{$k} = 0;
+      }
+      else
+      {
+         $percent{$k} = int( $params{$k} / $sum * 100 );
+      }
    }
    return \%percent;
 }
