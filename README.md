@@ -4,9 +4,12 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 
 ![Dashboard screenshot](screenshots/dr-dashboard.png)
 
+[More screenshots](Screenshots.md)
+
 ## Features ##
 - Report on class membership history.
 - Report on low level promise compliance history.
+- Report missing hosts.
 - Trend graphs for promise outcomes and host counts.
 - Inventory reporting.
 - Centralize all your CFEngine servers to a single reporting database.
