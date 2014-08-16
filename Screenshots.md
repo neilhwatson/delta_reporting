@@ -1,5 +1,11 @@
 # Delta Reporting screenshots #
 
+![Dashboard screenshot](screenshots/dr-dashboard.png)
+
+A Dashboard
+
+---
+
 ![Class query form](screenshots/dr-classes-form.png)
 
 Forms optimized for quick data entry.
