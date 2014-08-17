@@ -1,7 +1,7 @@
 <table id="dr-results-table" class="table table-hover table-condensed table-striped">
    <thead>
       <tr>
-         % foreach my $column ( @$columns ) {
+         % for my $column ( @$columns ) {
          <th data-toggle="tooltip" title="sort"><span class="glyphicon glyphicon-sort"></span>
          <%= $column %></th>
          % }
@@ -9,10 +9,10 @@
    </thead>
    <tbody>
 
-   % foreach my $row ( @$rows )
+   % for my $row ( @$rows )
    % {
       <tr>
-        % foreach my $column (@$row ) {
+        % for my $column (@$row ) {
             <td><%= $column %></td>
         % }
       </tr>
@@ -20,7 +20,7 @@
    </tbody>
    <tfoot>
       <tr>
-         % foreach my $column ( @$columns ) {
+         % for my $column ( @$columns ) {
          <th><%= $column %></th>
          % }
       </tr>

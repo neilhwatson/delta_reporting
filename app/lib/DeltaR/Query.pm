@@ -40,7 +40,7 @@ sub table_cleanup
       "REINDEX TABLE $agent_table"
    );
 
-   foreach my $q ( @queries )
+   for my $q ( @queries )
    {
       #say $q;
       my $sth = $dbh->prepare( $q );
@@ -69,7 +69,7 @@ sub reduce_records
 "DELETE FROM agent_log WHERE timestamp < now() - ?::interval ;",
 );
 
-   foreach my $q ( @queries )
+   for my $q ( @queries )
    {
       #say $q;
       my $sth = $dbh->prepare( $q )
@@ -167,7 +167,7 @@ sub query_inventory
       my $class_arrayref = $dbh->selectall_arrayref( $sth ) 
          || die "Could not execute inventory query [$dbh->errstr]" ;
 
-      foreach my $row ( @$class_arrayref )
+      for my $row ( @$class_arrayref )
       {
          my ( $bind_class ) = @$row;
          $like_clauses .= " OR lower(class) LIKE lower('$bind_class') ESCAPE '!'";
@@ -254,7 +254,7 @@ sub test_for_invalid_data
 
    my @errors;
 
-   foreach my $p ( keys %{ $inputs } )
+   for my $p ( keys %{ $inputs } )
    {
       if ( $valid_inputs->{$p} )
       {
@@ -349,7 +349,7 @@ END
       $return = 0;
    };
 
-   foreach my $row ( @{ $AoH } )
+   for my $row ( @{ $AoH } )
    {
       $sth->execute( 
          $row->{datestamp},
@@ -485,7 +485,7 @@ sub execute_query
    if ( $bind_params )
    {
       my $param_count = 1;
-      foreach my $qp ( @{ $bind_params } )
+      for my $qp ( @{ $bind_params } )
       {
          $sth->bind_param( $param_count, $query_params->{$qp} )
             or warn "bind error [$sth->errstr]";
@@ -504,7 +504,7 @@ sub get_timestamp_clause
    my $second_time_limit;
 
    my @integers = qw/ delta_minutes gmt_offset /;
-   foreach my $i ( @integers )
+   for my $i ( @integers )
    {
       if ( $query_params->{$i} !~ m/^[-+]/ )
       {
@@ -552,7 +552,7 @@ sub drop_tables
 
    my $sth;
 
-   foreach my $table ( @tables )
+   for my $table ( @tables )
    {
       $sth = $dbh->prepare( "DROP TABLE IF EXISTS $table CASCADE" );
       $sth->execute or do
@@ -650,7 +650,7 @@ WITH ( OIDS=FALSE );
 
 );
 
-   foreach my $query ( @queries )
+   for my $query ( @queries )
    {
       my $sth = $dbh->prepare( $query ) or do 
       {
@@ -709,7 +709,7 @@ END
       
       while (<$fh>)
       {
-         foreach my $k ( qw/ timestamp class promise_handle promiser
+         for my $k ( qw/ timestamp class promise_handle promiser
             promise_outcome promisee / )
          {
             $record{$k} = '';
@@ -727,7 +727,7 @@ END
 
          my $errors = validate_load_inputs( \%record );
          if ( $#{ $errors } > 0 ){
-            foreach my $err ( @{ $errors } ) { warn "validation error [$err]" };
+            for my $err ( @{ $errors } ) { warn "validation error [$err]" };
             next;
          };
 
@@ -769,7 +769,7 @@ sub get_ptr
 
    if ( $query )
    {
-      foreach my $rr ( $query->answer )
+      for my $rr ( $query->answer )
       {
          next unless $rr->type eq "PTR";
          $hostname = $rr->rdatastr;

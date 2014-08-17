@@ -33,7 +33,7 @@ my $stats_table_body_regex = qr(
 my $t = Test::Mojo->new('DeltaR');
 $t->ua->max_redirects(1);
 
-foreach my $report ( 'kept', 'repaired' )
+for my $report ( 'kept', 'repaired' )
 {
    $t->get_ok("/trend/$report")
       ->status_is(200)

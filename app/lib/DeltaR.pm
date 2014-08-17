@@ -106,7 +106,7 @@ sub startup
       # Get latest counts of promise outcomes and convert to json
       my $promise_count = $self->dr->query_recent_promise_counts( $inventory_limit );
       my @promise_count;
-      foreach my $i  ( @{ $promise_count } )
+      for my $i  ( @{ $promise_count } )
       {
          push @promise_count,
          {

@@ -49,7 +49,7 @@ sub build_test_conf
       return;
    };
 
-   foreach my $line (<DATA>)
+   for my $line (<DATA>)
    {
       print FH $line or do
       {

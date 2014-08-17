@@ -134,7 +134,7 @@ sub calc_percent
    my @values = values %params;
    $sum += $_ for @values;
 
-   foreach my $k ( keys %params )
+   for my $k ( keys %params )
    {
       # Guard against divide by zero;
       if ( $sum == 0 )

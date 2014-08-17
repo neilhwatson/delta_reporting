@@ -360,7 +360,7 @@ ZeroClipboard_TableTools.Client.prototype = {
 					// name of function
 					window[func](this, args);
 				}
-			} // foreach event handler defined
+			} // for event handler defined
 		} // user defined handler for event
 	}
 	

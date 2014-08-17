@@ -168,7 +168,7 @@ sub run
    #
    # Generate output
    #
-   foreach my $row ( @{$rows} )
+   for my $row ( @{$rows} )
    {
       @row  = @{$row};
       write;

@@ -13,7 +13,7 @@ my $trend_timestamp =
 
 my @historical_trends;
 
-foreach my $day ( -7..-2 )
+for my $day ( -7..-2 )
 {
    my $datestamp = strftime "%Y-%m-%d", localtime( time - 60**2 * 24 * -$day );
    my $kept      = int( rand( 200 ) + 900 );
@@ -37,13 +37,13 @@ ok( $t->app->dw->insert_promise_counts( \@historical_trends ),
 my $shared = retrieve( '/tmp/delta_reporting_test_data' );
 ok( defined $shared, 'Load shared data' );
 
-foreach my $line (<DATA>)
+for my $line (<DATA>)
 {
    chomp $line;
    push @log_data, $line;
 }
 
-foreach my $i ( 1..$hosts )
+for my $i ( 1..$hosts )
 {
    my $hex = sprintf( "%x", $i );
    my $log_file = "/tmp/$shared->{data}{subnet}$hex.log";
@@ -58,7 +58,7 @@ foreach my $i ( 1..$hosts )
       @timestamps = ( $trend_timestamp, $shared->{data}{log_timestamp} );
    }
 
-   foreach my $ts ( @timestamps )
+   for my $ts ( @timestamps )
    {
       ok( build_client_log(
             log_file  => $log_file,
@@ -88,7 +88,7 @@ sub build_client_log
       return;
    };
 
-   foreach my $data ( @{ $params{log_data} } )
+   for my $data ( @{ $params{log_data} } )
    {
       $line = $params{timestamp} . ' ;; '. $data."\n";
       print $fh $line or do
