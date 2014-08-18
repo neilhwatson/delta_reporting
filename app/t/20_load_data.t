@@ -1,4 +1,5 @@
 use Test::More;
+use Test::Exception;
 use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
@@ -11,8 +12,8 @@ my $missing_timestamp =
 my $trend_timestamp =
    strftime "%Y-%m-%dT%H:%M:%S%z", localtime( time - 60**2 * 24 );
 
+## Create historical trend data
 my @historical_trends;
-
 for my $day ( -7..-2 )
 {
    my $datestamp = strftime "%Y-%m-%d", localtime( time - 60**2 * 24 * -$day );
@@ -30,19 +31,25 @@ for my $day ( -7..-2 )
    };
 }
 
+# Load historical trend data
 my $t = Test::Mojo->new( 'DeltaR' );
-ok( $t->app->dw->insert_promise_counts( \@historical_trends ),
-   'Load test historical trend data' );
+lives_and
+{
+   ok( $t->app->dw->insert_promise_counts( \@historical_trends ) )
+} 'Load test historical trend data';
 
+# Load stored shared data
 my $shared = retrieve( '/tmp/delta_reporting_test_data' );
 ok( defined $shared, 'Load shared data' );
 
+# Prep test client log data for loading
 for my $line (<DATA>)
 {
    chomp $line;
    push @log_data, $line;
 }
 
+# Load test client log data
 for my $i ( 1..$hosts )
 {
    my $hex = sprintf( "%x", $i );
@@ -60,42 +67,50 @@ for my $i ( 1..$hosts )
 
    for my $ts ( @timestamps )
    {
-      ok( build_client_log(
-            log_file  => $log_file,
-            timestamp => $ts,
-            log_data  => \@log_data
-         ),
-         'build log data for hosts'
-      );
+      lives_and
+      {
+         ok( build_client_log(
+               log_file  => $log_file,
+               timestamp => $ts,
+               log_data  => \@log_data
+         )),
+      } 'build log data for hosts';
 
-      ok( run_command( "./script/load $log_file" ), 'Insert client log' );
-      unlink $log_file or warn "Cannot unlink  [$log_file]";
+      lives_and
+      {
+         ok( run_command( "./script/load $log_file" ));
+      } 'Insert client log';
+      unlink $log_file or warn "Cannot unlink [$log_file]";
    }
 }
 
-ok( run_command( './script/prune'  ), 'Run command prune'  );
-ok( run_command( './script/reduce' ), 'Run command reduce' );
-ok( run_command( './script/trends' ), 'Run command trends' );
+lives_and
+{
+   ok( run_command( './script/prune'  ));
+} 'Run command prune';
+
+lives_and
+{
+   ok( run_command( './script/reduce' ));
+} 'Run command reduce';
+
+lives_and
+{
+   ok( run_command( './script/trends' ));
+} 'Run command trends';
 
 done_testing();
 
 sub build_client_log
 {
    my %params = @_;
-   open( my $fh, ">", $params{log_file} ) or do
-   { 
-      warn "Cannot open log file [$params{log_file}], [$!]";
-      return;
-   };
+   open( my $fh, ">", $params{log_file} )
+      or die "Cannot open log file [$params{log_file}], [$!]";
 
    for my $data ( @{ $params{log_data} } )
    {
       $line = $params{timestamp} . ' ;; '. $data."\n";
-      print $fh $line or do
-      {
-         warn "Cannot write [$line] to [$params{log_file}], [$!]";
-         return;
-      };
+      print $fh $line or die "Cannot write [$line] to [$params{log_file}], [$!]";
    }
    close $fh;
    return 1;
@@ -107,8 +122,7 @@ sub run_command
    my $return = system( $command );
    if ( $return != 0 )
    {
-      warn "Error [$command] return status [$return]";
-      return;
+      die "Error [$command] return status [$return]";
    }
    return 1;
 }

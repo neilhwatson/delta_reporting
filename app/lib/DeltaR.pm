@@ -156,9 +156,7 @@ sub startup
    $r->post('/report/classes' )->to('report#classes',   record_limit => $record_limit );
    $r->post('/report/promises')->to('report#promises',  record_limit => $record_limit );
 
-   $r->get( '/trend/kept'     )->to( 'graph#trend', subject => 'Kept' );
-   $r->get( '/trend/notkept'  )->to( 'graph#trend', subject => 'NotKept' );
-   $r->get( '/trend/repaired' )->to( 'graph#trend', subject => 'Repaired' );
+   $r->get( '/trend/:promise_outcome' )->to( 'graph#trend' );
 
    $r->get('/report/pps')->to('graph#percent_promise_summary');
 }

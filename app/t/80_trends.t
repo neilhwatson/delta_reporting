@@ -33,12 +33,20 @@ my $stats_table_body_regex = qr(
 my $t = Test::Mojo->new('DeltaR');
 $t->ua->max_redirects(1);
 
-for my $report ( 'kept', 'repaired' )
+my %trends = (
+   kept     => 'kept',
+   notkept  => 'not kept',
+   repaired => 'repaired'
+);
+
+for my $report ( keys %trends )
 {
+   my $promise_column = qr/$trends{$report}/i;
+
    $t->get_ok("/trend/$report")
       ->status_is(200)
 
-      ->element_exists( 'html head title' => "promises $report trend",
+      ->element_exists( 'html head title' => "promises $trends{$report} trend",
          "/trend/$report has wrong title" )
 
       ->content_like( qr(
@@ -62,7 +70,7 @@ for my $report ( 'kept', 'repaired' )
          .*
          <th.*?>\s*Hosts\s*</th>
          .*
-         <th.*?>\s*(not){0,1}$report\s*</th>
+         <th.*?>\s*$promise_column\s*</th>
          .*
          <td>$stored->{data}{datestamp_yesterday}</td>
       )misx, "/trend/$report Raw data" )

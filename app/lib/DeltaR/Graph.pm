@@ -8,30 +8,29 @@ use Time::Local;
 
 sub trend
 {
-   my $self = shift;
-   my $subject = $self->param('subject');
-   my $column = lc $subject;
-   $subject = 'Not Kept' if ( $subject eq 'NotKept' );
-   my $dq = $self->app->dr;
-   my @columns = ( 'Date', 'Hosts', $subject );
-   my $rows = $dq->query_promise_count( 'hosts', $column );
+   my $self           = shift;
+   my $trend          = $self->param('promise_outcome');
+   my $rows           = $self->app->dr->query_promise_count( 'hosts', $trend );
+   $trend             = 'not kept' if ( $trend eq 'notkept' );
+   ( my $column_title = $trend  ) =~ s/\b(\w)/\u$1/g;
+   my @columns        = ( 'Date', 'Hosts', $column_title );
 
    my ( $hosts_series, $hosts_stats ) = nvd3_scatter_series( 
-      key => 'Hosts',
+      key    => 'Hosts',
       column => 1,
-      rows => $rows
+      rows   => $rows
    );
    my ( $promise_series, $promise_stats ) = nvd3_scatter_series( 
-      key => $subject,
+      key    => $trend,
       column => 2,
-      rows => $rows
+      rows   => $rows
    );
    my @json_data_series = ( \%$hosts_series, \%$promise_series );
    my $json_data_series = encode_json( \@json_data_series );
 
    $self->render(
       template      => 'report/trend',
-      title         => "Promises $subject trend",
+      title         => "Promises $trend trend",
       rows          => $rows,
       dr_data       => $json_data_series,
       hosts_stats   => $hosts_stats,

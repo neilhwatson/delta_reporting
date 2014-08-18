@@ -1,4 +1,5 @@
 use Test::More;
+use Test::Exception;
 use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
@@ -23,39 +24,25 @@ my %stored = (
 sub store_test_data
 {
    my $data = shift;
-   if ( store $data, $data->{file} )
-   {
-      return 1;
-   }
-   else
-   {
-      warn "could not store data in [$data->{file}], [$!]";
-      return;
-   }
+
+   store( $data, $data->{file} ) or
+      die "could not store data in [$data->{file}], [$!]";
+
+   return 1;
 }
 
 sub build_test_conf
 {
    my $conf = $stored{data}{config};
-   copy( $conf, "$conf.backup" ) or do
-   {
-      warn "Cannot backup [$stored{data}{config}], [$!]";
-      return;
-   };
 
-   open( FH, '>', $conf ) or do
-   {
-      warn "Cannot open [$conf], [$!]";
-      return;
-   };
+   copy( $conf, "$conf.backup" ) or 
+      die "Cannot backup [$stored{data}{config}], [$!]";
+
+   open( FH, '>', $conf ) or die "Cannot open [$conf], [$!]";
 
    for my $line (<DATA>)
    {
-      print FH $line or do
-      {
-         warn "Cannot write [$line] to [$conf], [$!]";
-         return;
-      };
+      print FH $line or die "Cannot write [$line] to [$conf], [$!]";
    }
    close FH;
    return 1
@@ -64,6 +51,8 @@ sub build_test_conf
 #
 # Main matter
 #
+
+## Build and store shared data
 if ( $timestamp =~ m/ \A
    ( \d{4}-\d{2}-\d{2} ) # Date
    T
@@ -87,14 +76,19 @@ ok( store_test_data( \%stored ), "Store shared test data" )
 ok( build_test_conf(), "Build test configuration" )
    or BAIL_OUT( "Failed to build [$stored{data}{config}]" );
 
+## Load app config
 my $t = Test::Mojo->new( 'DeltaR' );
 
 my $config = $t->app->plugin( 'config', file => 'DeltaR.conf' );
 ok( $config->{db_name} eq 'delta_reporting_test', 'Confirm config test database' )
    or BAIL_OUT( "Config test failed" );
 
+## Initialize test database
 $t->ua->max_redirects(1);
-$t->get_ok( '/initialize_database' ) ->status_is( 200, 'Initialize database' );
+lives_and
+{
+   $t->get_ok( '/initialize_database' ) ->status_is( 200, 'Initialize database' );
+} '/initialze_database';
 
 done_testing();
 

@@ -32,6 +32,18 @@ sub new
    bless{} => __PACKAGE__;
 };
 
+# TODO new query sub to reduce code
+sub sql_execute
+{
+   my %args = @_;
+
+   if ( $args{return} eq 'none' )
+   {
+      return $args{sth}->execute or die "SQL execute error: [$dbh->errstr]";
+   }
+   return;
+}
+
 sub table_cleanup
 {
    my $self = shift;
@@ -42,10 +54,14 @@ sub table_cleanup
 
    for my $q ( @queries )
    {
-      #say $q;
-      my $sth = $dbh->prepare( $q );
-      $sth->execute;
+      my $sth = $dbh->prepare( $q ) or die "SQL prepare error: [$dbh->errstr]";
+      return sql_execute(
+         query  => $q,
+         sth    => $sth,
+         return => 'none',
+      );
    }
+   return;
 }
 
 sub delete_records
