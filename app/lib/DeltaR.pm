@@ -3,7 +3,7 @@ package DeltaR;
 use Mojo::Base qw( Mojolicious );
 use DeltaR::Query;
 use Mojo::JSON 'encode_json';
-use DBI;
+use DBI qw(:sql_types);
 
 sub startup
 {

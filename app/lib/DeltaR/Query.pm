@@ -33,70 +33,70 @@ sub new
 };
 
 # TODO new query sub to reduce code
-sub sql_execute
+sub sql_prepare_and_execute
 {
-   my %args = @_;
+   my %args = ( 
+      return => 'none',
+      @_
+   );
+   my $return;
 
-   if ( $args{return} eq 'none' )
+   my $sth = $dbh->prepare( $args{query} )
+      or die "SQL prepare error: [$dbh->errstr]";
+   $return = $sth->execute
+      or die "SQL execute error: [$dbh->errstr]";
+
+   if ( $args{return} eq 'fetchall_arrayref' )
    {
-      return $args{sth}->execute or die "SQL execute error: [$dbh->errstr]";
+      $return = $sth->fetchall_arrayref();
    }
-   return;
+   return $return;
 }
 
 sub table_cleanup
 {
    my $self = shift;
-   my @queries = (
-      "VACUUM $agent_table",
-      "REINDEX TABLE $agent_table"
-   );
+   my $return;
+   my @query;
+   push @query, sprintf "VACUUM %s"       , $dbh->quote_identifier( $agent_table );
+   push @query, sprintf "REINDEX TABLE %s", $dbh->quote_identifier( $agent_table );
 
-   for my $q ( @queries )
+   for my $q ( @query )
    {
-      my $sth = $dbh->prepare( $q ) or die "SQL prepare error: [$dbh->errstr]";
-      return sql_execute(
-         query  => $q,
-         sth    => $sth,
-         return => 'none',
-      );
+      $return = sql_prepare_and_execute( query  => $q,);
    }
-   return;
+   return $return;
 }
 
 sub delete_records
 {
    my $self = shift;
-   my $query =
-      "DELETE FROM agent_log WHERE timestamp < now() - interval '$delete_age days'";
-   #say $query;
-   my $sth = $dbh->prepare( $query );
-   $sth->execute;
+
+   my $query = sprintf "DELETE FROM %s WHERE timestamp < now() - interval %s",
+      $dbh->quote_identifier( $agent_table ),
+      $dbh->quote( "$delete_age days" );
+
+   return sql_prepare_and_execute( query  => $query,);
 }
 
 sub reduce_records
 {
    my $self = shift;
+   my $return;
 
-   my @queries = (
-"SELECT * INTO TEMP tmp_agent_log FROM agent_log
-   WHERE timestamp < now() - ?::interval ;",
+   my @query;
 
-"DELETE FROM agent_log WHERE timestamp < now() - ?::interval ;",
-);
+   push @query, sprintf "SELECT * INTO TEMP tmp_agent_log FROM %s
+      WHERE timestamp < now() - interval %s",
+      $dbh->quote_identifier( $agent_table ),
+      $dbh->quote( "$reduce_age days" );
 
-   for my $q ( @queries )
-   {
-      #say $q;
-      my $sth = $dbh->prepare( $q )
-         or die "Can't prepare $q". $dbh->errstr;
+   push @query, sprintf "DELETE FROM %s WHERE timestamp < now() - interval %s",
+      $dbh->quote_identifier( $agent_table ),
+      $dbh->quote( "$reduce_age days" );
 
-      $sth->execute( "$reduce_age days" )
-         or die "Can't execute $q". $dbh->errstr;
-   }
-
-   my $sth = $dbh->prepare( <<END )
-INSERT INTO agent_log SELECT 
+   push @query, sprintf <<END,
+INSERT INTO %s SELECT 
    class, hostname, ip_address, promise_handle, promiser,
    promisee, policy_server, "rowId", timestamp, promise_outcome
    FROM (
@@ -109,12 +109,17 @@ INSERT INTO agent_log SELECT
       ) t1
    WHERE row_number = 1;
 END
-      or die "Can't prepare insert statement". $dbh->errstr;
+      $dbh->quote_identifier( $agent_table );
 
-      $sth->execute()
-         or die "Can't execute insert statement". $dbh->errstr;
+   for my $q ( @query )
+   {
+      $return = sql_prepare_and_execute( query  => $q,);
+   }
+
+   return $return;
 }
 
+# TODO use sql_prepare_and_execute
 sub count_records
 {
    my $self = shift;
@@ -130,20 +135,27 @@ sub count_records
 sub query_missing
 {
    my $self = shift;
-   my $sth = $dbh->prepare("
-(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table
+   my $query = sprintf <<END,
+(SELECT DISTINCT hostname, ip_address, policy_server FROM %s
 WHERE class = 'any'
 	AND timestamp < ( now() - interval '24' hour )
    AND timestamp > ( now() - interval '48' hour )
-   LIMIT ? )
+   LIMIT %s )
 EXCEPT
-(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table
+(SELECT DISTINCT hostname, ip_address, policy_server FROM %s
 WHERE class = 'any'
    AND timestamp > ( now() - interval '24' hour )
-   LIMIT ? )
-   ");
-   $sth->execute( $record_limit, $record_limit );
-   return $sth->fetchall_arrayref()
+   LIMIT %s )
+END
+   $dbh->quote_identifier( $agent_table ),
+   $dbh->quote_identifier( $agent_table ),
+   $dbh->quote( $record_limit, { pg_type => SQL_INTEGER } ),
+   $dbh->quote( $record_limit, { pg_type => SQL_INTEGER } );
+   
+   return sql_prepare_and_execute(
+      query  => $query,
+      return => 'fetchall_arrayref',
+   );
 }
 
 sub query_recent_promise_counts
