@@ -284,3 +284,25 @@ C<EXE_FILES: script/hypnotoad script/mojo script/morbo>
 
 =back
 
+=head2 Thu Aug 21 15:41:15 2014: C<Module> L<Try::Tiny|Try::Tiny>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.22>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

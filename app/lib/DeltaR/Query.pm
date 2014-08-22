@@ -5,7 +5,8 @@ use warnings;
 use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
-# use Data::Dumper; # TODO remove
+use Try::Tiny;
+use Data::Dumper; # TODO remove
 
 our $dbh;
 our $record_limit;
@@ -36,21 +37,63 @@ sub new
 sub sql_prepare_and_execute
 {
    my %args = ( 
-      return => 'none',
+      return      => 'none',
+      bind_params => [],
       @_
    );
-   my $return;
+   my $data;
+
+   my $caller = ( caller(1) )[3]; # Calling subroutine
 
    my $sth = $dbh->prepare( $args{query} )
-      or die "SQL prepare error: [$dbh->errstr]";
-   $return = $sth->execute
-      or die "SQL execute error: [$dbh->errstr]";
+      or die "SQL prepare error: [$dbh->errstr], caller: [$caller]";
 
-   if ( $args{return} eq 'fetchall_arrayref' )
+   warn "bind_params # [$#{ $args{bind_params} }]";
+   my $bind_parms_length = scalar( @{ $args{bind_params} } );
+   if ( $bind_parms_length > 0 )
    {
-      $return = $sth->fetchall_arrayref();
+      for my $param_list ( @{ $args{bind_params} } )
+      {
+         my $exception;
+         $data = try
+         {
+            my $data = $sth->execute( @{ $param_list } );
+            if ( $args{return} eq 'fetchall_arrayref' )
+            {
+               $data = $sth->fetchall_arrayref();
+            }
+            return $data;
+         }
+         catch
+         {
+            $exception = $_;
+         };
+         if ( $exception )
+         {
+            warn "Exception [$exception], SQL error [$dbh->errstr]";
+            die  "Caller [$caller], query [$args{query}]";
+         }
+      }
    }
-   return $return;
+      else
+   {
+      my $exception;
+      $data = try
+      {
+         my $data = $sth->execute();
+         return $data;
+      }
+      catch
+      {
+         $exception = $_;
+      };
+      if ( $exception )
+      {
+         warn "Exception [$exception], SQL error [$dbh->errstr]";
+         die  "Caller [$caller], query [$args{query}]";
+      }
+   }
+   return $data;
 }
 
 sub table_cleanup
@@ -63,9 +106,9 @@ sub table_cleanup
 
    for my $q ( @query )
    {
-      $return = sql_prepare_and_execute( query  => $q,);
+      sql_prepare_and_execute( query  => $q,);
    }
-   return $return;
+   return;
 }
 
 sub delete_records
@@ -82,7 +125,6 @@ sub delete_records
 sub reduce_records
 {
    my $self = shift;
-   my $return;
 
    my @query;
 
@@ -113,10 +155,10 @@ END
 
    for my $q ( @query )
    {
-      $return = sql_prepare_and_execute( query  => $q,);
+      sql_prepare_and_execute( query  => $q,);
    }
 
-   return $return;
+   return;
 }
 
 # TODO use sql_prepare_and_execute
@@ -140,21 +182,22 @@ sub query_missing
 WHERE class = 'any'
 	AND timestamp < ( now() - interval '24' hour )
    AND timestamp > ( now() - interval '48' hour )
-   LIMIT %s )
+   LIMIT ? )
 EXCEPT
 (SELECT DISTINCT hostname, ip_address, policy_server FROM %s
 WHERE class = 'any'
    AND timestamp > ( now() - interval '24' hour )
-   LIMIT %s )
+   LIMIT ? )
 END
    $dbh->quote_identifier( $agent_table ),
    $dbh->quote_identifier( $agent_table ),
-   $dbh->quote( $record_limit, { pg_type => SQL_INTEGER } ),
-   $dbh->quote( $record_limit, { pg_type => SQL_INTEGER } );
+   my @bind_params;
+   push @bind_params, [ $record_limit, $record_limit ];
    
    return sql_prepare_and_execute(
-      query  => $query,
-      return => 'fetchall_arrayref',
+      query       => $query,
+      bind_params => \@bind_params,
+      return      => 'fetchall_arrayref',
    );
 }
 
@@ -162,66 +205,87 @@ sub query_recent_promise_counts
 {
    my $self     = shift;
    my $interval = shift;
-   my $query = <<END;
+   my $query = sprintf <<END,
 SELECT promise_outcome, count( promise_outcome ) FROM
 (
-   SELECT promise_outcome FROM agent_log
-   WHERE timestamp >= ( now() - interval '$interval' minute )
+   SELECT promise_outcome FROM %s 
+   WHERE timestamp >= ( now() - interval %s )
    AND promise_outcome != 'empty'
 )
 AS promise_count
 GROUP BY promise_outcome,promise_count;
 END
+   $dbh->quote_identifier( $agent_table ),
+   $dbh->quote( "$interval minute" );
 
-   my $sth;
-   $sth = $dbh->prepare( $query )
-      or warn "Cannot prepare [$query], [$dbh->errstr]";
-   $sth->execute
-      or warn "Cannot execute [$query], [$dbh->errstr]";
-
-   return $sth->fetchall_arrayref();
+   return sql_prepare_and_execute(
+      query       => $query,
+      return      => 'fetchall_arrayref',
+   );
 }
 
 sub query_inventory
 {
    my $self = shift;
    my $class = shift;
-   my ( $like_clauses, $sth );
+   my ( $x, @bind_params );
 
-   if ( not defined $class or $class eq '' )
-   {
-      my $sth = $dbh->prepare( "SELECT class FROM $inventory_table" )
-         || die "Could not prepare inventory query [$dbh->errstr]" ;
-      my $class_arrayref = $dbh->selectall_arrayref( $sth ) 
-         || die "Could not execute inventory query [$dbh->errstr]" ;
-
-      for my $row ( @$class_arrayref )
-      {
-         my ( $bind_class ) = @$row;
-         $like_clauses .= " OR lower(class) LIKE lower('$bind_class') ESCAPE '!'";
-      }
-      $like_clauses =~ s/^ OR//;
-   }
-   else
-   {
-      $like_clauses = "class = lower('$class')";
-   }
-
-   my $query = <<END;
+   my $inventory_query = sprintf <<END,
 SELECT class,COUNT( class )
 FROM(
-   SELECT class,ip_address FROM $agent_table
-   WHERE timestamp > ( now() - interval '$inventory_limit' minute )
-   AND ($like_clauses)
+   SELECT class,ip_address FROM %s 
+   WHERE timestamp > ( now() - interval %s )
+   AND (
+END
+   $dbh->quote_identifier( $agent_table ),
+   $dbh->quote( "$inventory_limit minute" );
+
+   # Get all inventory classes if none are provided.
+   if ( not defined $class or $class eq '' )
+   {
+      my $class_query = sprintf "SELECT class FROM %s", 
+         $dbh->quote_identifier( $inventory_table );
+
+      my $class_arrayref = sql_prepare_and_execute(
+         query  => $class_query,
+         return => 'fetchall_arrayref',
+      );
+      
+      # Build returned hard classes into final inventory query.
+      for my $row ( @ {$class_arrayref } )
+      {
+         $x++;
+         my $or = '';
+         if ( $x > 1 ) { $or = 'OR' };
+
+         push @bind_params, [ @$row ];
+         $inventory_query .= qq/ $or lower(class) LIKE lower(?) ESCAPE '!' /;
+      }
+   }
+   # Or query only the provided class.
+   else
+   {
+      push @bind_params, [ $class ];
+      $inventory_query .= qq/ class = lower(?) /;
+   }
+
+   $inventory_query .= <<END;
+)
    GROUP BY class,ip_address
 )
 AS class_count
 GROUP BY class
 ORDER BY class
 END
-   $sth = $dbh->prepare( $query ) || die "Could not prepare class query [$dbh->errstr]";
-   $sth->execute || die "Could not execute class query [$dbh->errstr]";
-   return $sth->fetchall_arrayref();
+
+   my $data = sql_prepare_and_execute(
+      query       => $inventory_query,
+      bind_params => \@bind_params,
+      return      => 'fetchall_arrayref',
+   );
+   warn "Inventory query [$inventory_query]";
+   warn "Inventory data: [" .Dumper( $data ). "]";
+   return $data;
 };
 
 sub validate_load_inputs
@@ -304,6 +368,7 @@ sub test_for_invalid_data
    return \@errors;
 }
 
+# TODO start here.
 sub query_promises
 {
    my $self = shift;
