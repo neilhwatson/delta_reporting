@@ -22,13 +22,13 @@ for my $day ( -7..-2 )
    my $repaired  = int( rand( 200 ) + 900 );
 
    push @historical_trends,
-   { 
-      datestamp => $datestamp,
-      hosts     => $hosts,
-      kept      => $kept,
-      notkept   => $notkept,
-      repaired  => $repaired
-   };
+   [ 
+      $datestamp,
+      $hosts,
+      $kept,
+      $notkept,
+      $repaired
+   ];
 }
 
 # Load historical trend data

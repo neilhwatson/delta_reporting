@@ -6,7 +6,6 @@ use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
 use Try::Tiny;
-use Data::Dumper; # TODO remove
 
 our $dbh;
 our $record_limit;
@@ -43,12 +42,12 @@ sub sql_prepare_and_execute
    );
    my $data;
 
+   # TODO count queries and log them.
    my $caller = ( caller(1) )[3]; # Calling subroutine
 
    my $sth = $dbh->prepare( $args{query} )
       or die "SQL prepare error: [$dbh->errstr], caller: [$caller]";
 
-   warn "bind_params # [$#{ $args{bind_params} }]";
    my $bind_parms_length = scalar( @{ $args{bind_params} } );
    if ( $bind_parms_length > 0 )
    {
@@ -57,12 +56,7 @@ sub sql_prepare_and_execute
          my $exception;
          $data = try
          {
-            my $data = $sth->execute( @{ $param_list } );
-            if ( $args{return} eq 'fetchall_arrayref' )
-            {
-               $data = $sth->fetchall_arrayref();
-            }
-            return $data;
+            return $sth->execute( @{ $param_list } );
          }
          catch
          {
@@ -71,7 +65,8 @@ sub sql_prepare_and_execute
          if ( $exception )
          {
             warn "Exception [$exception], SQL error [$dbh->errstr]";
-            die  "Caller [$caller], query [$args{query}]";
+            warn "Caller [$caller], query [$args{query}]";
+            die;
          }
       }
    }
@@ -80,8 +75,7 @@ sub sql_prepare_and_execute
       my $exception;
       $data = try
       {
-         my $data = $sth->execute();
-         return $data;
+         return $sth->execute();
       }
       catch
       {
@@ -90,8 +84,13 @@ sub sql_prepare_and_execute
       if ( $exception )
       {
          warn "Exception [$exception], SQL error [$dbh->errstr]";
-         die  "Caller [$caller], query [$args{query}]";
+         warn "Caller [$caller], query [$args{query}]";
+         die;
       }
+   }
+   if ( $args{return} eq 'fetchall_arrayref' )
+   {
+      $data = $sth->fetchall_arrayref();
    }
    return $data;
 }
@@ -161,17 +160,19 @@ END
    return;
 }
 
-# TODO use sql_prepare_and_execute
 sub count_records
 {
    my $self = shift;
    my $query = "SELECT reltuples FROM pg_class WHERE relname = ?";
+   my @bind_params;
+   push @bind_params, [ $agent_table ];
 
-   my $sth = $dbh->prepare( $query );
-   $sth->execute( $agent_table );
-   my $array_ref = $sth->fetchall_arrayref();
-
-   return $array_ref->[0][0];
+   my $record_count = sql_prepare_and_execute(
+      query       => $query,
+      bind_params => \@bind_params,
+      return      => 'fetchall_arrayref',
+   );
+   return $record_count->[0][0];
 }
 
 sub query_missing
@@ -258,7 +259,7 @@ END
          my $or = '';
          if ( $x > 1 ) { $or = 'OR' };
 
-         push @bind_params, [ @$row ];
+         push @{ $bind_params[0] }, @$row;
          $inventory_query .= qq/ $or lower(class) LIKE lower(?) ESCAPE '!' /;
       }
    }
@@ -278,16 +279,485 @@ GROUP BY class
 ORDER BY class
 END
 
-   my $data = sql_prepare_and_execute(
+   return sql_prepare_and_execute(
       query       => $inventory_query,
       bind_params => \@bind_params,
       return      => 'fetchall_arrayref',
    );
-   warn "Inventory query [$inventory_query]";
-   warn "Inventory data: [" .Dumper( $data ). "]";
-   return $data;
 };
 
+sub query_promises
+{
+   my $self = shift;
+   my $query_params = shift;
+   my $query;
+   my $common_query_section = <<END;
+FROM $agent_table WHERE 
+lower(promiser) LIKE lower(?) ESCAPE '!'
+AND lower(promisee) LIKE lower(?) ESCAPE '!'
+AND lower(promise_handle) LIKE lower(?) ESCAPE '!'
+AND promise_outcome LIKE ? ESCAPE '!'
+AND promise_outcome != 'empty'
+AND lower(hostname) LIKE lower(?) ESCAPE '!'
+AND lower(ip_address) LIKE lower(?) ESCAPE '!'
+AND lower(policy_server) LIKE lower(?) ESCAPE '!'
+END
+
+   my @bind_params;
+   for my $param ( qw/ promiser promisee promise_handle promise_outcome
+      hostname ip_address policy_server/ )
+   {
+      push @{ $bind_params[0] }, $query_params->{$param};
+   }
+
+   if ( $query_params->{'latest_record'} == 1 )
+   {
+      $query = <<END;
+SELECT promiser,promisee,promise_handle,promise_outcome,max(timestamp)
+AS maxtime,hostname,ip_address,policy_server
+$common_query_section
+GROUP BY promise_outcome,promiser,promise_handle,promisee,hostname,ip_address,policy_server
+ORDER BY maxtime DESC
+LIMIT ?
+END
+      push @{ $bind_params[0] }, $record_limit;
+   }
+   elsif ( $query_params->{'latest_record'} == 0 )
+   {
+      my %timestamp = get_timestamp_clause( $query_params );
+
+      $query = <<END;
+SELECT promiser,promisee,promise_handle,promise_outcome,timestamp,
+hostname,ip_address,policy_server 
+$common_query_section
+$timestamp{clause}
+ORDER BY timestamp DESC
+LIMIT ? 
+END
+      push @{ $bind_params[0] }, ( @{ $timestamp{bind_params} }, $record_limit );
+   }
+
+   return sql_prepare_and_execute(
+      query       => $query,
+      bind_params => \@bind_params,
+      return      => 'fetchall_arrayref',
+   );
+}
+
+sub insert_promise_counts
+# This is not used in production, but in testing to insert sample historical data.
+{
+   my $self        = shift;
+   my $bind_params = shift;
+   my $return      = 1;
+   
+   my $query = sprintf <<END,
+INSERT INTO %s ( datestamp, hosts, kept, notkept, repaired )
+VALUES ( ?, ?, ?, ?, ? )
+END
+      $dbh->quote_identifier( $promise_counts );
+
+   return sql_prepare_and_execute(
+      query       => $query,
+      bind_params => $bind_params,
+   );
+}
+
+sub insert_yesterdays_promise_counts
+{
+   my $self = shift;
+   my $query = sprintf <<END,
+INSERT INTO %s ( datestamp, hosts, kept, notkept, repaired )
+   SELECT
+     date_trunc('day', timestamp) AS timestamp,
+     COUNT(DISTINCT CASE WHEN class = 'any' THEN ip_address ELSE NULL END) AS hosts,
+     COUNT(CASE promise_outcome WHEN 'kept' THEN 1 END) AS kept,
+     COUNT(CASE promise_outcome WHEN 'notkept' THEN 1 END) AS notkept,
+     COUNT(CASE promise_outcome WHEN 'repaired' THEN 1 END) AS repaired
+   FROM %s 
+   WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
+     AND timestamp  < CURRENT_DATE 
+     AND NOT EXISTS (
+        SELECT 1 FROM %s WHERE datestamp = timestamp 
+     )
+   GROUP BY date_trunc('day', timestamp)
+;
+END
+      $dbh->quote_identifier( $promise_counts ),
+      $dbh->quote_identifier( $agent_table ),
+      $dbh->quote_identifier( $promise_counts );
+
+   return sql_prepare_and_execute( query => $query );
+}
+
+sub query_promise_count
+{
+   my $self = shift;
+   my @fields = @_;
+
+   my $query = "SELECT datestamp";
+   for my $field ( @fields )
+   {
+      $query .= sprintf ', %s', $dbh->quote_identifier( $field );
+   }
+   $query .= sprintf ' FROM %s', $dbh->quote_identifier( $promise_counts ); 
+
+   return sql_prepare_and_execute(
+      query       => $query,
+      return      => 'fetchall_arrayref',
+   );
+}
+
+sub query_classes
+{
+   my $self = shift;
+   my $query_params = shift;
+   my $query;
+   my $common_query_section = <<END;
+FROM $agent_table WHERE lower(class) LIKE lower(?) ESCAPE '!'
+AND lower(hostname) LIKE lower(?) ESCAPE '!'
+AND lower(ip_address) LIKE lower(?) ESCAPE '!'
+AND lower(policy_server) LIKE lower(?) ESCAPE '!'
+END
+
+   my @bind_params;
+   for my $param ( qw/ class hostname ip_address policy_server/ )
+   {
+      push @{ $bind_params[0] }, $query_params->{$param};
+   }
+
+   if ( $query_params->{'latest_record'} == 1 )
+   {
+      $query = <<END;
+SELECT class,max(timestamp)
+AS maxtime,hostname,ip_address,policy_server
+$common_query_section
+GROUP BY class,hostname,ip_address,policy_server
+ORDER BY maxtime DESC
+LIMIT ?
+END
+      push @{ $bind_params[0] }, $record_limit;
+   }
+   elsif ( $query_params->{'latest_record'} == 0 )
+   {
+      my %timestamp = get_timestamp_clause( $query_params );
+
+      $query = <<END;
+SELECT class,timestamp,hostname,ip_address,policy_server
+$common_query_section
+$timestamp{clause}
+ORDER BY timestamp DESC
+LIMIT ? 
+END
+      push @{ $bind_params[0] }, ( @{ $timestamp{bind_params} }, $record_limit );
+   }
+
+   return sql_prepare_and_execute(
+      query       => $query,
+      bind_params => \@bind_params,
+      return      => 'fetchall_arrayref',
+   );
+}
+
+sub query_latest_record
+{
+   my $query = sprintf <<END,
+SELECT timestamp FROM %s
+ORDER BY timestamp desc LIMIT 1
+END
+   $dbh->quote_identifier( $agent_table );
+
+   my $data = sql_prepare_and_execute(
+      query       => $query,
+      return      => 'fetchall_arrayref',
+   );
+   return $data->[0][0];
+}
+
+sub get_timestamp_clause
+{
+   my $query_params = shift;
+   my $delta_sign;
+   my $first_time_limit;
+   my $second_time_limit;
+
+   # Alter timestamps for DB consumption.
+   for my $i ( qw/ delta_minutes gmt_offset / )
+   {
+      if ( $query_params->{$i} !~ m/^[-+]/ )
+      {
+         $query_params->{$i} = '+'.$query_params->{$i};
+      }
+   }
+   $query_params->{timestamp} = $query_params->{timestamp}.$query_params->{gmt_offset};
+   delete $query_params->{gmt_offset};
+   if ( $query_params->{delta_minutes} =~ m/^([-+])(\d{1,4})/ )
+   {
+      $delta_sign = $1;
+      $query_params->{delta_minutes} = $2;
+
+      if ( $delta_sign eq '-' )
+      {
+         $first_time_limit = '<=';
+         $second_time_limit = '>=';
+      }
+      elsif ( $delta_sign eq '+' )
+      {
+         $first_time_limit = '=>';
+         $second_time_limit = '=<';
+      }
+   }
+   my @bind_params;
+   push @bind_params, $query_params->{delta_minutes};
+
+   my $clause = sprintf <<END,
+AND timestamp $first_time_limit %s::timestamp 
+AND timestamp $second_time_limit ( %s::timestamp $delta_sign ? * interval '1 minute' )
+END
+   $dbh->quote( $query_params->{timestamp} ),
+   $dbh->quote( $query_params->{timestamp} );
+
+   return (
+      bind_params => \@bind_params,
+      clause      => $clause,
+   );
+}
+
+sub drop_tables
+# This is not used in production, but in testing.
+{
+   my $self = shift;
+   my $return = 1;
+   my @tables = (
+      "$agent_table",
+      "$inventory_table",
+      # "client_by_timestamp ", # dropped by default?
+      "$promise_counts",
+      # "promise_counts_idx ", # dropped by default?
+   );
+
+   for my $table ( @tables )
+   {
+      my $query = sprintf "DROP TABLE IF EXISTS %s CASCADE",
+         $dbh->quote_identifier( $table );
+
+      $return = sql_prepare_and_execute( query => $query );
+   }
+   return $return;
+}
+
+sub create_tables
+{
+   my $self = shift;
+   my @queries;
+
+   my $query = sprintf <<END,
+CREATE TABLE %s 
+(
+   class text,
+   hostname text,
+   ip_address text,
+   promise_handle text,
+   promiser text,
+   promisee text,
+   policy_server text,
+   "rowId" serial NOT NULL, -- auto generated row id
+   timestamp timestamp with time zone,
+   promise_outcome text, -- result of promise if applicable
+   CONSTRAINT primary_key PRIMARY KEY ("rowId")
+)
+WITH ( OIDS=FALSE )
+END
+      $dbh->quote_identifier( $agent_table );
+   push @queries, $query;
+
+   $query = sprintf <<END,
+CREATE INDEX client_by_timestamp ON %s USING btree (timestamp, class)
+END
+      $dbh->quote_identifier( $agent_table );
+   push @queries, $query;
+
+   $query = sprintf <<END,
+CREATE TABLE %s 
+(
+   "rowId" serial NOT NULL, -- auto generated row id
+	class text
+)
+WITH ( OIDS=FALSE )
+END
+      $dbh->quote_identifier( $inventory_table );
+   push @queries, $query;
+
+   $query = sprintf "INSERT INTO %s ( class ) ",
+      $dbh->quote_identifier( $inventory_table );
+   $query .= <<END;
+VALUES 
+   ('am_policy_hub'),
+   ('any'),
+   ('centos%'),
+   ('cfengine_3%'),
+   ('community%'),
+   ('debian%'),
+   ('enterprise%'),
+   ('fedora%'),
+   ('ipv4_%'),
+   ('linux%'),
+   ('policy_server'),
+   ('pure_%'),
+   ('redhat%'),
+   ('solaris%'),
+   ('sun4%'),
+   ('suse%'),
+   ('ubuntu%'),
+   ('virt_%'),
+   ('vmware%'),
+   ('xen%'),
+   ('zone_%')
+END
+   push @queries, $query;
+
+   $query = sprintf <<END,
+CREATE TABLE %s 
+(
+   rowid serial NOT NULL,
+   datestamp date,
+   hosts integer,
+   kept integer,
+   notkept integer,
+   repaired integer
+)
+WITH ( OIDS=FALSE )
+END
+      $dbh->quote_identifier( $promise_counts );
+   push @queries, $query;
+
+   $query = sprintf <<END,
+CREATE INDEX promise_counts_idx ON %s USING btree( datestamp )
+END
+      $dbh->quote_identifier( $promise_counts );
+   push @queries, $query;
+
+   $query = sprintf <<END,
+GRANT SELECT ON $agent_table, $promise_counts, $inventory_table TO deltar_ro
+END
+      $dbh->quote_identifier( $agent_table ),
+      $dbh->quote_identifier( $promise_counts ),
+      $dbh->quote_identifier( $inventory_table );
+   push @queries, $query;
+
+   $query = sprintf <<END,
+GRANT ALL ON $agent_table, $promise_counts, $inventory_table TO deltar_rw
+END
+      $dbh->quote_identifier( $agent_table ),
+      $dbh->quote_identifier( $promise_counts ),
+      $dbh->quote_identifier( $inventory_table );
+   push @queries, $query;
+
+   for $query ( @queries )
+   {
+      sql_prepare_and_execute( query => $query );
+   }
+}
+
+sub insert_client_log
+{
+   my $self = shift;
+   my $client_log = shift;
+   my @bind_params;
+   my %record;
+   my $query = sprintf <<END,
+INSERT INTO %s 
+(class, timestamp, hostname, ip_address, promise_handle,
+promiser, promise_outcome, promisee, policy_server)
+SELECT ?,?,?,?,?,?,?,?,? 
+WHERE NOT EXISTS (
+   SELECT 1 FROM %s WHERE
+class = ?
+AND timestamp = ?
+AND hostname = ?
+AND ip_address = ?
+AND promise_handle = ?
+AND promiser = ?
+AND promise_outcome = ?
+AND promisee = ?
+AND policy_server = ?
+   );
+END
+   $dbh->quote_identifier( $agent_table ),
+   $dbh->quote_identifier( $agent_table );
+
+   my $fh;
+   if ( open( $fh, "<", "$client_log" ) )
+   {
+      undef %record;
+      if ( $client_log =~ m:([^/]+)\.log$: )
+      {
+         $record{ip_address} = $1;
+         $record{hostname} = get_ptr( $record{ip_address} );
+      }
+
+      $record{policy_server} = hostname_long();
+      
+      while (<$fh>)
+      {
+         for my $k ( qw/ timestamp class promise_handle promiser
+            promise_outcome promisee / )
+         {
+            $record{$k} = '';
+         }
+
+         chomp;
+         (
+            $record{timestamp},
+            $record{class},
+            $record{promise_handle},
+            $record{promiser},
+            $record{promise_outcome},
+            $record{promisee}
+         )  = split /\s*;;\s*/;
+
+         my $errors = validate_load_inputs( \%record );
+         if ( $#{ $errors } > 0 ){
+            for my $err ( @{ $errors } ) { warn "validation error [$err]" };
+            next;
+         };
+
+         push @bind_params,  [
+            $record{class},
+            $record{timestamp},
+            $record{hostname},
+            $record{ip_address},
+            $record{promise_handle},
+            $record{promiser},
+            $record{promise_outcome},
+            $record{promisee},
+            $record{policy_server},
+            $record{class},
+            $record{timestamp},
+            $record{hostname},
+            $record{ip_address},
+            $record{promise_handle},
+            $record{promiser},
+            $record{promise_outcome},
+            $record{promisee},
+            $record{policy_server},
+         ];
+      }
+   }
+   else
+   {
+      warn "Could not open file [$client_log]";
+      return 0;
+   }
+   close $fh;
+   sql_prepare_and_execute(
+      query       => $query,
+      bind_params => \@bind_params,
+   );
+   return 1;
+}
+
+# TODO add negative input data tests.
 sub validate_load_inputs
 # Valid inputs for loading client logs
 {
@@ -323,6 +793,7 @@ sub validate_form_inputs
    return $errors;
 }
 
+# TODO use default named params style.
 sub test_for_invalid_data
 {
 	my %valid_inputs = (
@@ -366,491 +837,6 @@ sub test_for_invalid_data
       }
    }
    return \@errors;
-}
-
-# TODO start here.
-sub query_promises
-{
-   my $self = shift;
-   my $query_params = shift;
-   my $query;
-   my $delta_sign;
-   my $first_time_limit;
-   my $second_time_limit;
-   my $common_query_section = <<END;
-FROM $agent_table WHERE 
-lower(promiser) LIKE lower(?) ESCAPE '!'
-AND lower(promisee) LIKE lower(?) ESCAPE '!'
-AND lower(promise_handle) LIKE lower(?) ESCAPE '!'
-AND promise_outcome LIKE ? ESCAPE '!'
-AND promise_outcome != 'empty'
-AND lower(hostname) LIKE lower(?) ESCAPE '!'
-AND lower(ip_address) LIKE lower(?) ESCAPE '!'
-AND lower(policy_server) LIKE lower(?) ESCAPE '!'
-END
-
-   my @bind_params = qw/ promiser promisee promise_handle promise_outcome hostname ip_address policy_server/;
-
-   if ( $query_params->{'latest_record'} == 1 )
-   {
-      $query = <<END;
-SELECT promiser,promisee,promise_handle,promise_outcome,max(timestamp)
-AS maxtime,hostname,ip_address,policy_server
-$common_query_section
-GROUP BY promise_outcome,promiser,promise_handle,promisee,hostname,ip_address,policy_server
-ORDER BY maxtime DESC
-LIMIT $record_limit
-END
-
-   }
-   elsif ( $query_params->{'latest_record'} == 0 )
-   {
-      my $timestamp_clause = get_timestamp_clause( $query_params );
-
-      $query = <<END;
-SELECT promiser,promisee,promise_handle,promise_outcome,timestamp,
-hostname,ip_address,policy_server 
-$common_query_section
-$timestamp_clause
-ORDER BY timestamp DESC
-LIMIT $record_limit 
-END
-   }
-
-   my $rows = execute_query(
-      query => $query,
-      bind_params => \@bind_params,
-      query_params => $query_params,
-   );
-   return $rows
-}
-
-sub insert_promise_counts
-# This is not used in production, but in testing to insert sample historical data.
-{
-   my $self = shift;
-   my $AoH = shift;
-   my $return = 1;
-   
-   my $sth = $dbh->prepare( <<END
-   INSERT INTO $promise_counts ( datestamp, hosts, kept, notkept, repaired )
-   VALUES ( ?, ?, ?, ?, ? )
-END
-   ) or do
-   {
-      warn "Cannot prepare historical trend data [$dbh->errstr]";
-      $return = 0;
-   };
-
-   for my $row ( @{ $AoH } )
-   {
-      $sth->execute( 
-         $row->{datestamp},
-         $row->{hosts},
-         $row->{kept},
-         $row->{notkept},
-         $row->{repaired}
-      ) or do
-      {
-         warn "cannot insert historical trend data [$dbh->errstr]";
-         $return = 0;
-      };
-   }
-   return $return;
-}
-
-sub insert_yesterdays_promise_counts
-{
-   my $self = shift;
-   my $query = <<END;
-INSERT INTO $promise_counts ( datestamp, hosts, kept, notkept, repaired )
-   SELECT
-     date_trunc('day', timestamp) AS timestamp,
-     COUNT(DISTINCT CASE WHEN class = 'any' THEN ip_address ELSE NULL END) AS hosts,
-     COUNT(CASE promise_outcome WHEN 'kept' THEN 1 END) AS kept,
-     COUNT(CASE promise_outcome WHEN 'notkept' THEN 1 END) AS notkept,
-     COUNT(CASE promise_outcome WHEN 'repaired' THEN 1 END) AS repaired
-   FROM $agent_table
-   WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
-     AND timestamp  < CURRENT_DATE 
-     AND NOT EXISTS (
-        SELECT 1 FROM $promise_counts WHERE datestamp = timestamp 
-     )
-   GROUP BY date_trunc('day', timestamp)
-;
-END
-
-   my $sth = $dbh->prepare( $query )
-      or die "$dbh->errstr Cannot prepare $query";
-   $sth->execute
-      or die "$dbh->errstr Cannot execute $query";
-}
-
-sub query_promise_count
-{
-   my $self = shift;
-   my @fields = @_;
-   my $fields = join ',', @fields;
-   my $query = "SELECT datestamp, $fields FROM $promise_counts";
-   my $sth = $dbh->prepare( $query );
-   $sth->execute;
-   return $sth->fetchall_arrayref();
-}
-
-sub query_classes
-{
-   my $self = shift;
-   my $query_params = shift;
-   my $query;
-   my $delta_sign;
-   my $first_time_limit;
-   my $second_time_limit;
-   my @bind_params = qw/ class hostname ip_address policy_server/;
-   my $common_query_section = <<END;
-FROM $agent_table WHERE lower(class) LIKE lower(?) ESCAPE '!'
-AND lower(hostname) LIKE lower(?) ESCAPE '!'
-AND lower(ip_address) LIKE lower(?) ESCAPE '!'
-AND lower(policy_server) LIKE lower(?) ESCAPE '!'
-END
-
-   if ( $query_params->{'latest_record'} == 1 )
-   {
-      $query = <<END;
-SELECT class,max(timestamp)
-AS maxtime,hostname,ip_address,policy_server
-$common_query_section
-GROUP BY class,hostname,ip_address,policy_server
-ORDER BY maxtime DESC
-LIMIT $record_limit
-END
-
-   }
-   elsif ( $query_params->{'latest_record'} == 0 )
-   {
-      my $timestamp_clause = get_timestamp_clause( $query_params );
-
-      $query = <<END;
-SELECT class,timestamp,hostname,ip_address,policy_server
-$common_query_section
-$timestamp_clause
-ORDER BY timestamp DESC
-LIMIT $record_limit 
-END
-   }
-
-   my $rows = execute_query(
-      query => $query,
-      bind_params => \@bind_params,
-      query_params => $query_params,
-   );
-   return $rows
-}
-
-sub query_latest_record
-{
-   my $query = <<END;
-SELECT timestamp FROM $agent_table 
-ORDER BY timestamp desc LIMIT 1
-END
-
-   my $sth = $dbh->prepare( $query )
-      or warn "Can't prepare query [$query]";
-
-   $sth->execute()
-      or warn "Can't execute query [$query] [$sth->errstr]";
-
-   my $array_ref = $sth->fetchall_arrayref();
-
-   return $array_ref->[0][0];
-}
-
-sub execute_query
-{
-   my %params = @_;
-   my $query = $params{query};
-   my $bind_params = $params{bind_params};
-   my $query_params = $params{query_params};
-
-   my $sth;
-   $sth = $dbh->prepare( $query )
-      or warn "Can't prepare query [$sth->errstr]";
-
-   if ( $bind_params )
-   {
-      my $param_count = 1;
-      for my $qp ( @{ $bind_params } )
-      {
-         $sth->bind_param( $param_count, $query_params->{$qp} )
-            or warn "bind error [$sth->errstr]";
-         $param_count++;
-      }
-   }
-   $sth->execute() or warn "bind error [$sth->errstr]";
-   return $sth->fetchall_arrayref();
-}
-
-sub get_timestamp_clause
-{
-   my $query_params = shift;
-   my $delta_sign;
-   my $first_time_limit;
-   my $second_time_limit;
-
-   my @integers = qw/ delta_minutes gmt_offset /;
-   for my $i ( @integers )
-   {
-      if ( $query_params->{$i} !~ m/^[-+]/ )
-      {
-         $query_params->{$i} = '+'.$query_params->{$i};
-      }
-   }
-   $query_params->{timestamp} = $query_params->{timestamp}.$query_params->{gmt_offset};
-   delete $query_params->{gmt_offset};
-   if ( $query_params->{delta_minutes} =~ m/^([-+])(\d{1,4})/ )
-   {
-      $delta_sign = $1;
-      $query_params->{delta_minutes} = $2;
-
-      if ( $delta_sign eq '-' )
-      {
-         $first_time_limit = '<=';
-         $second_time_limit = '>=';
-      }
-      elsif ( $delta_sign eq '+' )
-      {
-         $first_time_limit = '=>';
-         $second_time_limit = '=<';
-      }
-   }
-
-  return <<END
-AND timestamp $first_time_limit '$query_params->{timestamp}'::timestamp
-AND timestamp $second_time_limit ( '$query_params->{timestamp}'::timestamp
-$delta_sign $query_params->{delta_minutes} * interval '1 minute' )
-END
-}
-
-sub drop_tables
-# This is not used in production, but in testing.
-{
-   my $self = shift;
-   my $return = 1;
-   my @tables = (
-      "$agent_table",
-      "$inventory_table",
-      # "client_by_timestamp ", # dropped by default?
-      "$promise_counts",
-      # "promise_counts_idx ", # dropped by default?
-   );
-
-   my $sth;
-
-   for my $table ( @tables )
-   {
-      $sth = $dbh->prepare( "DROP TABLE IF EXISTS $table CASCADE" );
-      $sth->execute or do
-      {
-         warn "cannot execute drop [$dbh->errstr]";
-         $return = 0;
-      }
-   }
-   return $return;
-}
-
-sub create_tables
-{
-   my $self = shift;
-
-   my @queries = ( 
-# 
-"CREATE TABLE $agent_table
-(
-class text,
-hostname text,
-ip_address text,
-promise_handle text,
-promiser text,
-promisee text,
-policy_server text,
-\"rowId\" serial NOT NULL, -- auto generated row id
-timestamp timestamp with time zone,
-promise_outcome text, -- result of promise if applicable
-CONSTRAINT primary_key PRIMARY KEY (\"rowId\")
-)
-WITH (
-OIDS=FALSE
-);",
-
-#
-"CREATE INDEX client_by_timestamp ON $agent_table USING btree (timestamp, class);",
-
-#
-"CREATE TABLE $inventory_table 
-(
-   \"rowId\" serial NOT NULL, -- auto generated row id
-	class text
-)
-WITH (
-OIDS=FALSE
-);",
-
-#
-"INSERT INTO $inventory_table ( class ) VALUES
-('am_policy_hub'),
-('any'),
-('centos%'),
-('cfengine_3%'),
-('community%'),
-('debian%'),
-('enterprise%'),
-('fedora%'),
-('ipv4_%'),
-('linux%'),
-('policy_server'),
-('pure_%'),
-('redhat%'),
-('solaris%'),
-('sun4%'),
-('suse%'),
-('ubuntu%'),
-('virt_%'),
-('vmware%'),
-('xen%'),
-('zone_%');
-",
-
-#
-"CREATE TABLE $promise_counts
-(
-   rowid serial NOT NULL,
-   datestamp date,
-   hosts integer,
-   kept integer,
-   notkept integer,
-   repaired integer
-)
-WITH ( OIDS=FALSE );
-",
-
-#
-"CREATE INDEX promise_counts_idx ON $promise_counts USING btree( datestamp );",
-
-#
-"GRANT SELECT ON $agent_table, $promise_counts, $inventory_table TO deltar_ro;",
-
-#
-"GRANT ALL ON $agent_table, $promise_counts, $inventory_table TO deltar_rw;",
-
-);
-
-   for my $query ( @queries )
-   {
-      my $sth = $dbh->prepare( $query ) or do 
-      {
-         warn "Cannot prepare [$query], [$dbh->errstr]";
-         die;
-      };
-      $sth->execute or do
-      {
-         warn "Cannot prepare [$query], [$dbh->errstr]";
-         die;
-      };
-   }
-}
-
-sub insert_client_log
-{
-   my $self = shift;
-   my $client_log = shift;
-   my %record;
-   my $query = <<END;
-INSERT INTO $agent_table
-(class, timestamp, hostname, ip_address, promise_handle,
-promiser, promise_outcome, promisee, policy_server)
-SELECT ?,?,?,?,?,?,?,?,? 
-WHERE NOT EXISTS (
-   SELECT 1 FROM $agent_table WHERE
-class = ?
-AND timestamp = ?
-AND hostname = ?
-AND ip_address = ?
-AND promise_handle = ?
-AND promiser = ?
-AND promise_outcome = ?
-AND promisee = ?
-AND policy_server = ?
-   );
-END
-
-   my $fh;
-   if ( open( $fh, "<", "$client_log" ) )
-   {
-      my $sth = $dbh->prepare( $query ) or do
-      {
-         warn "Cannot prepare insert query [$dbh->errstr]";
-         die;
-      };
-
-      undef %record;
-      if ( $client_log =~ m:([^/]+)\.log$: )
-      {
-         $record{ip_address} = $1;
-         $record{hostname} = get_ptr( $record{ip_address} );
-      }
-
-      $record{policy_server} = hostname_long();
-      
-      while (<$fh>)
-      {
-         for my $k ( qw/ timestamp class promise_handle promiser
-            promise_outcome promisee / )
-         {
-            $record{$k} = '';
-         }
-
-         chomp;
-         (
-            $record{timestamp},
-            $record{class},
-            $record{promise_handle},
-            $record{promiser},
-            $record{promise_outcome},
-            $record{promisee}
-         )  = split /\s*;;\s*/;
-
-         my $errors = validate_load_inputs( \%record );
-         if ( $#{ $errors } > 0 ){
-            for my $err ( @{ $errors } ) { warn "validation error [$err]" };
-            next;
-         };
-
-         $sth->bind_param( 1, $record{class} );
-         $sth->bind_param( 2, $record{timestamp} );
-         $sth->bind_param( 3, $record{hostname} );
-         $sth->bind_param( 4, $record{ip_address} );
-         $sth->bind_param( 5, $record{promise_handle} );
-         $sth->bind_param( 6, $record{promiser} );
-         $sth->bind_param( 7, $record{promise_outcome} );
-         $sth->bind_param( 8, $record{promisee} );
-         $sth->bind_param( 9, $record{policy_server} );
-         $sth->bind_param( 10, $record{class} );
-         $sth->bind_param( 11, $record{timestamp} );
-         $sth->bind_param( 12, $record{hostname} );
-         $sth->bind_param( 13, $record{ip_address} );
-         $sth->bind_param( 14, $record{promise_handle} );
-         $sth->bind_param( 15, $record{promiser} );
-         $sth->bind_param( 16, $record{promise_outcome} );
-         $sth->bind_param( 17, $record{promisee} );
-         $sth->bind_param( 18, $record{policy_server} );
-         $sth->execute or warn "cannot execute load [$dbh->errstr]";
-      }
-   }
-   else
-   {
-      return 0;
-   }
-   close $fh;
-   return 1;
 }
 
 sub get_ptr
