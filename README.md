@@ -43,6 +43,7 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
   1. Mojolicious framework, included.
   1. Statistics::LineFit, included.
   1. Local::lib, included.
+  1. Try::Tiny, included.
   1. Data::Dumper, for development only, not required for production.
   1. POSIX
   1. Getopt::Long
