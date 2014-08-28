@@ -15,6 +15,7 @@ our $inventory_table;
 our $inventory_limit;
 our $delete_age;
 our $reduce_age;
+our $logger;
 
 sub new 
 {
@@ -28,6 +29,7 @@ sub new
    $delete_age      = $param{'delete_age'};
    $reduce_age      = $param{'reduce_age'};
    $dbh             = $param{'dbh'};
+   $logger          = $param{'logger'};
 
    bless{} => __PACKAGE__;
 };
@@ -40,6 +42,7 @@ sub sql_prepare_and_execute
       bind_params => [],
       @_
    );
+   my $self = $args{self};
    my $data;
 
    # TODO count queries and log them.
@@ -64,9 +67,8 @@ sub sql_prepare_and_execute
          };
          if ( $exception )
          {
-            warn "Exception [$exception], SQL error [$dbh->errstr]";
-            warn "Caller [$caller], query [$args{query}]";
-            die;
+            $logger->error_warn( "Exception [$exception], SQL error [$dbh->errstr]" );
+            $logger->error_die(  "Caller [$caller], query [$args{query}]" );
          }
       }
    }
@@ -83,15 +85,17 @@ sub sql_prepare_and_execute
       };
       if ( $exception )
       {
-         warn "Exception [$exception], SQL error [$dbh->errstr]";
-         warn "Caller [$caller], query [$args{query}]";
-         die;
+         $logger->error_warn( "Exception [$exception], SQL error [$dbh->errstr]" );
+         $logger->error_die(  "Caller [$caller], query [$args{query}]" );
       }
    }
    if ( $args{return} eq 'fetchall_arrayref' )
    {
       $data = $sth->fetchall_arrayref();
    }
+
+   #$logger->info( "$caller" );
+
    return $data;
 }
 
@@ -541,7 +545,7 @@ sub drop_tables
       my $query = sprintf "DROP TABLE IF EXISTS %s CASCADE",
          $dbh->quote_identifier( $table );
 
-      $return = sql_prepare_and_execute( query => $query );
+      $return = sql_prepare_and_execute( self => $self, query => $query );
    }
    return $return;
 }
@@ -655,7 +659,7 @@ END
 
    for $query ( @queries )
    {
-      sql_prepare_and_execute( query => $query );
+      sql_prepare_and_execute( self => $self, query => $query );
    }
 }
 
@@ -718,7 +722,7 @@ END
 
          my $errors = validate_load_inputs( \%record );
          if ( $#{ $errors } > 0 ){
-            for my $err ( @{ $errors } ) { warn "validation error [$err]" };
+            for my $err ( @{ $errors } ) { $logger->error_warn( "validation error [$err]" )};
             next;
          };
 
@@ -746,7 +750,7 @@ END
    }
    else
    {
-      warn "Could not open file [$client_log]";
+      $logger->error_warn( "Could not open file [$client_log]" );
       return 0;
    }
    close $fh;

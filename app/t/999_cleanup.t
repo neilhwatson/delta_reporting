@@ -7,8 +7,7 @@ my $shared  = retrieve( '/tmp/delta_reporting_test_data' );
 
 my $t = Test::Mojo->new( 'DeltaR' );
 
-my $db_name = $t->app->config( 'db_name' );
-ok( $db_name eq 'delta_reporting_test', 'Confirm config test database' )
+ok( $t->app->config->{db_name} eq 'delta_reporting_test', 'Confirm config test database' )
    or BAIL_OUT( "Config test failed" );
 
 ok( $t->app->dw->drop_tables, 'Drop tables in test database' );

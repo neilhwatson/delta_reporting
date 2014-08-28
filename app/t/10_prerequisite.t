@@ -79,8 +79,7 @@ ok( build_test_conf(), "Build test configuration" )
 ## Load app config
 my $t = Test::Mojo->new( 'DeltaR' );
 
-my $config = $t->app->plugin( 'config', file => 'DeltaR.conf' );
-ok( $config->{db_name} eq 'delta_reporting_test', 'Confirm config test database' )
+ok( $t->app->config->{db_name} eq 'delta_reporting_test', 'Confirm config test database' )
    or BAIL_OUT( "Config test failed" );
 
 ## Initialize test database

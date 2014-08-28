@@ -1,0 +1,73 @@
+{
+   "abstract" : "Validate method/function parameters",
+   "author" : [
+      "Dave Rolsky <autarch@urth.org>",
+      "Ilya Martynov <ilya@martynov.org>"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "Module::Build version 0.4205",
+   "license" : [
+      "artistic_2"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Params-Validate",
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "ExtUtils::CBuilder" : "0",
+            "Module::Build" : "0.3601"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "Module::Build" : "0.3601"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "Attribute::Handlers" : "0.79",
+            "Carp" : "0",
+            "Exporter" : "0",
+            "Module::Implementation" : "0",
+            "Scalar::Util" : "1.10",
+            "XSLoader" : "0",
+            "attributes" : "0",
+            "perl" : "5.008001",
+            "strict" : "0",
+            "vars" : "0",
+            "warnings" : "0"
+         }
+      },
+      "test" : {
+         "requires" : {
+            "Devel::Peek" : "0",
+            "File::Spec" : "0",
+            "File::Temp" : "0",
+            "Test::Fatal" : "0",
+            "Test::More" : "0.88",
+            "Test::Requires" : "0",
+            "Tie::Array" : "0",
+            "Tie::Hash" : "0",
+            "base" : "0",
+            "lib" : "0",
+            "overload" : "0"
+         }
+      }
+   },
+   "release_status" : "stable",
+   "resources" : {
+      "bugtracker" : {
+         "mailto" : "bug-params-validate@rt.cpan.org",
+         "web" : "http://rt.cpan.org/NoAuth/Bugs.html?Dist=Params-Validate"
+      },
+      "repository" : {
+         "type" : "git",
+         "url" : "git://git.urth.org/Params-Validate.git",
+         "web" : "http://git.urth.org/Params-Validate.git"
+      }
+   },
+   "version" : "1.13"
+}

@@ -1,0 +1,1 @@
+{"provides":{"Sys::Syslog::Win32":{"file":"win32/Win32.pm"},"Sys::Syslog":{"version":"0.33","file":"Syslog.pm"}},"target":"Sys::Syslog","version":"0.33","name":"Sys::Syslog","dist":"Sys-Syslog-0.33","pathname":"S/SA/SAPER/Sys-Syslog-0.33.tar.gz"}

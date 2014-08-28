@@ -3,6 +3,7 @@ package DeltaR;
 use Mojo::Base qw( Mojolicious );
 use DeltaR::Query;
 use Mojo::JSON 'encode_json';
+use Log::Log4perl;
 use DBI;
 
 sub startup
@@ -16,6 +17,7 @@ sub startup
    push @{$self->commands->namespaces}, 'DeltaR::Command';
 
 ## Helpers
+
    $self->helper( dbh => sub
    {
       my ( $self, %args ) = @_;
@@ -27,7 +29,6 @@ sub startup
             "$args{db_user}", "$args{db_pass}",
             { RaiseError => 1 }
       );
-      
       return $dbh;
    });
 
@@ -35,6 +36,7 @@ sub startup
    {
       my $self = shift;
       my $dq = DeltaR::Query->new( 
+         logger          => $self->logger(),
          agent_table     => $config->{agent_table},
          promise_counts  => $config->{promise_counts},
          inventory_table => $config->{inventory_table},
@@ -54,6 +56,7 @@ sub startup
    {
       my $self = shift;
       my $dq = DeltaR::Query->new( 
+         logger          => $self->logger(),
          agent_table     => $config->{agent_table},
          promise_counts  => $config->{promise_counts},
          inventory_table => $config->{inventory_table},
@@ -68,6 +71,12 @@ sub startup
       );
       return $dq;
    });
+
+## logging helper
+   Log::Log4perl::init( 'DeltaR_logging.conf' )
+      or die 'Cannot open [DeltaR_logging.conf]';
+   my $logger = Log::Log4perl->get_logger( $0 );
+   $self->helper( logger => sub { $logger });
 
    $self->defaults( small_title => '' );
 

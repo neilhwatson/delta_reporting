@@ -44,6 +44,8 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
   1. Statistics::LineFit, included.
   1. Local::lib, included.
   1. Try::Tiny, included.
+  1. Log::Log4perl, included
+  1. Log::Dispatch::Syslog, included
   1. Data::Dumper, for development only, not required for production.
   1. POSIX
   1. Getopt::Long
