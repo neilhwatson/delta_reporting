@@ -16,11 +16,13 @@ sub trend
    my @columns        = ( 'Date', 'Hosts', $column_title );
 
    my ( $hosts_series, $hosts_stats ) = nvd3_scatter_series( 
+      self   => $self,
       key    => 'Hosts',
       column => 1,
       rows   => $rows
    );
    my ( $promise_series, $promise_stats ) = nvd3_scatter_series( 
+      self   => $self,
       key    => $trend,
       column => 2,
       rows   => $rows
@@ -41,20 +43,20 @@ sub trend
 
 sub percent_promise_summary
 {
-   my $self = shift;
+   my $self    = shift;
    my @columns = ( 'Date', 'Hosts', 'Kept', 'Repaired', 'Not kept' );
-   my $dq = $self->app->dr;
-   my $rows = $dq->query_promise_count( 'hosts', 'kept', 'repaired', 'notkept' );
+   my $dq      = $self->app->dr;
+   my $rows    = $dq->query_promise_count( 'hosts', 'kept', 'repaired', 'notkept' );
 
    my $host_series = nvd3_2column_timeseries(
-      key => "Hosts",
+      key      => "Hosts",
       x_column => 0,
       y_column => 1,
-      rows => $rows
+      rows     => $rows
       );
    my $json_host_series = encode_json( \%$host_series );
 
-   my $percent_series = nvd3_percent_promise_series( rows => $rows );
+   my $percent_series      = nvd3_percent_promise_series( rows => $rows );
    my $json_percent_series = encode_json( \@$percent_series );
 
    $self->render(
@@ -70,17 +72,17 @@ sub percent_promise_summary
 sub nvd3_2column_timeseries
 # Build nvd3 data series
 {
-   my %params = @_;
+   my %args = @_;
    my %series;
 
-   $series{key} = $params{key};
+   $series{key} = $args{key};
    
-   for my $r ( @{$params{rows}} )
+   for my $r ( @{$args{rows}} )
    {
-      my $epoch = convert_to_epoch( $r->[$params{x_column}] );
-      my $y = $r->[$params{y_column}];
+      my $epoch = convert_to_epoch( $r->[$args{x_column}] );
+      my $y     = $r->[$args{y_column}];
 
-      my $rec = {};
+      my $rec   = {};
       $rec->{x} = $epoch;
       $rec->{y} = $y;
       push @{ $series{values} }, $rec;
@@ -91,34 +93,34 @@ sub nvd3_2column_timeseries
 sub nvd3_percent_promise_series
 # Build nvd3 data series for percent bar graph
 {
-   my %params = @_;
+   my %args = @_;
    my ( @series, $rec );
 
    $series[0]{key} = "Kept";
    $series[1]{key} = "Repaired";
    $series[2]{key} = "Not kept";
 
-   for my $r ( @{$params{rows}} )
+   for my $r ( @{$args{rows}} )
    {
       my $epoch = convert_to_epoch( $r->[0] );
 
       my $percent = calc_percent(
-         kept => $r->[2],
+         kept     => $r->[2],
          repaired => $r->[3],
-         notkept => $r->[4],
+         notkept  => $r->[4],
       );
 
-      $rec = {};
+      $rec      = {};
       $rec->{x} = $epoch;
       $rec->{y} = $percent->{kept};
       push @{ $series[0]{values} }, $rec;
 
-      $rec = {};
+      $rec      = {};
       $rec->{x} = $epoch;
       $rec->{y} = $percent->{repaired};
       push @{ $series[1]{values} }, $rec;
 
-      $rec = {};
+      $rec      = {};
       $rec->{x} = $epoch;
       $rec->{y} = $percent->{notkept};
       push @{ $series[2]{values} }, $rec;
@@ -128,12 +130,12 @@ sub nvd3_percent_promise_series
 
 sub calc_percent
 {
-   my %params = @_;
+   my %args = @_;
    my ( %percent, $sum );
-   my @values = values %params;
+   my @values = values %args;
    $sum += $_ for @values;
 
-   for my $k ( keys %params )
+   for my $k ( keys %args )
    {
       # Guard against divide by zero;
       if ( $sum == 0 )
@@ -142,7 +144,7 @@ sub calc_percent
       }
       else
       {
-         $percent{$k} = int( $params{$k} / $sum * 100 );
+         $percent{$k} = int( $args{$k} / $sum * 100 );
       }
    }
    return \%percent;
@@ -151,12 +153,14 @@ sub calc_percent
 sub nvd3_scatter_series
 # Build nvd3 data series for scatter plus line graph.
 {
-   my %params = @_;
+   my %args = @_;
+   my $self = $args{self};
    my ( @x_axis, @y_axis );
+
    my %series;
-   $series{key} = $params{key};
-   my $column = $params{column};
-   my $rows = $params{rows};
+   $series{key} = $args{key};
+   my $column   = $args{column};
+   my $rows     = $args{rows};
 
    for my $r ( @$rows )
    {
@@ -165,13 +169,17 @@ sub nvd3_scatter_series
       my $y = $r->[$column];
       push @y_axis, $y;
 
-      my $rec = {};
+      my $rec   = {};
       $rec->{x} = $epoch;
       $rec->{y} = $y;
       push @{ $series{values} }, $rec;
 
    }
-   my %stats = regression( x => \@x_axis, y => \@y_axis );
+   my %stats = regression(
+      self => $self,
+      x    => \@x_axis,
+      y    => \@y_axis
+   );
 
    for my $k ( qw/Slope Intercept/ )
    {
@@ -183,13 +191,15 @@ sub nvd3_scatter_series
 
 sub regression
 {
-   my %params = @_;
-   my @x = @{ $params{x} };
-   my @y = @{ $params{y} };
+   my %args = @_;
+   my $self = $args{self};
+   my @x = @{ $args{x} };
+   my @y = @{ $args{y} };
    my %stats;
 
    my $lineFit = Statistics::LineFit->new( 0, 1 );
-   $lineFit->setData( \@x, \@y ) or warn "Invalid regression data\n";
+   $lineFit->setData( \@x, \@y )
+      or $self->app->logger->error_warn( "Invalid regression data" );
    ( $stats{Intercept}, $stats{Slope} ) = $lineFit->coefficients();
    $stats{Stderr} = $lineFit->sigma();
    $stats{Correlation} = $lineFit->rSquared();

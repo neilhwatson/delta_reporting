@@ -76,7 +76,7 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 
 1. Configure using DeltaR.conf. Be sure to configure your database properly for authentication and authorization. Two database users are required. 
 
-1. Copy bin/delta\_reporting script to /etc/init.d. This is your start script. Run it.
+1. Copy bin/delta\_reporting script to /etc/init.d. This is your start script.
 
 1. Create a user 'deltar', home /opt/delta\_reporting, shell /bin/false.
 

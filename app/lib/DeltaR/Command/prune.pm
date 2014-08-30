@@ -9,17 +9,16 @@ sub run
    if ( $target eq 'delete' )
    {
       $dq->delete_records;
-      $dq->table_cleanup;
    }
    elsif ( $target eq 'reduce' )
    {
       $dq->reduce_records;
-      $dq->table_cleanup;
    }
    else
    {
       usage();
    }
+   $dq->table_cleanup;
 
 }
 

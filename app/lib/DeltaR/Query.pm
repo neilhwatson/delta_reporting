@@ -20,21 +20,20 @@ our $logger;
 sub new 
 {
    my $self = shift;
-   my %param = @_;
-   $record_limit    = $param{'record_limit'};
-   $agent_table     = $param{'agent_table'};
-   $promise_counts  = $param{'promise_counts'};
-   $inventory_table = $param{'inventory_table'};
-   $inventory_limit = $param{'inventory_limit'};
-   $delete_age      = $param{'delete_age'};
-   $reduce_age      = $param{'reduce_age'};
-   $dbh             = $param{'dbh'};
-   $logger          = $param{'logger'};
+   my %args = @_;
+   $record_limit    = $args{'record_limit'};
+   $agent_table     = $args{'agent_table'};
+   $promise_counts  = $args{'promise_counts'};
+   $inventory_table = $args{'inventory_table'};
+   $inventory_limit = $args{'inventory_limit'};
+   $delete_age      = $args{'delete_age'};
+   $reduce_age      = $args{'reduce_age'};
+   $dbh             = $args{'dbh'};
+   $logger          = $args{'logger'};
 
    bless{} => __PACKAGE__;
 };
 
-# TODO new query sub to reduce code
 sub sql_prepare_and_execute
 {
    my %args = ( 
@@ -45,11 +44,10 @@ sub sql_prepare_and_execute
    my $self = $args{self};
    my $data;
 
-   # TODO count queries and log them.
    my $caller = ( caller(1) )[3]; # Calling subroutine
 
    my $sth = $dbh->prepare( $args{query} )
-      or die "SQL prepare error: [$dbh->errstr], caller: [$caller]";
+      or $logger->error_die( "SQL prepare error: [$dbh->errstr], caller: [$caller]" );
 
    my $bind_parms_length = scalar( @{ $args{bind_params} } );
    if ( $bind_parms_length > 0 )
@@ -185,7 +183,7 @@ sub query_missing
    my $query = sprintf <<END,
 (SELECT DISTINCT hostname, ip_address, policy_server FROM %s
 WHERE class = 'any'
-	AND timestamp < ( now() - interval '24' hour )
+   AND timestamp < ( now() - interval '24' hour )
    AND timestamp > ( now() - interval '48' hour )
    LIMIT ? )
 EXCEPT
@@ -369,7 +367,7 @@ END
 
 sub insert_yesterdays_promise_counts
 {
-   my $self = shift;
+   my $self  = shift;
    my $query = sprintf <<END,
 INSERT INTO %s ( datestamp, hosts, kept, notkept, repaired )
    SELECT
@@ -396,7 +394,7 @@ END
 
 sub query_promise_count
 {
-   my $self = shift;
+   my $self   = shift;
    my @fields = @_;
 
    my $query = "SELECT datestamp";
@@ -414,7 +412,7 @@ sub query_promise_count
 
 sub query_classes
 {
-   my $self = shift;
+   my $self         = shift;
    my $query_params = shift;
    my $query;
    my $common_query_section = <<END;
@@ -722,7 +720,10 @@ END
 
          my $errors = validate_load_inputs( \%record );
          if ( $#{ $errors } > 0 ){
-            for my $err ( @{ $errors } ) { $logger->error_warn( "validation error [$err]" )};
+            for my $err ( @{ $errors } )
+            {
+               $logger->error_warn( "validation error [$err], skipping record" )
+            }
             next;
          };
 
@@ -761,28 +762,18 @@ END
    return 1;
 }
 
-# TODO add negative input data tests.
 sub validate_load_inputs
 # Valid inputs for loading client logs
 {
-   my $self = shift;
    my $record = shift;
-	my $max_length = 72;
-	my %valid_inputs = (
-		class           => '^[%\w]+$',
-		hostname        => '^[\w\-\.]+$',
-		ip_address      => '^[\d\.:a-fA-F]+$',
-      policy_server   => '^([\d\.:a-fA-F]+)|([\w\-\.]+)$',
-		promise_handle  => '^[\w]+$',
-		promise_outcome => '^kept|repaired|notkept|empty$',
-		promisee        => '^[\w/\s\d\.\-\\:]+$',
-		promiser        => '^[\w/\s\d\.\-\\:=]+$',
-		timestamp       => '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[-+]{1}\d{4}$',
-	);
-
+   my %valid_inputs = (
+      promise_outcome => '^kept|repaired|notkept|empty$',
+      timestamp       => '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[-+]{1}\d{4}$',
+   );
+   
    my $errors = test_for_invalid_data(
       valid_inputs      => \%valid_inputs,
-      max_record_length => $max_length,
+      max_record_length => 125,
       inputs            => $record
    );
    return $errors;
@@ -790,34 +781,43 @@ sub validate_load_inputs
 
 sub validate_form_inputs
 {
-   my $self = shift;
+   my $self         = shift;
    my $query_params = shift; 
-
-   my $errors = test_for_invalid_data( inputs => $query_params );
+   my $errors       = test_for_invalid_data( inputs => $query_params );
    return $errors;
 }
 
-# TODO use default named params style.
 sub test_for_invalid_data
 {
-	my %valid_inputs = (
-		class           => '^[%\w]+$',
-		delta_minutes   => '^[+-]{0,1}\d{1,4}$',
-		gmt_offset      => '^[+-]{0,1}\d{1,4}$',
-		hostname        => '^[%\w\-\.]+$',
-		ip_address      => '^[%\d\.:a-fA-F]+$',
+   my %params = (
+      max_record_length => 24,
+      @_
+   );
+
+   my %default_valid_inputs = (
+      class           => '^[%\w]+$',
+      delta_minutes   => '^[+-]{0,1}\d{1,4}$',
+      gmt_offset      => '^[+-]{0,1}\d{1,4}$',
+      hostname        => '^[%\w\-\.]+$',
+      ip_address      => '^[%\d\.:a-fA-F]+$',
       policy_server   => '^([%\d\.:a-fA-F]+)|([%\w\-\.]+)$',
-		promise_handle  => '^[%\w]+$',
-		promise_outcome => '^%|kept|repaired|notkept$',
-		promisee        => '^[%\w/\s\d\.\-\\:]+$',
-		promiser        => '^[%\w/\s\d\.\-\\:=]+$',
-		timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
+      promise_handle  => '^[%\w]+$',
+      promise_outcome => '^%|kept|repaired|notkept$',
+      promisee        => '^[%\w/\s\d\.\-\\:]+$',
+      promiser        => '^[%\w/\s\d\.\-\\:=]+$',
+      timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
       latest_record   => '0|1',
-	);
-   my %params = @_;
-   my $inputs = $params{inputs};
-   my $max_record_length = $params{record_length} // 24;
-   my $valid_inputs = $params{valid_inputs} // \%valid_inputs;
+   );
+
+   # Merge paramter valid inputs into defaults
+   for my $k ( keys %{ $params{valid_inputs} } )
+   {
+      $default_valid_inputs{$k} = $params{valid_inputs}->{$k};
+   }
+
+   my $inputs            = $params{inputs};
+   my $max_record_length = $params{max_record_length};
+   my $valid_inputs      = \%default_valid_inputs;
 
    my @errors;
 
@@ -825,7 +825,6 @@ sub test_for_invalid_data
    {
       if ( $valid_inputs->{$p} )
       {
-
          if (
             $inputs->{$p} !~ m/$valid_inputs->{$p}/
             or $inputs->{$p}  =~ m/;/
@@ -835,9 +834,8 @@ sub test_for_invalid_data
          }
          elsif ( length( $inputs->{$p} ) > $max_record_length )
          {
-            push @errors, "Error $p too long. Maximum length is $max_record_length.";
+            push @errors, "Error [$p], [$inputs->{$p}] is too long. Maximum length is [$max_record_length].";
          }
-
       }
    }
    return \@errors;

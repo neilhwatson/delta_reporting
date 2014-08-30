@@ -73,11 +73,17 @@ sub startup
    });
 
 ## logging helper
-   Log::Log4perl::init( 'DeltaR_logging.conf' )
-      or die 'Cannot open [DeltaR_logging.conf]';
-   my $logger = Log::Log4perl->get_logger( $0 );
-   $self->helper( logger => sub { $logger });
+   $self->helper( logger => sub
+   { 
+      my $self = shift;
+      Log::Log4perl::init( 'DeltaR_logging.conf' )
+         or die 'Cannot open [DeltaR_logging.conf]';
+      my $logger = Log::Log4perl->get_logger( $0 );
+      
+      return $logger;
+   });
 
+   $self->logger->info( 'Starting' );
    $self->defaults( small_title => '' );
 
 ## Routes
@@ -135,11 +141,7 @@ sub startup
       );
    } => 'home' );
 
-   $r->any( '/help' => sub
-   {
-      my $self = shift;
-      $self->stash( title => "Delta Reporting Help" );
-   } => 'help');
+   $r->any( '/help' )->to( 'help', title => 'Help' );
 
    $r->any( '/about' => sub 
    {

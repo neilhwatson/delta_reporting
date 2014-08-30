@@ -25,6 +25,12 @@
    <dd>Run by delta-cron.</dd>
 </dl>
 
+<h3>Database tips</h3>
+
+<p>Configure Delta Reporting to prune and aggregate historical data. See DeltaR.conf.</p>
+
+<p>To find frequent and slow queries configure your database to log them. In Postgresql see log_min_duration_statement in the Postgresql configuration file.</p>
+
 <h3>Further help</h3>
 
 <dl class="dl-horizontal">

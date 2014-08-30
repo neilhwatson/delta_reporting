@@ -22,6 +22,29 @@ $t->ua->max_redirects(1);
 $t->post_ok( '/report/classes' =>
    form => {
       report_title  => 'DR test suite',
+      class         => 'any;',
+      hostname      => 'ettin;',
+      ip_address    => '10.com',
+      policy_server => '; DELETE FROM',
+      latest_record => 0,
+      timestamp     => '$400;',
+      gmt_offset    => '\\;400; EXIT',
+      delta_minutes => '; DROP TABLES',
+   })
+   ->status_is(200)
+
+   ->content_like( qr/class.*not allowed/i,         '/report/classes class input error' )
+   ->content_like( qr/hostname.*not allowed/i,      '/report/classes hostname input error' )
+   ->content_like( qr/ip_address.*not allowed/i,    '/report/classes ip_address input error' )
+   ->content_like( qr/policy_server.*not allowed/i, '/report/classes policy_server input error' )
+   ->content_like( qr/timestamp.*not allowed/i,     '/report/classes timestamp input error' )
+   ->content_like( qr/gmt_offset.*not allowed/i,    '/report/classes gmt_offset input error' )
+   ->content_like( qr/delta_minutes.*not allowed/i, '/report/classes delta_minutes input error' )
+   ;
+
+$t->post_ok( '/report/classes' =>
+   form => {
+      report_title  => 'DR test suite',
       class         => $test_params{class},
       hostname      => '%',
       ip_address    => $stored->{data}{ip_address},

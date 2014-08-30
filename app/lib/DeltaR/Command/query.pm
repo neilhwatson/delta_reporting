@@ -71,24 +71,26 @@ $row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6], $row[7]
 sub run
 {
    my ( $self, @args ) = @_;
-   my ( %query_params, $rows, $report_type );
+   my ( $rows, $report_type );
    my $dq = $self->app->dr;
 
    #
    # Defaults
    #
-   $query_params{hostname} = '%';
-   $query_params{ip_address} = '%';
-   $query_params{gmt_offset} = strftime "%z", localtime;
-   $query_params{timestamp} = strftime "%Y-%m-%d %H:%M:%S", localtime;
-   $query_params{latest_record} = 0;
-   $query_params{delta_minutes} = -30;
-   $query_params{policy_server} = '%';
-   $query_params{promiser} = '%';
-   $query_params{promisee} = '%';
-   $query_params{promise_handle} = '%';
-   $query_params{promise_outcome} = '%';
-   $query_params{output} = 'default';
+   my %query_params = (
+      hostname        => '%';
+      ip_address      => '%';
+      gmt_offset      => strftime "%z", localtime;
+      timestamp       => strftime "%Y-%m-%d %H:%M:%S", localtime;
+      latest_record   => 0;
+      delta_minutes   => -30;
+      policy_server   => '%';
+      promiser        => '%';
+      promisee        => '%';
+      promise_handle  => '%';
+      promise_outcome => '%';
+      output          => 'default';
+   )
 
    GetOptionsFromArray (
       \@args, \%query_params,
