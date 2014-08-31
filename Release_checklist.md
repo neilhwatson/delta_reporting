@@ -2,7 +2,7 @@
 
 1. Set mode to production in DeltaR.conf.
 
-1. Tag after push.
+1. Tag after push. ```git push origin <tag>```
 
 1. Submit release to Freecode.
 

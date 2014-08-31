@@ -12,6 +12,7 @@ sub startup
    my $config = $self->plugin('config', file => 'DeltaR.conf' );
    my $record_limit = $config->{record_limit};
    my $inventory_limit = $config->{inventory_limit};
+   $self->secrets( @{ $config->{secrets} } );
 
    # use commands from DeltaR::Command namespace
    push @{$self->commands->namespaces}, 'DeltaR::Command';
