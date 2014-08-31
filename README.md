@@ -74,7 +74,9 @@ Using the provided the CFEngine policy in delta\_reporting.cf all CFEngine class
 
 1. Install contents of repo to /opt/delta\_reporting/.
 
-1. Configure using DeltaR.conf. Be sure to configure your database properly for authentication and authorization. Two database users are required. 
+1. Configure using DeltaR.conf. Be sure to configure your database properly for authentication and authorization. Two database users are required. The read/write user should own the database.
+
+1. If you configure the database delta\_reporting\_test, with the same users as above, you can use the built in test suite to test the installation: ./DeltaR.pl test.
 
 1. Copy bin/delta\_reporting script to /etc/init.d. This is your start script.
 
