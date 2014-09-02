@@ -13,7 +13,7 @@ $t->ua->max_redirects(1);
 
 $t->get_ok('/about')
  ->status_is(200, 'Load /about' )
- ->text_is( 'html body div div ul li a', 'Delta Reporting', 'First menu item is wrong' )
+ ->text_is( 'html body div div div div a', 'Delta Reporting', 'First menu item is wrong' )
 
  ->content_like( qr/This database has $real_number records and is growing/mis,
     '/about record count');

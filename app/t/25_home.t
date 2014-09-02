@@ -7,7 +7,7 @@ $t->ua->max_redirects(1);
 
 $t->get_ok('/')
  ->status_is(200, 'Load /home' )
- ->text_is( 'html body div div ul li a', 'Delta Reporting', 'First menu item is wrong' )
+ ->text_is( 'html body div div div div a', 'Delta Reporting', 'First menu item is wrong' )
 
  ->content_like( qr/
     var\s+host_data\s+=\s+\[\s*\{\S*
