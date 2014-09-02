@@ -84,7 +84,6 @@ sub startup
       return $logger;
    });
 
-   $self->logger->info( 'Starting' );
    $self->defaults( small_title => '' );
 
 ## Routes
