@@ -78,19 +78,19 @@ sub run
    # Defaults
    #
    my %query_params = (
-      hostname        => '%';
-      ip_address      => '%';
-      gmt_offset      => strftime "%z", localtime;
-      timestamp       => strftime "%Y-%m-%d %H:%M:%S", localtime;
-      latest_record   => 0;
-      delta_minutes   => -30;
-      policy_server   => '%';
-      promiser        => '%';
-      promisee        => '%';
-      promise_handle  => '%';
-      promise_outcome => '%';
-      output          => 'default';
-   )
+      hostname        => '%',
+      ip_address      => '%',
+      gmt_offset      => strftime "%z", localtime,
+      timestamp       => strftime "%Y-%m-%d %H:%M:%S", localtime,
+      latest_record   => 0,
+      delta_minutes   => -30,
+      policy_server   => '%',
+      promiser        => '%',
+      promisee        => '%',
+      promise_handle  => '%',
+      promise_outcome => '%',
+      output          => 'default',
+   );
 
    GetOptionsFromArray (
       \@args, \%query_params,

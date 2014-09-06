@@ -162,10 +162,11 @@ sub startup
    $r->get( '/form/promises')->to('form#class_or_promise', template => 'form/promises', record_limit => $record_limit );
    $r->get( '/form/classes' )->to('form#class_or_promise', template => 'form/classes', record_limit => $record_limit );
 
-   $r->get('/report/missing'  )->to('report#missing',   record_limit => $record_limit );
-   $r->get('/report/inventory')->to('report#inventory', record_limit => $record_limit );
    $r->post('/report/classes' )->to('report#classes',   record_limit => $record_limit );
    $r->post('/report/promises')->to('report#promises',  record_limit => $record_limit );
+
+   $r->get('/report/missing'  )->to('report#missing',   record_limit => $record_limit );
+   $r->get('/report/inventory')->to('report#inventory', record_limit => $record_limit );
 
    $r->get( '/trend/:promise_outcome' )->to( 'graph#trend' );
 

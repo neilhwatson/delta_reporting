@@ -19,29 +19,61 @@ my $content = qr(
 my $t = Test::Mojo->new( 'DeltaR' );
 $t->ua->max_redirects(1);
 
-$t->post_ok( '/report/classes' =>
-   form => {
-      report_title  => 'DR test suite',
-      class         => 'any;',
-      hostname      => 'ettin;',
-      ip_address    => '10.com',
-      policy_server => '; DELETE FROM',
-      latest_record => 0,
-      timestamp     => '$400;',
-      gmt_offset    => '\\;400; EXIT',
-      delta_minutes => '; DROP TABLES',
-   })
-   ->status_is(200)
+subtest 'Invalid webform input' => sub
+{
+      my $query_params = {
+         report_title  => 'DR test suite',
+         class         => 'any;',
+         hostname      => 'ettin;',
+         ip_address    => '10.com',
+         policy_server => '; DELETE FROM',
+         latest_record => 0,
+         timestamp     => '$400;',
+         gmt_offset    => '\\;400; EXIT',
+         delta_minutes => '; DROP TABLES',
+      };
 
-   ->content_like( qr/class.*not allowed/i,         '/report/classes class input error' )
-   ->content_like( qr/hostname.*not allowed/i,      '/report/classes hostname input error' )
-   ->content_like( qr/ip_address.*not allowed/i,    '/report/classes ip_address input error' )
-   ->content_like( qr/policy_server.*not allowed/i, '/report/classes policy_server input error' )
-   ->content_like( qr/timestamp.*not allowed/i,     '/report/classes timestamp input error' )
-   ->content_like( qr/gmt_offset.*not allowed/i,    '/report/classes gmt_offset input error' )
-   ->content_like( qr/delta_minutes.*not allowed/i, '/report/classes delta_minutes input error' )
-   ;
+      my @errors = 
+      (
+         {
+            regex => qr/class.*not allowed/i,
+            name => 'class input error'
+         },
+         {
+            regex => qr/hostname.*not allowed/i,
+            name => 'hostname input error'
+         },
+         {
+            regex => qr/ip_address.*not allowed/i,
+            name => 'ip_address input error'
+         },
+         {
+            regex => qr/policy_server.*not allowed/i,
+            name => 'policy_server input error'
+         },
+         {
+            regex => qr/timestamp.*not allowed/i,
+            name => 'timestamp input error'
+         },
+         {
+            regex => qr/gmt_offset.*not allowed/i,
+            name => 'gmt_offset input error'
+         },
+         {
+            regex => qr/delta_minutes.*not allowed/i,
+            name => 'delta_minutes input error'
+         },
+      );
 
+   for my $error ( @errors )
+   {
+      $t->post_ok( '/report/classes' => form => $query_params )
+         ->status_is(200)
+         ->content_like( $error->{regex}, "/report/classes $error->{name}" );
+   }
+};
+
+# TODO add command line negative testing.
 $t->post_ok( '/report/classes' =>
    form => {
       report_title  => 'DR test suite',
