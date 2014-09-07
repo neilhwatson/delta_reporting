@@ -74,14 +74,18 @@ sub run
    my ( $rows, $report_type );
    my $dq = $self->app->dr;
 
+   my $gmt_offset =
+      strftime( '%z', localtime ) or die;
+   my $timestamp  =
+      strftime( '%Y-%m-%d %H:%M:%S', localtime) or die;
    #
    # Defaults
    #
    my %query_params = (
       hostname        => '%',
       ip_address      => '%',
-      gmt_offset      => strftime "%z", localtime,
-      timestamp       => strftime "%Y-%m-%d %H:%M:%S", localtime,
+      gmt_offset      => $gmt_offset,
+      timestamp       => $timestamp,,
       latest_record   => 0,
       delta_minutes   => -30,
       policy_server   => '%',
@@ -135,7 +139,7 @@ sub run
    {
       my $errors = "\nError: ".join "\n", @{ $errors };
       usage( $self, $errors );
-      return;
+      exit 1;
    }
 
    #

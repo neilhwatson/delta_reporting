@@ -16,55 +16,87 @@ my $content = qr(
    <td>$stored->{data}{timestamp_regex}</td>
 )msix;
 
+my $query_params = {
+   report_title  => 'DR test suite',
+   class         => 'any;',
+   hostname      => 'ettin;',
+   ip_address    => '10.com',
+   policy_server => '; DELETE FROM',
+   latest_record => 0,
+   timestamp     => '$400;',
+   gmt_offset    => '\\;400; EXIT',
+   delta_minutes => '; DROP TABLES',
+};
+
+my @errors = 
+(
+   {
+      regex => qr/class.*?not allowed/i,
+      name => 'class input error'
+   },
+   {
+      regex => qr/.*hostname.*?not allowed.*/i,
+      name => 'hostname input error'
+   },
+   {
+      regex => qr/ip_address.*?not allowed/i,
+      name => 'ip_address input error'
+   },
+   {
+      regex => qr/policy_server.*?not allowed/i,
+      name => 'policy_server input error'
+   },
+   {
+      regex => qr/timestamp.*?not allowed/i,
+      name => 'timestamp input error'
+   },
+   {
+      regex => qr/gmt_offset.*?not allowed/i,
+      name => 'gmt_offset input error'
+   },
+   {
+      regex => qr/delta_minutes.*?not allowed/i,
+      name => 'delta_minutes input error'
+   },
+);
+
+subtest 'Invalid CLI input' => sub
+{
+   my @args;
+   for my $key ( keys %{ $query_params } )
+   {
+      next if ( $key eq 'report_title' );
+      push @args, '--'.$key, "\'$query_params->{$key}\'";
+   }
+
+   my $stdout = $$.'_stdout';
+   ok ( system( './script/query '. join( ' ', @args ) ." &>/tmp/$stdout" ),
+      'cli query classes, invalid data' )
+      or warn "not ok .... CLI query command did NOT returne none zero.";
+
+   open my $fh, "/tmp/$stdout" or warn "Cannot open /tmp/[$stdout]";
+   my $error_string;
+   while (<$fh>)
+   {
+      chomp;
+      $error_string .= " ".$_;
+   }
+
+   for my $error ( @errors )
+   {
+      like( $error_string, $error->{regex}, "CLI query classes [$error->{name}]" )
+         or warn "CLI query classes [$error->{name}]";
+   }
+
+   unlink "$stdout";
+   done_testing();
+};
+
 my $t = Test::Mojo->new( 'DeltaR' );
 $t->ua->max_redirects(1);
 
 subtest 'Invalid webform input' => sub
 {
-      my $query_params = {
-         report_title  => 'DR test suite',
-         class         => 'any;',
-         hostname      => 'ettin;',
-         ip_address    => '10.com',
-         policy_server => '; DELETE FROM',
-         latest_record => 0,
-         timestamp     => '$400;',
-         gmt_offset    => '\\;400; EXIT',
-         delta_minutes => '; DROP TABLES',
-      };
-
-      my @errors = 
-      (
-         {
-            regex => qr/class.*not allowed/i,
-            name => 'class input error'
-         },
-         {
-            regex => qr/hostname.*not allowed/i,
-            name => 'hostname input error'
-         },
-         {
-            regex => qr/ip_address.*not allowed/i,
-            name => 'ip_address input error'
-         },
-         {
-            regex => qr/policy_server.*not allowed/i,
-            name => 'policy_server input error'
-         },
-         {
-            regex => qr/timestamp.*not allowed/i,
-            name => 'timestamp input error'
-         },
-         {
-            regex => qr/gmt_offset.*not allowed/i,
-            name => 'gmt_offset input error'
-         },
-         {
-            regex => qr/delta_minutes.*not allowed/i,
-            name => 'delta_minutes input error'
-         },
-      );
-
    for my $error ( @errors )
    {
       $t->post_ok( '/report/classes' => form => $query_params )
@@ -73,7 +105,6 @@ subtest 'Invalid webform input' => sub
    }
 };
 
-# TODO add command line negative testing.
 $t->post_ok( '/report/classes' =>
    form => {
       report_title  => 'DR test suite',
