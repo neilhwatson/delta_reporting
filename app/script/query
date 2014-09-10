@@ -26,3 +26,4 @@ base=$(dirname $0)
 
 cd ${base}/..
 perl -I${base}/../../perl5/lib/perl5 -Mlocal::lib DeltaR.pl query "$@"
+exit $?
