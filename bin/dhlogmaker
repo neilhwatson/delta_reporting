@@ -9,9 +9,10 @@ my $cf_workdir = '/var/cfengine/delta_reporting/log';
 my $classes = "$cf_workdir/classes";
 my $promises = "$cf_workdir/promises";
 my $final_log = "$cf_workdir/final";
-my $timestamp = '^BEGIN (\d{4}-\d{2}-\d{2}\S*)';
+my $timestamp_regex = qr/\ABEGIN (\d{4}-\d{2}-\d{2}\S*)/;
+my $outcome = qr/((not)?kept)|repaired/;
 
-my ( $class, $promise_handle, $promiser, $promise_outcome, $promisee );
+my ( $timestamp, $class, $promise_handle, $promiser, $promise_outcome, $promisee );
 format FINAL =
 @* ;; @* ;; @* ;; @* ;; @* ;; @*
 $timestamp, $class, $promise_handle, $promiser, $promise_outcome, $promisee
@@ -25,7 +26,7 @@ sub readfile {
 	open( my $fh, "<", $file) || die "Cannot open $file, $!";
 	while (<$fh>){
 		chomp;
-      if ( m/$timestamp/ ){
+      if ( m/$timestamp_regex/ ){
          $ts = $1;
          next;
       }
@@ -41,58 +42,72 @@ sub readfile {
 #
 # Main matter
 # 
-my @classes = readfile $classes;
-my @promises = readfile $promises;
-
-my %timestamp;
-$timestamp{classes} = shift @classes;
-$timestamp{promises} = shift @promises;
-
-if ( $timestamp{classes} eq $timestamp{promises} )
-{
-   $timestamp = $timestamp{classes};
-}
-else
-{
-   die ( "Timestamps $timestamp{classes} and $timestamp{promsises} not the same.");
-}
 
 open ( FINAL, ">>", $final_log) || die "Cannot open $final_log, $!";
-foreach $class ( @classes )
+
+my ( $fh, %record );
+open( $fh, "<", $classes ) or die "Cannot open [$classes], [$!]";
+while (<$fh>)
 {
-   $promise_handle  = 'empty';
-   $promiser        = 'empty';
-   $promise_outcome = 'empty';
-   $promisee        = 'empty';
-
-   if ( $class =~ m/(\S+)_handle_(\w+)_(((not)?kept)|repaired)$/ )
+   chomp;
+   if ( m/$timestamp_regex/ )
    {
-      # Look for matching promise records
-      my $class_canonizied_promiser = $1; 
-      $promise_handle = $2;
-      $promise_outcome = $3;
+      $record{timestamp} = $1;
+      next;
+   }
+   elsif ( m/_handle_(\w+)_($outcome)\Z/ )
+   {
+      $record{$_}{promise_handle}  = $1;
+      $record{$_}{promise_outcome} = $2;
+   }
+   elsif ( m/\A\w+\Z/ )
+   {
+      $timestamp       = $record{timestamp};
+      $class           = $_;
+      $promise_handle  = 'empty';
+      $promiser        = 'empty';
+      $promise_outcome = 'empty';
+      $promisee        = 'empty';
+      write FINAL;
+   }
+}
+close $fh;
 
-		for my $i ( 0 .. $#promises )
+my @promises = readfile( $promises );
+my $promises_timestamp = shift @promises;
+if ( $record{timestamp} ne $promises_timestamp )
+{
+   die "Timestamps in [$classes] and [$promises] are not equal";
+}
+
+for my $p ( @promises )
+{
+   # A clean record each time
+   undef $timestamp;
+   undef $class;
+   undef $promise_handle;
+   undef $promiser;
+   undef $promise_outcome;
+   undef $promisee;
+
+   ( $promise_handle, $promiser, $promisee ) = split /\s+;;\s+/, $p;
+
+   my $canonized_promiser;
+   ( $canonized_promiser = $promiser ) =~ s/[\W\s]/_/g;
+
+   for my $k ( keys %record )
+   {
+      if ( $k =~ m/\A${canonized_promiser}_handle_${promise_handle}_$outcome\Z/ )
       {
-         my $tmp_handle = '';
-         my $promises_canonized_promiser = '';
+         $timestamp       = $record{timestamp};
+         $class           = $k;
+         $promise_outcome = $record{$k}{promise_outcome};
+         write FINAL;
 
-         ( $tmp_handle, $promiser, $promisee ) = split '\s*;;\s*', $promises[$i];
-         
-         ( $promises_canonized_promiser = $promiser) =~ s/[\W\s]/_/g;
-
-         if (
-            $promises_canonized_promiser eq $class_canonizied_promiser &&
-            $tmp_handle eq $promise_handle
-            )
-         {
-            splice @promises, $i, 1; # Shrink to shorten next loop;
-            # Write promise line
-            last;
-         }
+         # Remove this record to shorten this loop for the next $p.
+         delete $record{$k};
       }
    }
-   write FINAL;
 }
 close FINAL;
 
