@@ -69,11 +69,12 @@ subtest 'Invalid CLI input' => sub
       push @args, '--'.$key, "\'$query_params->{$key}\'";
    }
 
-   my $stdout  = '/tmp/'.$$.'_stdout';
-   my $command = './script/query '. join( ' ', @args ) .' 2>&1 1>'.$stdout;
-   ok ( system( $command ), 'CLI should return none zero status' )
-      or warn "not ok .... CLI query command [$command] did NOT return false [$?].";
-   open my $fh, "$stdout" or warn "Cannot open [$stdout]";
+   my $stdout = $$.'_stdout';
+   ok ( system( './script/query '. join( ' ', @args ) ." &>/tmp/$stdout" ),
+      'cli query classes, invalid data' )
+      or warn "not ok .... CLI query command did NOT returne none zero.";
+
+   open my $fh, "/tmp/$stdout" or warn "Cannot open /tmp/[$stdout]";
    my $error_string;
    while (<$fh>)
    {
@@ -84,7 +85,7 @@ subtest 'Invalid CLI input' => sub
    for my $error ( @errors )
    {
       like( $error_string, $error->{regex}, "CLI query classes [$error->{name}]" )
-         or warn "CLI query classe negative test failed [$error->{name}]";
+         or warn "CLI query classes [$error->{name}]";
    }
 
    unlink "$stdout";

@@ -120,14 +120,31 @@ sub startup
 
       # Get latest counts of promise outcomes and convert to json
       my $promise_count = $self->dr->query_recent_promise_counts( $inventory_limit );
-      my @promise_count;
-      for my $i  ( @{ $promise_count } )
-      {
-         push @promise_count,
+      # Default values, because no values returned is not zero.
+      my @promise_count = (
          {
-            label => $i->[0],
-            value => $i->[1]
-         };
+            label => 'kept',
+            value => 0
+         },
+         {
+            label => 'notkept',
+            value => 0
+         },
+         {
+            label => 'repaired',
+            value => 0
+         }
+      );
+      OUTER: for my $i  ( @{ $promise_count } )
+      {
+         for my $d ( @promise_count )
+         {
+            if ( $i->[0] eq $d->{label} )
+            {
+               $d->{value} = $i->[1];
+               next OUTER;
+            }
+         }
       }
       my $promise_count_json = encode_json( \@promise_count );
 
