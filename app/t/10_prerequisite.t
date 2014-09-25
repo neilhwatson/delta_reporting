@@ -35,8 +35,11 @@ sub build_test_conf
 {
    my $conf = $stored{data}{config};
 
-   copy( $conf, "$conf.backup" ) or 
-      die "Cannot backup [$stored{data}{config}], [$!]";
+   if ( -e $conf )
+   {
+      copy( $conf, "$conf.backup" ) or 
+         die "Cannot backup [$stored{data}{config}], [$!]";
+   }
 
    open( FH, '>', $conf ) or die "Cannot open [$conf], [$!]";
 

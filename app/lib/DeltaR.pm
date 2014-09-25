@@ -9,7 +9,35 @@ use DBI;
 sub startup
 {
    my $self = shift;
-   my $config = $self->plugin('config', file => 'DeltaR.conf' );
+
+# Config
+   my $config;
+
+   $config->{small_title}     = '';
+   $config->{db_name}         = 'delta_reporting';
+   $config->{db_user}         = "deltar_ro";
+   $config->{db_pass}         = "";
+   $config->{db_wuser}        = "deltar_rw";
+   $config->{db_wpass}        = "";
+   $config->{db_host}         = "localhost";
+   $config->{secrets}         = [ 'secret passphrase', 'old secret passphrase' ];
+   $config->{record_limit}    = 1000; # Limit the number of records returned by a query.
+   $config->{agent_table}     = "agent_log";
+   $config->{promise_counts}  = "promise_counts";
+   $config->{inventory_table} = "inventory_table";
+   $config->{inventory_limit} = 20; # mintes to look backwards for inventory query
+   $config->{client_log_dir}  = "/var/cfengine/delta_reporting/log/client_logs";
+   $config->{delete_age}      = 90; # (days) Delete records older than this.
+   $config->{reduce_age}      = 10; # (days) Reduce duplicate records older than this to one per day
+   $config->{hypnotoad}       = {
+      proxy          => 1,
+      production     => 1,
+      listen         => [ 'http://localhost:8080' ],
+   };
+
+   if ( -e 'DeltaR.conf' ) {
+      my $config = $self->plugin('config', file => 'DeltaR.conf' );
+   }
    my $record_limit = $config->{record_limit};
    my $inventory_limit = $config->{inventory_limit};
    $self->secrets( @{ $config->{secrets} } );
@@ -83,8 +111,6 @@ sub startup
       
       return $logger;
    });
-
-   $self->defaults( small_title => '' );
 
 ## Routes
    my $r = $self->routes;
