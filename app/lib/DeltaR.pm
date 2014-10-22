@@ -13,7 +13,6 @@ sub startup
 # Config
    my $config;
 
-   $config->{small_title}     = '';
    $config->{db_name}         = 'delta_reporting';
    $config->{db_user}         = "deltar_ro";
    $config->{db_pass}         = "";
@@ -34,12 +33,14 @@ sub startup
       production     => 1,
       listen         => [ 'http://localhost:8080' ],
    };
+   $self->defaults( small_title => '' );
 
    if ( -e 'DeltaR.conf' ) {
-      my $config = $self->plugin('config', file => 'DeltaR.conf' );
+      $config = $self->plugin('config', file => 'DeltaR.conf' );
    }
    my $record_limit = $config->{record_limit};
    my $inventory_limit = $config->{inventory_limit};
+
    $self->secrets( @{ $config->{secrets} } );
 
    # use commands from DeltaR::Command namespace
