@@ -75,9 +75,11 @@ sub redirect {
   return undef unless grep { $_ == $code } 301, 302, 303, 307, 308;
 
   # Fix location without authority and/or scheme
-  return unless my $location = $res->headers->location;
+  return undef unless my $location = $res->headers->location;
   $location = Mojo::URL->new($location);
   $location = $location->base($old->req->url)->to_abs unless $location->is_abs;
+  my $proto = $location->protocol;
+  return undef unless $proto eq 'http' || $proto eq 'https';
 
   # Clone request if necessary
   my $new = Mojo::Transaction::HTTP->new;
@@ -155,19 +157,19 @@ sub _form {
   my ($self, $tx, $form, %options) = @_;
 
   # Check for uploads and force multipart if necessary
-  my $multipart;
+  my $req       = $tx->req;
+  my $headers   = $req->headers;
+  my $multipart = ($headers->content_type // '') =~ m!multipart/form-data!i;
   for my $value (map { ref $_ eq 'ARRAY' ? @$_ : $_ } values %$form) {
     ++$multipart and last if ref $value eq 'HASH';
   }
-  my $req     = $tx->req;
-  my $headers = $req->headers;
-  $headers->content_type('multipart/form-data') if $multipart;
 
   # Multipart
-  if (($headers->content_type // '') eq 'multipart/form-data') {
+  if ($multipart) {
     my $parts = $self->_multipart($options{charset}, $form);
     $req->content(
       Mojo::Content::MultiPart->new(headers => $headers, parts => $parts));
+    _type($headers, 'multipart/form-data');
     return $tx;
   }
 
@@ -178,15 +180,14 @@ sub _form {
   if ($method eq 'GET' || $method eq 'HEAD') { $req->url->query->merge($p) }
   else {
     $req->body($p->to_string);
-    $headers->content_type('application/x-www-form-urlencoded');
+    _type($headers, 'application/x-www-form-urlencoded');
   }
   return $tx;
 }
 
 sub _json {
   my ($self, $tx, $data) = @_;
-  my $headers = $tx->req->body(encode_json($data))->headers;
-  $headers->content_type('application/json') unless $headers->content_type;
+  _type($tx->req->body(encode_json $data)->headers, 'application/json');
   return $tx;
 }
 
@@ -253,6 +254,8 @@ sub _proxy {
 
   return $proto, $host, $port;
 }
+
+sub _type { $_[0]->content_type($_[1]) unless $_[0]->content_type }
 
 1;
 
@@ -390,27 +393,50 @@ requests, with support for L</"GENERATORS">.
   my $tx = $t->tx(PUT => 'http://example.com');
   $tx->req->content->asset(Mojo::Asset::File->new(path => '/foo.txt'));
 
-  # GET request with query parameters
-  my $tx = $t->tx(GET => 'http://example.com' => form => {a => 'b'});
+The C<json> content generator uses L<Mojo::JSON> for encoding and sets the
+content type to C<application/json>.
 
   # POST request with "application/json" content
   my $tx = $t->tx(
     POST => 'http://example.com' => json => {a => 'b', c => [1, 2, 3]});
 
+The C<form> content generator will automatically use query parameters for
+C<GET> and C<HEAD> requests.
+
+  # GET request with query parameters
+  my $tx = $t->tx(GET => 'http://example.com' => form => {a => 'b'});
+
+For all other request methods the C<application/x-www-form-urlencoded> content
+type is used.
+
   # POST request with "application/x-www-form-urlencoded" content
   my $tx = $t->tx(
     POST => 'http://example.com' => form => {a => 'b', c => 'd'});
+
+Parameters may be encoded with the C<charset> option.
 
   # PUT request with Shift_JIS encoded form values
   my $tx = $t->tx(
     PUT => 'example.com' => form => {a => 'b'} => charset => 'Shift_JIS');
 
+An array reference can be used for multiple form values sharing the same name.
+
   # POST request with form values sharing the same name
   my $tx = $t->tx(POST => 'http://example.com' => form => {a => [qw(b c d)]});
+
+A hash reference with a C<content> or C<file> value can be used to switch to
+the C<multipart/form-data> content type for file uploads.
 
   # POST request with "multipart/form-data" content
   my $tx = $t->tx(
     POST => 'http://example.com' => form => {mytext => {content => 'lala'}});
+
+  # POST request with multiple files sharing the same name
+  my $tx = $t->tx(POST => 'http://example.com' =>
+    form => {mytext => [{content => 'first'}, {content => 'second'}]});
+
+The C<file> value should contain the path to the file you want to upload or an
+asset object, like L<Mojo::Asset::File> or L<Mojo::Asset::Memory>.
 
   # POST request with upload streamed from file
   my $tx = $t->tx(
@@ -421,9 +447,9 @@ requests, with support for L</"GENERATORS">.
   my $tx    = $t->tx(
     POST => 'http://example.com' => form => {mytext => {file => $asset}});
 
-  # POST request with multiple files sharing the same name
-  my $tx = $t->tx(POST => 'http://example.com' =>
-    form => {mytext => [{content => 'first'}, {content => 'second'}]});
+A C<filename> value will be generated automatically, but can also be set
+manually if necessary. All remainging values in the hash reference get merged
+into the C<multipart/form-data> content as headers.
 
   # POST request with form values and customized upload (filename and header)
   my $tx = $t->tx(POST => 'http://example.com' => form => {
@@ -436,11 +462,8 @@ requests, with support for L</"GENERATORS">.
     }
   });
 
-The C<form> content generator will automatically use query parameters for
-C<GET>/C<HEAD> requests and the C<application/x-www-form-urlencoded> content
-type for everything else. Both get upgraded automatically to using the
-C<multipart/form-data> content type when necessary or when the header has been
-set manually.
+The C<multipart/form-data> content type can also be enforced by setting the
+C<Content-Type> header manually.
 
   # Force "multipart/form-data"
   my $headers = {'Content-Type' => 'multipart/form-data'};

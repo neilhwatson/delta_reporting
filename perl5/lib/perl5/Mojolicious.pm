@@ -43,12 +43,12 @@ has types     => sub { Mojolicious::Types->new };
 has validator => sub { Mojolicious::Validator->new };
 
 our $CODENAME = 'Tiger Face';
-our $VERSION  = '5.27';
+our $VERSION  = '5.55';
 
 sub AUTOLOAD {
   my $self = shift;
 
-  my ($package, $method) = split /::(\w+)$/, our $AUTOLOAD;
+  my ($package, $method) = our $AUTOLOAD =~ /^(.+)::(.+)$/;
   croak "Undefined subroutine &${package}::$method called"
     unless blessed $self && $self->isa(__PACKAGE__);
 
@@ -158,11 +158,15 @@ sub new {
   my $r = $self->routes->namespaces(["@{[ref $self]}::Controller", ref $self]);
 
   # Hide controller attributes/methods and "handler"
-  $r->hide(qw(app continue cookie finish flash handler match on param));
-  $r->hide(qw(redirect_to render render_exception render_later render_maybe));
-  $r->hide(qw(render_not_found render_static render_to_string rendered req));
+  $r->hide(qw(app continue cookie every_cookie every_param));
+  $r->hide(qw(every_signed_cookie finish flash handler helpers match on));
+  $r->hide(qw(param redirect_to render render_exception render_later));
+  $r->hide(qw(render_maybe render_not_found render_to_string rendered req));
   $r->hide(qw(res respond_to send session signed_cookie stash tx url_for));
   $r->hide(qw(validation write write_chunk));
+
+  # DEPRECATED in Tiger Face!
+  $r->hide('render_static');
 
   # Check if we have a log directory
   my $mode = $self->mode;
@@ -188,7 +192,11 @@ sub plugin {
   $self->plugins->register_plugin(shift, $self, @_);
 }
 
-sub start { shift->commands->run(@_ ? @_ : @ARGV) }
+sub start {
+  my $self = shift;
+  $_->_warmup for $self->static, $self->renderer;
+  return $self->commands->run(@_ ? @_ : @ARGV);
+}
 
 sub startup { }
 
@@ -357,8 +365,9 @@ Useful for rewriting outgoing responses and other post-processing tasks.
 Emitted right before the L</"before_dispatch"> hook and wraps around the whole
 dispatch process, so you have to manually forward to the next hook if you want
 to continue the chain. Default exception handling with
-L<Mojolicious::Controller/"render_exception"> is the first hook in the chain
-and a call to L</"dispatch"> the last, yours will be in between.
+L<Mojolicious::Plugin::DefaultHelpers/"reply-E<gt>exception"> is the first
+hook in the chain and a call to L</"dispatch"> the last, yours will be in
+between.
 
   $app->hook(around_dispatch => sub {
     my ($next, $c) = @_;
@@ -878,6 +887,8 @@ Kevin Old
 
 Kitamura Akatsuki
 
+Klaus S. Madsen
+
 Lars Balker Rasmussen
 
 Leon Brocard
@@ -885,6 +896,10 @@ Leon Brocard
 Magnus Holm
 
 Maik Fischer
+
+Mark Fowler
+
+Mark Grimes
 
 Mark Stosberg
 
@@ -969,6 +984,8 @@ Stephane Este-Gracias
 Tatsuhiko Miyagawa
 
 Terrence Brannon
+
+Tianon Gravi
 
 Tomas Znamenacek
 

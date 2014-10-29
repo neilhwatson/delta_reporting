@@ -45,7 +45,7 @@ sub register {
 
 sub _csrf_field {
   my $c = shift;
-  return _hidden_field($c, csrf_token => $c->csrf_token, @_);
+  return _hidden_field($c, csrf_token => $c->helpers->csrf_token, @_);
 }
 
 sub _form_for {
@@ -76,7 +76,7 @@ sub _input {
   my %attrs = @_ % 2 ? (value => shift, @_) : @_;
 
   # Special selection value
-  my @values = $c->param($name);
+  my @values = @{$c->every_param($name)};
   my $type = $attrs{type} || '';
   if (@values && $type ne 'submit') {
 
@@ -152,7 +152,7 @@ sub _password_field {
 sub _select_field {
   my ($c, $name, $options, %attrs) = (shift, shift, shift, @_);
 
-  my %values = map { $_ => 1 } $c->param($name);
+  my %values = map { $_ => 1 } @{$c->every_param($name)};
 
   my $groups = '';
   for my $group (@$options) {
@@ -246,7 +246,7 @@ sub _text_area {
 sub _validation {
   my ($c, $name) = (shift, shift);
   return _tag(@_) unless $c->validation->has_error($name);
-  return $c->tag_with_error(@_);
+  return $c->helpers->tag_with_error(@_);
 }
 
 1;

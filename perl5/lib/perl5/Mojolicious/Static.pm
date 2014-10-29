@@ -12,19 +12,23 @@ use Mojo::Util 'md5_sum';
 has classes => sub { ['main'] };
 has paths   => sub { [] };
 
-# Last modified default
-my $MTIME = time;
-
 # Bundled files
 my $HOME   = Mojo::Home->new;
 my $PUBLIC = $HOME->parse($HOME->mojo_lib_dir)->rel_dir('Mojolicious/public');
 
+my $LOADER = Mojo::Loader->new;
+
 sub dispatch {
   my ($self, $c) = @_;
 
+  # Method (GET or HEAD)
+  my $req    = $c->req;
+  my $method = $req->method;
+  return undef unless $method eq 'GET' || $method eq 'HEAD';
+
   # Canonical path
   my $stash = $c->stash;
-  my $path  = $c->req->url->path;
+  my $path  = $req->url->path;
   $path = $stash->{path} ? $path->new($stash->{path}) : $path->clone;
   return undef unless my @parts = @{$path->canonicalize->parts};
 
@@ -73,10 +77,15 @@ sub is_fresh {
 
 sub serve {
   my ($self, $c, $rel) = @_;
+
   return undef unless my $asset = $self->file($rel);
+  my $headers = $c->res->headers;
+  return !!$self->serve_asset($c, $asset) if $headers->content_type;
+
+  # Content-Type
   my $types = $c->app->types;
   my $type = $rel =~ /\.(\w+)$/ ? $types->type($1) : undef;
-  $c->res->headers->content_type($type || $types->type('txt'));
+  $headers->content_type($type || $types->type('txt'));
   return !!$self->serve_asset($c, $asset);
 }
 
@@ -86,26 +95,23 @@ sub serve_asset {
   # Last-Modified and ETag
   my $res = $c->res;
   $res->code(200)->headers->accept_ranges('bytes');
-  my $mtime = $asset->is_file ? (stat $asset->path)[9] : $MTIME;
+  my $mtime = $asset->mtime;
   my $options = {etag => md5_sum($mtime), last_modified => $mtime};
   return $res->code(304) if $self->is_fresh($c, $options);
 
   # Range
-  my $size = $asset->size;
-  my ($start, $end) = (0, $size - 1);
-  if (my $range = $c->req->headers->range) {
+  return $res->content->asset($asset)
+    unless my $range = $c->req->headers->range;
 
-    # Not satisfiable
-    return $res->code(416) unless $size && $range =~ m/^bytes=(\d+)?-(\d+)?/;
-    $start = $1 if defined $1;
-    $end = $2 if defined $2 && $2 <= $end;
-    return $res->code(416) if $start > $end || $end > ($size - 1);
+  # Not satisfiable
+  return $res->code(416) unless my $size = $asset->size;
+  return $res->code(416) unless $range =~ m/^bytes=(\d+)?-(\d+)?/;
+  my ($start, $end) = ($1 // 0, defined $2 && $2 < $size ? $2 : $size - 1);
+  return $res->code(416) if $start > $end;
 
-    # Satisfiable
-    $res->code(206)->headers->content_length($end - $start + 1)
-      ->content_range("bytes $start-$end/$size");
-  }
-
+  # Satisfiable
+  $res->code(206)->headers->content_length($end - $start + 1)
+    ->content_range("bytes $start-$end/$size");
   return $res->content->asset($asset->start_range($start)->end_range($end));
 }
 
@@ -114,21 +120,14 @@ sub _epoch { Mojo::Date->new(shift)->epoch }
 sub _get_data_file {
   my ($self, $rel) = @_;
 
-  # Protect templates
-  return undef if $rel =~ /\.\w+\.\w+$/;
+  # Protect files without extensions and templates with two extensions
+  return undef if $rel !~ /\.\w+$/ || $rel =~ /\.\w+\.\w+$/;
 
-  # Index DATA files
-  my $loader = Mojo::Loader->new;
-  unless ($self->{index}) {
-    my $index = $self->{index} = {};
-    for my $class (reverse @{$self->classes}) {
-      $index->{$_} = $class for keys %{$loader->data($class)};
-    }
-  }
+  $self->_warmup unless $self->{index};
 
   # Find file
   return undef
-    unless defined(my $data = $loader->data($self->{index}{$rel}, $rel));
+    unless defined(my $data = $LOADER->data($self->{index}{$rel}, $rel));
   return Mojo::Asset::Memory->new->add_chunk($data);
 }
 
@@ -136,6 +135,14 @@ sub _get_file {
   my ($self, $path) = @_;
   no warnings 'newline';
   return -f $path && -r $path ? Mojo::Asset::File->new(path => $path) : undef;
+}
+
+sub _warmup {
+  my $self = shift;
+  my $index = $self->{index} = {};
+  for my $class (reverse @{$self->classes}) {
+    $index->{$_} = $class for keys %{$LOADER->data($class)};
+  }
 }
 
 1;
@@ -156,8 +163,8 @@ Mojolicious::Static - Serve static files
 
 =head1 DESCRIPTION
 
-L<Mojolicious::Static> is a static file server with C<Range> and
-C<If-Modified-Since> support based on
+L<Mojolicious::Static> is a static file server with C<Range>,
+C<If-Modified-Since> and C<If-None-Match> support based on
 L<RFC 7232|http://tools.ietf.org/html/rfc7232> and
 L<RFC 7233|http://tools.ietf.org/html/rfc7233>.
 
@@ -246,8 +253,8 @@ that this method does not protect from traversing to parent directories.
 
   $static->serve_asset(Mojolicious::Controller->new, Mojo::Asset::File->new);
 
-Serve a L<Mojo::Asset::File> or L<Mojo::Asset::Memory> object with C<Range>
-and C<If-Modified-Since> support.
+Serve a L<Mojo::Asset::File> or L<Mojo::Asset::Memory> object with C<Range>,
+C<If-Modified-Since> and C<If-None-Match> support.
 
 =head1 SEE ALSO
 

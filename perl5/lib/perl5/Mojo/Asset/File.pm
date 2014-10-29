@@ -17,8 +17,7 @@ has handle => sub {
   my $handle = IO::File->new;
   my $path   = $self->path;
   if (defined $path && -f $path) {
-    $handle->open($path, -w _ ? O_APPEND | O_RDWR : O_RDONLY)
-      or croak qq{Can't open file "$path": $!};
+    $handle->open($path, O_RDONLY) or croak qq{Can't open file "$path": $!};
     return $handle;
   }
 
@@ -78,8 +77,7 @@ sub contains {
     # Search window
     my $pos = index $window, $str;
     return $offset + $pos if $pos >= 0;
-    $offset += $read;
-    return -1 if $read == 0 || $offset == $end;
+    return -1 if $read == 0 || ($offset += $read) == $end;
 
     # Resize window
     substr $window, 0, $read, '';
@@ -98,8 +96,7 @@ sub get_chunk {
 
   my $buffer;
   if (defined(my $end = $self->end_range)) {
-    my $chunk = $end + 1 - $offset;
-    return '' if $chunk <= 0;
+    return '' if (my $chunk = $end + 1 - $offset) <= 0;
     $handle->sysread($buffer, $chunk > $max ? $max : $chunk);
   }
   else { $handle->sysread($buffer, $max) }
@@ -122,17 +119,13 @@ sub move_to {
   return $self->path($to)->cleanup(0);
 }
 
-sub size {
-  return 0 unless defined(my $file = shift->path);
-  return -s $file;
-}
+sub mtime { (stat shift->handle)[9] }
+
+sub size { -s shift->handle }
 
 sub slurp {
-  my $handle = shift->handle;
-  $handle->sysseek(0, SEEK_SET);
-  my $content = '';
-  while ($handle->sysread(my $buffer, 131072)) { $content .= $buffer }
-  return $content;
+  return '' unless defined(my $file = shift->path);
+  return Mojo::Util::slurp $file;
 }
 
 1;
@@ -237,6 +230,12 @@ True.
   $file = $file->move_to('/home/sri/bar.txt');
 
 Move asset data into a specific file and disable L</"cleanup">.
+
+=head2 mtime
+
+  my $mtime = $file->mtime;
+
+Modification time of asset.
 
 =head2 size
 

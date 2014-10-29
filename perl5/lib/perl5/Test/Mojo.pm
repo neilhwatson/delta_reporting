@@ -265,14 +265,13 @@ sub send_ok {
 
 sub status_is {
   my ($self, $status, $desc) = @_;
-  $desc ||= "$status " . $self->tx->res->new(code => $status)->default_message;
+  $desc ||= "$status " . $self->tx->res->default_message($status);
   return $self->_test('is', $self->tx->res->code, $status, $desc);
 }
 
 sub status_isnt {
   my ($self, $status, $desc) = @_;
-  $desc
-    ||= "not $status " . $self->tx->res->new(code => $status)->default_message;
+  $desc ||= "not $status " . $self->tx->res->default_message($status);
   return $self->_test('isnt', $self->tx->res->code, $status, $desc);
 }
 
@@ -422,7 +421,8 @@ Test::Mojo - Testing Mojo!
 =head1 DESCRIPTION
 
 L<Test::Mojo> is a collection of testing helpers for everyone developing
-L<Mojo> and L<Mojolicious> applications.
+L<Mojo> and L<Mojolicious> applications, it is usually used together with
+L<Test::More>.
 
 =head1 ATTRIBUTES
 
@@ -433,7 +433,14 @@ L<Test::Mojo> implements the following attributes.
   my $msg = $t->message;
   $t      = $t->message([text => $bytes]);
 
-Current WebSocket message.
+Current WebSocket message represented as an array reference containing the
+frame type and payload.
+
+  # More specific tests
+  use Mojo::JSON 'decode_json';
+  my $hash = decode_json $t->message->[1];
+  is ref $hash, 'HASH', 'right reference';
+  is $hash->{foo}, 'bar', 'right value';
 
   # Test custom message
   $t->message([binary => $bytes])
@@ -640,6 +647,10 @@ arguments as L<Mojo::UserAgent/"get">, except for the callback.
   # Run tests against remote host
   $t->get_ok('http://mojolicio.us/perldoc')->status_is(200);
 
+  # Run additional tests on the transaction
+  $t->get_ok('/foo')->status_is(200);
+  is $t->tx->res->dom->at('input')->val, 'whatever', 'right value';
+
 =head2 head_ok
 
   $t = $t->head_ok('/foo');
@@ -652,29 +663,29 @@ arguments as L<Mojo::UserAgent/"head">, except for the callback.
 
 =head2 header_is
 
-  $t = $t->header_is(Expect => 'fun');
-  $t = $t->header_is(Expect => 'fun', 'right header');
+  $t = $t->header_is(ETag => '"abc321"');
+  $t = $t->header_is(ETag => '"abc321"', 'right header');
 
 Check response header for exact match.
 
 =head2 header_isnt
 
-  $t = $t->header_isnt(Expect => 'fun');
-  $t = $t->header_isnt(Expect => 'fun', 'different header');
+  $t = $t->header_isnt(Etag => '"abc321"');
+  $t = $t->header_isnt(ETag => '"abc321"', 'different header');
 
 Opposite of L</"header_is">.
 
 =head2 header_like
 
-  $t = $t->header_like(Expect => qr/fun/);
-  $t = $t->header_like(Expect => qr/fun/, 'right header');
+  $t = $t->header_like(ETag => qr/abc/);
+  $t = $t->header_like(ETag => qr/abc/, 'right header');
 
 Check response header for similar match.
 
 =head2 header_unlike
 
-  $t = $t->header_like(Expect => qr/fun/);
-  $t = $t->header_like(Expect => qr/fun/, 'different header');
+  $t = $t->header_unlike(ETag => qr/abc/);
+  $t = $t->header_unlike(ETag => qr/abc/, 'different header');
 
 Opposite of L</"header_like">.
 

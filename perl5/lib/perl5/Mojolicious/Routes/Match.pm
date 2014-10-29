@@ -13,26 +13,26 @@ sub path_for {
   my ($self, $name, %values) = (shift, Mojo::Util::_options(@_));
 
   # Current route
-  my $endpoint;
-  if ($name && $name eq 'current' || !$name) {
-    return {} unless $endpoint = $self->endpoint;
+  my $route;
+  if (!$name || $name eq 'current') {
+    return {} unless $route = $self->endpoint;
   }
 
   # Find endpoint
-  else { return {path => $name} unless $endpoint = $self->root->lookup($name) }
+  else { return {path => $name} unless $route = $self->root->lookup($name) }
 
   # Merge values (clear format)
   my $captures = $self->stack->[-1] || {};
   %values = (%$captures, format => undef, %values);
-  my $pattern = $endpoint->pattern;
+  my $pattern = $route->pattern;
   $values{format}
     //= defined $captures->{format}
     ? $captures->{format}
     : $pattern->defaults->{format}
     if $pattern->constraints->{format};
 
-  my $path = $endpoint->render('', \%values);
-  return {path => $path, websocket => $endpoint->has_websocket};
+  my $path = $route->render(\%values);
+  return {path => $path, websocket => $route->has_websocket};
 }
 
 sub _match {
@@ -42,26 +42,27 @@ sub _match {
   my $path    = $options->{path};
   my $partial = $r->partial;
   my $detect  = (my $endpoint = $r->is_endpoint) && !$partial;
-  return unless my $captures = $r->pattern->match_partial(\$path, $detect);
+  return undef
+    unless my $captures = $r->pattern->match_partial(\$path, $detect);
   local $options->{path} = $path;
   local @{$self->{captures} ||= {}}{keys %$captures} = values %$captures;
   $captures = $self->{captures};
 
   # Method
   my $methods = $r->via;
-  return if $methods && !grep { $_ eq $options->{method} } @$methods;
+  return undef if $methods && !grep { $_ eq $options->{method} } @$methods;
 
   # Conditions
   if (my $over = $r->over) {
     my $conditions = $self->{conditions} ||= $self->root->conditions;
     for (my $i = 0; $i < @$over; $i += 2) {
-      return unless my $condition = $conditions->{$over->[$i]};
-      return if !$condition->($r, $c, $captures, $over->[$i + 1]);
+      return undef unless my $condition = $conditions->{$over->[$i]};
+      return undef if !$condition->($r, $c, $captures, $over->[$i + 1]);
     }
   }
 
   # WebSocket
-  return if $r->is_websocket && !$options->{websocket};
+  return undef if $r->is_websocket && !$options->{websocket};
 
   # Partial
   my $empty = !length $path || $path eq '/';
@@ -71,28 +72,22 @@ sub _match {
     $empty = 1;
   }
 
-  # Endpoint (or bridge)
+  # Endpoint (or intermediate destination)
   if (($endpoint && $empty) || $r->inline) {
     push @{$self->stack}, {%$captures};
     if ($endpoint && $empty) {
       my $format = $captures->{format};
       if ($format) { $_->{format} = $format for @{$self->stack} }
-      return $self->endpoint($r);
+      return !!$self->endpoint($r);
     }
     delete @$captures{qw(app cb)};
   }
 
   # Match children
-  my $snapshot = [@{$self->stack}];
+  my @snapshot = $r->parent ? ([@{$self->stack}], $captures) : ([], {});
   for my $child (@{$r->children}) {
-    $self->_match($child, $c, $options);
-
-    # Endpoint found
-    return if $self->endpoint;
-
-    # Reset
-    if   ($r->parent) { $self->stack([@$snapshot])->{captures} = $captures }
-    else              { $self->stack([])->{captures}           = {} }
+    return 1 if $self->_match($child, $c, $options);
+    $self->stack([@{$snapshot[0]}])->{captures} = $snapshot[1];
   }
 }
 
@@ -144,11 +139,11 @@ Current position on the L</"stack">, defaults to C<0>.
 
 =head2 endpoint
 
-  my $endpoint = $match->endpoint;
-  $match       = $match->endpoint(Mojolicious::Routes::Route->new);
+  my $route = $match->endpoint;
+  $match    = $match->endpoint(Mojolicious::Routes::Route->new);
 
 The route endpoint that matched, usually a L<Mojolicious::Routes::Route>
-objects.
+object.
 
 =head2 root
 
@@ -160,7 +155,7 @@ The root of the route structure, usually a L<Mojolicious::Routes> object.
 =head2 stack
 
   my $stack = $match->stack;
-  $match    = $match->stack([{foo => 'bar'}]);
+  $match    = $match->stack([{action => 'foo'}, {action => 'bar'}]);
 
 Captured parameters with nesting history.
 
