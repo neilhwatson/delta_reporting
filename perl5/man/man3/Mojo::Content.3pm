@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Content 3"
-.TH Mojo::Content 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Content 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -152,9 +152,10 @@ Mojo::Content \- HTTP content base class
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Content is an abstract base class for \s-1HTTP\s0 content based on
+Mojo::Content is an abstract base class for \s-1HTTP\s0 content containers based on
 \&\s-1RFC 7230\s0 <http://tools.ietf.org/html/rfc7230> and
-\&\s-1RFC 7231\s0 <http://tools.ietf.org/html/rfc7231>.
+\&\s-1RFC 7231\s0 <http://tools.ietf.org/html/rfc7231>, like
+Mojo::Content::MultiPart and Mojo::Content::Single.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::Content inherits all events from Mojo::EventEmitter and can emit
@@ -284,8 +285,8 @@ close.
 Skip body parsing and finish after headers.
 .SH "METHODS"
 .IX Header "METHODS"
-Mojo::Content inherits all methods from Mojo::EventEmitter and
-implements the following new ones.
+Mojo::Content inherits all methods from Mojo::EventEmitter and implements
+the following new ones.
 .SS "body_contains"
 .IX Subsection "body_contains"
 .Vb 1
@@ -385,8 +386,8 @@ Check if content is gzip compressed.
 \&  my $bool = $content\->is_dynamic;
 .Ve
 .PP
-Check if content will be dynamically generated, which prevents \*(L"clone\*(R"
-from working.
+Check if content will be dynamically generated, which prevents \*(L"clone\*(R" from
+working.
 .SS "is_finished"
 .IX Subsection "is_finished"
 .Vb 1
@@ -451,8 +452,8 @@ Size of content already received from message in bytes.
 \&  $content = $content\->write($bytes => sub {...});
 .Ve
 .PP
-Write dynamic content non-blocking, the optional drain callback will be
-invoked once all data has been written.
+Write dynamic content non-blocking, the optional drain callback will be invoked
+once all data has been written.
 .SS "write_chunk"
 .IX Subsection "write_chunk"
 .Vb 2

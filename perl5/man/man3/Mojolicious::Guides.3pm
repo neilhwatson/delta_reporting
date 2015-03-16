@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides 3"
-.TH Mojolicious::Guides 3 "2014-10-23" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -145,8 +145,10 @@ Mojolicious::Guides \- Mojolicious guide to the galaxy
 We are constantly working on new documentation, follow us on
 GitHub <http://github.com/kraih/mojo> or join the official \s-1IRC\s0 channel
 \&\f(CW\*(C`#mojo\*(C'\fR on \f(CW\*(C`irc.perl.org\*(C'\fR to get all the latest updates.
-.SH "LEARNING PERL"
-.IX Header "LEARNING PERL"
+.SH "BASICS"
+.IX Header "BASICS"
+.IP "Learning Perl" 2
+.IX Item "Learning Perl"
 If you are new to Perl, we recommend
 Learn Perl in 2 hours 30 minutes <http://qntm.org/files/perl/perl.html> for a
 quick introduction, or the
@@ -154,20 +156,24 @@ Modern Perl book <http://modernperlbooks.com/books/modern_perl/>, freely
 available in many formats. Both are excellent introductions to the language.
 For more books and documentation, check out
 learn.perl.org <http://learn.perl.org/>.
-.SH "LEARNING HTML"
-.IX Header "LEARNING HTML"
-All web development starts with \s-1HTML,\s0 to learn the basics we recommend the
-Mozilla Developer Network <https://developer.mozilla.org/en-US/learn/html>.
+.IP "Learning Web Technologies" 2
+.IX Item "Learning Web Technologies"
+All web development starts with \s-1HTML, CSS\s0 and JavaScript, to learn the basics
+we recommend the
+Mozilla Developer Network <https://developer.mozilla.org/en-US/docs/Web>. And
+if you want to know more about how browsers and web servers actually
+communicate, there's also a very nice introduction to
+\&\s-1HTTP\s0 <https://developer.mozilla.org/en-US/docs/Web/HTTP>.
 .SH "TUTORIAL"
 .IX Header "TUTORIAL"
-.IP "Mojolicious::Lite" 2
-.IX Item "Mojolicious::Lite"
-A fast and fun way to get started developing web applications with Mojolicious
-is the Mojolicious::Lite tutorial. This micro web framework is only a thin
-wrapper around the normal web framework, so almost everything you learn here
-also applies to full Mojolicious applications. The simplified notation
-introduced in the tutorial is commonly used throughout the guides and is
-therefore considered a prerequisite, you should definitely take a look!
+.IP "Mojolicious::Guides::Tutorial" 2
+.IX Item "Mojolicious::Guides::Tutorial"
+A fast and fun way to get started developing web applications with
+Mojolicious. The tutorial introduces the Mojolicious::Lite micro web
+framework, which is only a thin wrapper around the full web framework. The
+simplified notation introduced in the tutorial is commonly used throughout the
+guides and is therefore considered a prerequisite, you should definitely take a
+look!
 .SH "GUIDES"
 .IX Header "GUIDES"
 .IP "Mojolicious::Guides::Growing" 2
@@ -205,9 +211,9 @@ Very fun and minimalistic \s-1HTML/XML DOM\s0 parser with \s-1CSS\s0 selector su
 Minimalistic \s-1JSON\s0 implementation that just works.
 .IP "Mojo::Server::Daemon" 2
 .IX Item "Mojo::Server::Daemon"
-Full featured, highly portable non-blocking I/O \s-1HTTP\s0 and WebSocket server,
-with self-restart support through Mojo::Server::Morbo, perfect for
-development and testing.
+Full featured, highly portable non-blocking I/O \s-1HTTP\s0 and WebSocket server, with
+self-restart support through Mojo::Server::Morbo, perfect for development
+and testing.
 .IP "Mojo::Server::Prefork" 2
 .IX Item "Mojo::Server::Prefork"
 Full featured, \s-1UNIX\s0 optimized, preforking non-blocking I/O \s-1HTTP\s0 and WebSocket
@@ -228,6 +234,18 @@ Testing toolkit for web applications.
 .IP "ojo" 2
 .IX Item "ojo"
 Fun one-liners using everything above.
+.SH "SPIN-OFFS"
+.IX Header "SPIN-OFFS"
+These modules are not part of the Mojolicious distribution, but have been
+designed to be used with it and are being developed under the same umbrella.
+.IP "Mojo::Pg" 2
+.IX Item "Mojo::Pg"
+A tiny wrapper around DBD::Pg that makes
+PostgreSQL <http://www.postgresql.org> a lot of fun to use with
+Mojolicious.
+.IP "Minion" 2
+.IX Item "Minion"
+A job queue for Mojolicious with support for multiple backends.
 .SH "REFERENCE"
 .IX Header "REFERENCE"
 This is the class hierarchy of the Mojolicious distribution.
@@ -295,6 +313,8 @@ Mojo::Content::Single
 .RE
 .RS 2
 .RE
+.IP "\(bu" 2
+Mojo::IOLoop
 .IP "\(bu" 2
 Mojo::IOLoop::Client
 .IP "\(bu" 2
@@ -371,11 +391,7 @@ Mojo::Headers
 .IP "\(bu" 2
 Mojo::Home
 .IP "\(bu" 2
-Mojo::IOLoop
-.IP "\(bu" 2
 Mojo::JSON::Pointer
-.IP "\(bu" 2
-Mojo::Loader
 .IP "\(bu" 2
 Mojo::Parameters
 .IP "\(bu" 2
@@ -512,13 +528,15 @@ Mojo::DOM
 .IP "\(bu" 2
 Mojo::JSON
 .IP "\(bu" 2
+Mojo::Loader
+.IP "\(bu" 2
 Mojo::Util
 .IP "\(bu" 2
 ojo
 .SH "MORE"
 .IX Header "MORE"
-A lot more documentation and examples by many different authors can be found
-in the Mojolicious wiki <http://github.com/kraih/mojo/wiki>.
+A lot more documentation and examples by many different authors can be found in
+the Mojolicious wiki <http://github.com/kraih/mojo/wiki>.
 .SH "SUPPORT"
 .IX Header "SUPPORT"
 If you have any questions the documentation might not yet answer, don't

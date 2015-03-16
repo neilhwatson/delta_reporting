@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Command::generate::makefile 3"
-.TH Mojolicious::Command::generate::makefile 3 "2014-07-11" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Command::generate::makefile 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -163,7 +163,7 @@ Mojolicious::Command and implements the following new ones.
 .IX Subsection "description"
 .Vb 2
 \&  my $description = $makefile\->description;
-\&  $makefile       = $makefile\->description(\*(AqFoo!\*(Aq);
+\&  $makefile       = $makefile\->description(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short description of this command, used for the command list.
@@ -171,7 +171,7 @@ Short description of this command, used for the command list.
 .IX Subsection "usage"
 .Vb 2
 \&  my $usage = $makefile\->usage;
-\&  $makefile = $makefile\->usage(\*(AqFoo!\*(Aq);
+\&  $makefile = $makefile\->usage(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Usage information for this command, used for the help screen.

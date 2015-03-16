@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Util 3"
-.TH Mojo::Util 3 "2014-10-17" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Util 3 "2015-03-04" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -178,7 +178,7 @@ Base64 encode bytes, the line ending defaults to a newline.
 \&  my $camelcase = camelize $snakecase;
 .Ve
 .PP
-Convert snake_case string to CamelCase and replace \f(CW\*(C`\-\*(C'\fR with \f(CW\*(C`::\*(C'\fR.
+Convert \f(CW\*(C`snake_case\*(C'\fR string to \f(CW\*(C`CamelCase\*(C'\fR and replace \f(CW\*(C`\-\*(C'\fR with \f(CW\*(C`::\*(C'\fR.
 .PP
 .Vb 2
 \&  # "FooBar"
@@ -232,7 +232,7 @@ Convert class name to path.
 \&  my $snakecase = decamelize $camelcase;
 .Ve
 .PP
-Convert CamelCase string to snake_case and replace \f(CW\*(C`::\*(C'\fR with \f(CW\*(C`\-\*(C'\fR.
+Convert \f(CW\*(C`CamelCase\*(C'\fR string to \f(CW\*(C`snake_case\*(C'\fR and replace \f(CW\*(C`::\*(C'\fR with \f(CW\*(C`\-\*(C'\fR.
 .PP
 .Vb 2
 \&  # "foo_bar"
@@ -280,6 +280,11 @@ Encode characters to bytes.
 .Ve
 .PP
 Generate \s-1HMAC\-SHA1\s0 checksum for bytes.
+.PP
+.Vb 2
+\&  # "11cedfd5ec11adc0ec234466d8a0f2a83736aa68"
+\&  hmac_sha1_sum \*(Aqfoo\*(Aq, \*(Aqpassw0rd\*(Aq;
+.Ve
 .SS "html_unescape"
 .IX Subsection "html_unescape"
 .Vb 1
@@ -287,6 +292,11 @@ Generate \s-1HMAC\-SHA1\s0 checksum for bytes.
 .Ve
 .PP
 Unescape all \s-1HTML\s0 entities in string.
+.PP
+.Vb 2
+\&  # "<div>"
+\&  html_unescape \*(Aq&lt;div&gt;\*(Aq;
+.Ve
 .SS "md5_bytes"
 .IX Subsection "md5_bytes"
 .Vb 1
@@ -301,6 +311,11 @@ Generate binary \s-1MD5\s0 checksum for bytes.
 .Ve
 .PP
 Generate \s-1MD5\s0 checksum for bytes.
+.PP
+.Vb 2
+\&  # "acbd18db4cc2f85cedef654fccc4a4d8"
+\&  md5_sum \*(Aqfoo\*(Aq;
+.Ve
 .SS "monkey_patch"
 .IX Subsection "monkey_patch"
 .Vb 2
@@ -324,6 +339,11 @@ Monkey patch functions into package.
 .PP
 Punycode decode string as described in
 \&\s-1RFC 3492\s0 <http://tools.ietf.org/html/rfc3492>.
+.PP
+.Vb 2
+\&  # "bu\*:cher"
+\&  punycode_decode \*(Aqbcher\-kva\*(Aq;
+.Ve
 .SS "punycode_encode"
 .IX Subsection "punycode_encode"
 .Vb 1
@@ -332,6 +352,11 @@ Punycode decode string as described in
 .PP
 Punycode encode string as described in
 \&\s-1RFC 3492\s0 <http://tools.ietf.org/html/rfc3492>.
+.PP
+.Vb 2
+\&  # "bcher\-kva"
+\&  punycode_encode \*(Aqbu\*:cher\*(Aq;
+.Ve
 .SS "quote"
 .IX Subsection "quote"
 .Vb 1
@@ -360,6 +385,11 @@ Generate binary \s-1SHA1\s0 checksum for bytes.
 .Ve
 .PP
 Generate \s-1SHA1\s0 checksum for bytes.
+.PP
+.Vb 2
+\&  # "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33"
+\&  sha1_sum \*(Aqfoo\*(Aq;
+.Ve
 .SS "slurp"
 .IX Subsection "slurp"
 .Vb 1
@@ -367,23 +397,38 @@ Generate \s-1SHA1\s0 checksum for bytes.
 .Ve
 .PP
 Read all data at once from file.
+.SS "split_cookie_header"
+.IX Subsection "split_cookie_header"
+.Vb 1
+\&  my $tree = split_cookie_header \*(Aqa=b; expires=Thu, 07 Aug 2008 07:07:59 GMT\*(Aq;
+.Ve
+.PP
+Same as \*(L"split_header\*(R", but handles \f(CW\*(C`expires\*(C'\fR values from
+\&\s-1RFC 6265\s0 <http://tools.ietf.org/html/rfc6265>.
 .SS "split_header"
 .IX Subsection "split_header"
 .Vb 1
 \&   my $tree = split_header \*(Aqfoo="bar baz"; test=123, yada\*(Aq;
 .Ve
 .PP
-Split \s-1HTTP\s0 header value.
+Split \s-1HTTP\s0 header value into key/value pairs, each comma separated part gets
+its own array reference, and keys without a value get \f(CW\*(C`undef\*(C'\fR assigned.
 .PP
 .Vb 2
 \&  # "one"
 \&  split_header(\*(Aqone; two="three four", five=six\*(Aq)\->[0][0];
+\&
+\&  # "two"
+\&  split_header(\*(Aqone; two="three four", five=six\*(Aq)\->[0][2];
 \&
 \&  # "three four"
 \&  split_header(\*(Aqone; two="three four", five=six\*(Aq)\->[0][3];
 \&
 \&  # "five"
 \&  split_header(\*(Aqone; two="three four", five=six\*(Aq)\->[1][0];
+\&
+\&  # "six"
+\&  split_header(\*(Aqone; two="three four", five=six\*(Aq)\->[1][1];
 .Ve
 .SS "spurt"
 .IX Subsection "spurt"
@@ -400,6 +445,11 @@ Write all data at once to file.
 .PP
 Trim whitespace characters from both ends of string and then change all
 consecutive groups of whitespace into one space each.
+.PP
+.Vb 2
+\&  # "foo bar"
+\&  squish \*(Aq  foo  bar  \*(Aq;
+.Ve
 .SS "steady_time"
 .IX Subsection "steady_time"
 .Vb 1
@@ -421,6 +471,18 @@ Row-oriented generator for text tables.
 \&  # "foo   bar\enyada  yada\enbaz   yada\en"
 \&  tablify [[\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq], [\*(Aqyada\*(Aq, \*(Aqyada\*(Aq], [\*(Aqbaz\*(Aq, \*(Aqyada\*(Aq]];
 .Ve
+.SS "term_escape"
+.IX Subsection "term_escape"
+.Vb 1
+\&  my $escaped = term_escape $str;
+.Ve
+.PP
+Escape all \s-1POSIX\s0 control characters except for \f(CW\*(C`\en\*(C'\fR.
+.PP
+.Vb 2
+\&  # "foo\e\ex09bar\e\ex0d\en"
+\&  term_escape "foo\etbar\er\en";
+.Ve
 .SS "trim"
 .IX Subsection "trim"
 .Vb 1
@@ -428,6 +490,11 @@ Row-oriented generator for text tables.
 .Ve
 .PP
 Trim whitespace characters from both ends of string.
+.PP
+.Vb 2
+\&  # "foo bar"
+\&  trim \*(Aq  foo bar  \*(Aq;
+.Ve
 .SS "unindent"
 .IX Subsection "unindent"
 .Vb 1
@@ -435,6 +502,11 @@ Trim whitespace characters from both ends of string.
 .Ve
 .PP
 Unindent multiline string.
+.PP
+.Vb 2
+\&  # "foo\enbar\enbaz\en"
+\&  unindent "  foo\en  bar\en  baz\en";
+.Ve
 .SS "unquote"
 .IX Subsection "unquote"
 .Vb 1
@@ -452,6 +524,11 @@ Unquote string.
 Percent encode unsafe characters in string as described in
 \&\s-1RFC 3986\s0 <http://tools.ietf.org/html/rfc3986>, the pattern used defaults to
 \&\f(CW\*(C`^A\-Za\-z0\-9\e\-._~\*(C'\fR.
+.PP
+.Vb 2
+\&  # "foo%3Bbar"
+\&  url_unescape \*(Aqfoo;bar\*(Aq;
+.Ve
 .SS "url_unescape"
 .IX Subsection "url_unescape"
 .Vb 1
@@ -460,6 +537,11 @@ Percent encode unsafe characters in string as described in
 .PP
 Decode percent encoded characters in string as described in
 \&\s-1RFC 3986\s0 <http://tools.ietf.org/html/rfc3986>.
+.PP
+.Vb 2
+\&  # "foo;bar"
+\&  url_unescape \*(Aqfoo%3Bbar\*(Aq;
+.Ve
 .SS "xml_escape"
 .IX Subsection "xml_escape"
 .Vb 1
@@ -467,6 +549,11 @@ Decode percent encoded characters in string as described in
 .Ve
 .PP
 Escape unsafe characters \f(CW\*(C`&\*(C'\fR, \f(CW\*(C`<\*(C'\fR, \f(CW\*(C`>\*(C'\fR, \f(CW\*(C`"\*(C'\fR and \f(CW\*(C`\*(Aq\*(C'\fR in string.
+.PP
+.Vb 2
+\&  # "&lt;div&gt;"
+\&  xml_escape \*(Aq<div>\*(Aq;
+.Ve
 .SS "xor_encode"
 .IX Subsection "xor_encode"
 .Vb 1
@@ -474,6 +561,13 @@ Escape unsafe characters \f(CW\*(C`&\*(C'\fR, \f(CW\*(C`<\*(C'\fR, \f(CW\*(C`>\*
 .Ve
 .PP
 \&\s-1XOR\s0 encode string with variable length key.
+.SS "xss_escape"
+.IX Subsection "xss_escape"
+.Vb 1
+\&  my $escaped = xss_escape $str;
+.Ve
+.PP
+Same as \*(L"xml_escape\*(R", but does not escape Mojo::ByteStream objects.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

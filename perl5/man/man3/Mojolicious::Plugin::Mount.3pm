@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Plugin::Mount 3"
-.TH Mojolicious::Plugin::Mount 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Plugin::Mount 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -149,11 +149,12 @@ Mojolicious::Plugin::Mount \- Application mount plugin
 \&  # Mojolicious::Lite
 \&  my $route = plugin Mount => {\*(Aq/prefix\*(Aq => \*(Aq/home/sri/myapp.pl\*(Aq};
 \&
-\&  # Adjust the generated route
+\&  # Adjust the generated route and mounted application
 \&  my $example = plugin Mount => {\*(Aq/example\*(Aq => \*(Aq/home/sri/example.pl\*(Aq};
 \&  $example\->to(message => \*(AqIt works great!\*(Aq);
 \&  my $app = $example\->pattern\->defaults\->{app};
 \&  $app\->config(foo => \*(Aqbar\*(Aq);
+\&  $app\->log(app\->log);
 \&
 \&  # Mount application with host
 \&  plugin Mount => {\*(Aqexample.com\*(Aq => \*(Aq/home/sri/myapp.pl\*(Aq};

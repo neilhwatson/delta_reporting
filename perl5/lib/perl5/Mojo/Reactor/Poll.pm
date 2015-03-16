@@ -1,7 +1,7 @@
 package Mojo::Reactor::Poll;
 use Mojo::Base 'Mojo::Reactor';
 
-use IO::Poll qw(POLLERR POLLHUP POLLIN POLLOUT POLLPRI);
+use IO::Poll qw(POLLERR POLLHUP POLLIN POLLNVAL POLLOUT POLLPRI);
 use List::Util 'min';
 use Mojo::Util qw(md5_sum steady_time);
 use Time::HiRes 'usleep';
@@ -22,38 +22,41 @@ sub is_running { !!shift->{running} }
 sub one_tick {
   my $self = shift;
 
-  # Remember state for later
-  my $running = $self->{running};
-  $self->{running} = 1;
+  # Just one tick
+  local $self->{running} = 1 unless $self->{running};
 
   # Wait for one event
   my $i;
-  my $poll = $self->_poll;
-  until ($i) {
+  until ($i || !$self->{running}) {
 
     # Stop automatically if there is nothing to watch
     return $self->stop unless keys %{$self->{timers}} || keys %{$self->{io}};
 
-    # Calculate ideal timeout based on timers
+    # Calculate ideal timeout based on timers and round up to next millisecond
     my $min = min map { $_->{time} } values %{$self->{timers}};
-    my $timeout = defined $min ? ($min - steady_time) : 0.5;
-    $timeout = 0 if $timeout < 0;
+    my $timeout = defined $min ? $min - steady_time : 0.5;
+    $timeout = $timeout <= 0 ? 0 : int($timeout * 1000) + 1;
 
     # I/O
     if (keys %{$self->{io}}) {
-      $poll->poll($timeout);
-      for my $handle ($poll->handles(POLLIN | POLLPRI | POLLHUP | POLLERR)) {
-        next unless my $io = $self->{io}{fileno $handle};
-        ++$i and $self->_sandbox('Read', $io->{cb}, 0);
-      }
-      for my $handle ($poll->handles(POLLOUT)) {
-        next unless my $io = $self->{io}{fileno $handle};
-        ++$i and $self->_sandbox('Write', $io->{cb}, 1);
+      my @poll = map { $_ => $self->{io}{$_}{mode} } keys %{$self->{io}};
+
+      # This may break in the future, but is worth it for performance
+      if (IO::Poll::_poll($timeout, @poll) > 0) {
+        while (my ($fd, $mode) = splice @poll, 0, 2) {
+
+          if ($mode & (POLLIN | POLLPRI | POLLNVAL | POLLHUP | POLLERR)) {
+            next unless my $io = $self->{io}{$fd};
+            ++$i and $self->_sandbox('Read', $io->{cb}, 0);
+          }
+          next unless $mode & POLLOUT && (my $io = $self->{io}{$fd});
+          ++$i and $self->_sandbox('Write', $io->{cb}, 1);
+        }
       }
     }
 
     # Wait for timeout if poll can't be used
-    elsif ($timeout) { usleep $timeout * 1000000 }
+    elsif ($timeout) { usleep $timeout * 1000 }
 
     # Timers (time should not change in between timers)
     my $now = steady_time;
@@ -70,9 +73,6 @@ sub one_tick {
       ++$i and $self->_sandbox("Timer $id", $t->{cb}) if $t->{cb};
     }
   }
-
-  # Restore state if necessary
-  $self->{running} = $running if $self->{running};
 }
 
 sub recurring { shift->_timer(1, @_) }
@@ -80,11 +80,10 @@ sub recurring { shift->_timer(1, @_) }
 sub remove {
   my ($self, $remove) = @_;
   return !!delete $self->{timers}{$remove} unless ref $remove;
-  $self->_poll->remove($remove);
   return !!delete $self->{io}{fileno $remove};
 }
 
-sub reset { delete @{shift()}{qw(io poll timers)} }
+sub reset { delete @{shift()}{qw(io timers)} }
 
 sub start {
   my $self = shift;
@@ -102,15 +101,17 @@ sub watch {
   my $mode = 0;
   $mode |= POLLIN | POLLPRI if $read;
   $mode |= POLLOUT if $write;
-
-  my $poll = $self->_poll;
-  $poll->remove($handle);
-  $poll->mask($handle, $mode) if $mode != 0;
+  $self->{io}{fileno $handle}{mode} = $mode;
 
   return $self;
 }
 
-sub _poll { shift->{poll} ||= IO::Poll->new }
+sub _id {
+  my $self = shift;
+  my $id;
+  do { $id = md5_sum 't' . steady_time . rand 999 } while $self->{timers}{$id};
+  return $id;
+}
 
 sub _sandbox {
   my ($self, $event, $cb) = (shift, shift, shift);
@@ -120,10 +121,8 @@ sub _sandbox {
 sub _timer {
   my ($self, $recurring, $after, $cb) = @_;
 
-  my $timers = $self->{timers} //= {};
-  my $id;
-  do { $id = md5_sum('t' . steady_time . rand 999) } while $timers->{$id};
-  my $timer = $timers->{$id}
+  my $id    = $self->_id;
+  my $timer = $self->{timers}{$id}
     = {cb => $cb, after => $after, time => steady_time + $after};
   $timer->{recurring} = $after if $recurring;
 
@@ -144,18 +143,26 @@ Mojo::Reactor::Poll - Low-level event reactor with poll support
 
   # Watch if handle becomes readable or writable
   my $reactor = Mojo::Reactor::Poll->new;
-  $reactor->io($handle => sub {
+  $reactor->io($first => sub {
     my ($reactor, $writable) = @_;
-    say $writable ? 'Handle is writable' : 'Handle is readable';
+    say $writable ? 'First handle is writable' : 'First handle is readable';
   });
 
   # Change to watching only if handle becomes writable
-  $reactor->watch($handle, 0, 1);
+  $reactor->watch($first, 0, 1);
+
+  # Turn file descriptor into handle and watch if it becomes readable
+  my $second = IO::Handle->new_from_fd($fd, 'r');
+  $reactor->io($second => sub {
+    my ($reactor, $writable) = @_;
+    say $writable ? 'Second handle is writable' : 'Second handle is readable';
+  })->watch($second, 1, 0);
 
   # Add a timer
   $reactor->timer(15 => sub {
     my $reactor = shift;
-    $reactor->remove($handle);
+    $reactor->remove($first);
+    $reactor->remove($second);
     say 'Timeout!';
   });
 

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo 3"
-.TH Mojo 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -199,7 +199,7 @@ The logging layer of your application, defaults to a Mojo::Log object.
 .PP
 .Vb 2
 \&  # Log debug message
-\&  $app\->log\->debug(\*(AqIt works!\*(Aq);
+\&  $app\->log\->debug(\*(AqIt works\*(Aq);
 .Ve
 .SS "ua"
 .IX Subsection "ua"
@@ -225,8 +225,7 @@ new ones.
 \&  my $tx = $app\->build_tx;
 .Ve
 .PP
-Transaction builder, defaults to building a Mojo::Transaction::HTTP
-object.
+Transaction builder, defaults to building a Mojo::Transaction::HTTP object.
 .SS "config"
 .IX Subsection "config"
 .Vb 4
@@ -241,6 +240,9 @@ Application configuration.
 .Vb 2
 \&  # Remove value
 \&  my $foo = delete $app\->config\->{foo};
+\&
+\&  # Assign multiple values at once
+\&  $app\->config(foo => \*(Aqtest\*(Aq, bar => 23);
 .Ve
 .SS "handler"
 .IX Subsection "handler"
@@ -259,15 +261,6 @@ be overloaded in a subclass.
 \&    ...
 \&  }
 .Ve
-.SS "new"
-.IX Subsection "new"
-.Vb 1
-\&  my $app = Mojo\->new;
-.Ve
-.PP
-Construct a new Mojo application. Will automatically detect your home
-directory if necessary and set up logging to \f(CW\*(C`log/mojo.log\*(C'\fR if there's a
-\&\f(CW\*(C`log\*(C'\fR directory.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

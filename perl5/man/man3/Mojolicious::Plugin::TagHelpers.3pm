@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Plugin::TagHelpers 3"
-.TH Mojolicious::Plugin::TagHelpers 3 "2014-10-07" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Plugin::TagHelpers 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -154,8 +154,8 @@ Mojolicious::Plugin::TagHelpers \- Tag helpers plugin
 Mojolicious::Plugin::TagHelpers is a collection of \s-1HTML\s0 tag helpers for
 Mojolicious.
 .PP
-Most form helpers can automatically pick up previous input values and will
-show them as default. You can also use
+Most form helpers can automatically pick up previous input values and will show
+them as default. You can also use
 \&\*(L"param\*(R" in Mojolicious::Plugin::DefaultHelpers to set them manually and let
 necessary attributes always be generated automatically.
 .PP
@@ -167,11 +167,11 @@ necessary attributes always be generated automatically.
 .Ve
 .PP
 For fields that failed validation with \*(L"validation\*(R" in Mojolicious::Controller
-the \f(CW\*(C`field\-with\-error\*(C'\fR class will be automatically added through the
-\&\f(CW\*(C`tag_with_error\*(C'\fR helper, to make styling with \s-1CSS\s0 easier.
+the \f(CW\*(C`field\-with\-error\*(C'\fR class will be automatically added through
+\&\*(L"tag_with_error\*(R", to make styling with \s-1CSS\s0 easier.
 .PP
 .Vb 1
-\&  <input class="field\-with\-error" name="age" type="text" value="250" />
+\&  <input class="field\-with\-error" name="age" type="text" value="250">
 .Ve
 .PP
 This is a core plugin, that means it is always enabled and its code a good
@@ -193,8 +193,8 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`checkbox\*(C'\fR. Previou
 automatically get picked up and shown as default.
 .PP
 .Vb 2
-\&  <input name="employed" type="checkbox" value="1" />
-\&  <input disabled="disabled" name="employed" type="checkbox" value="1" />
+\&  <input name="employed" type="checkbox" value="1">
+\&  <input disabled="disabled" name="employed" type="checkbox" value="1">
 .Ve
 .SS "color_field"
 .IX Subsection "color_field"
@@ -208,9 +208,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`color\*(C'\fR. Previous i
 automatically get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="background" type="color" />
-\&  <input name="background" type="color" value="#ffffff" />
-\&  <input id="foo" name="background" type="color" value="#ffffff" />
+\&  <input name="background" type="color">
+\&  <input name="background" type="color" value="#ffffff">
+\&  <input id="foo" name="background" type="color" value="#ffffff">
 .Ve
 .SS "csrf_field"
 .IX Subsection "csrf_field"
@@ -222,7 +222,7 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`hidden\*(C'\fR with
 \&\*(L"csrf_token\*(R" in Mojolicious::Plugin::DefaultHelpers.
 .PP
 .Vb 1
-\&  <input name="csrf_token" type="hidden" value="fa6a08..." />
+\&  <input name="csrf_token" type="hidden" value="fa6a08...">
 .Ve
 .SS "date_field"
 .IX Subsection "date_field"
@@ -232,13 +232,13 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`hidden\*(C'\fR with
 \&  %= date_field end => \*(Aq2012\-12\-21\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`date\*(C'\fR. Previous input values will
-automatically get picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`date\*(C'\fR. Previous input values will automatically
+get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="end" type="date" />
-\&  <input name="end" type="date" value="2012\-12\-21" />
-\&  <input id="foo" name="end" type="date" value="2012\-12\-21" />
+\&  <input name="end" type="date">
+\&  <input name="end" type="date" value="2012\-12\-21">
+\&  <input id="foo" name="end" type="date" value="2012\-12\-21">
 .Ve
 .SS "datetime_field"
 .IX Subsection "datetime_field"
@@ -252,9 +252,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`datetime\*(C'\fR. Previou
 automatically get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="end" type="datetime" />
-\&  <input name="end" type="datetime" value="2012\-12\-21T23:59:59Z" />
-\&  <input id="foo" name="end" type="datetime" value="2012\-12\-21T23:59:59Z" />
+\&  <input name="end" type="datetime">
+\&  <input name="end" type="datetime" value="2012\-12\-21T23:59:59Z">
+\&  <input id="foo" name="end" type="datetime" value="2012\-12\-21T23:59:59Z">
 .Ve
 .SS "email_field"
 .IX Subsection "email_field"
@@ -268,9 +268,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`email\*(C'\fR. Previous i
 automatically get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="notify" type="email" />
-\&  <input name="notify" type="email" value="nospam@example.com" />
-\&  <input id="foo" name="notify" type="email" value="nospam@example.com" />
+\&  <input name="notify" type="email">
+\&  <input name="notify" type="email" value="nospam@example.com">
+\&  <input id="foo" name="notify" type="email" value="nospam@example.com">
 .Ve
 .SS "file_field"
 .IX Subsection "file_field"
@@ -282,8 +282,8 @@ automatically get picked up and shown as default.
 Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`file\*(C'\fR.
 .PP
 .Vb 2
-\&  <input name="avatar" type="file" />
-\&  <input id="foo" name="avatar" type="file" />
+\&  <input name="avatar" type="file">
+\&  <input id="foo" name="avatar" type="file">
 .Ve
 .SS "form_for"
 .IX Subsection "form_for"
@@ -312,20 +312,20 @@ automatically added.
 .PP
 .Vb 10
 \&  <form action="/path/to/login">
-\&    <input name="first_name" type="text" />
-\&    <input value="Ok" type="submit" />
+\&    <input name="first_name" type="text">
+\&    <input value="Ok" type="submit">
 \&  </form>
 \&  <form action="/path/to/login.txt" method="POST">
-\&    <input name="first_name" type="text" />
-\&    <input value="Ok" type="submit" />
+\&    <input name="first_name" type="text">
+\&    <input value="Ok" type="submit">
 \&  </form>
 \&  <form action="/path/to/login" enctype="multipart/form\-data">
-\&    <input disabled="disabled" name="first_name" type="text" />
-\&    <input value="Ok" type="submit" />
+\&    <input disabled="disabled" name="first_name" type="text">
+\&    <input value="Ok" type="submit">
 \&  </form>
 \&  <form action="http://example.com/login" method="POST">
-\&    <input name="first_name" type="text" />
-\&    <input value="Ok" type="submit" />
+\&    <input name="first_name" type="text">
+\&    <input value="Ok" type="submit">
 \&  </form>
 .Ve
 .SS "hidden_field"
@@ -338,8 +338,8 @@ automatically added.
 Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`hidden\*(C'\fR.
 .PP
 .Vb 2
-\&  <input name="foo" type="hidden" value="bar" />
-\&  <input id="bar" name="foo" type="hidden" value="bar" />
+\&  <input name="foo" type="hidden" value="bar">
+\&  <input id="bar" name="foo" type="hidden" value="bar">
 .Ve
 .SS "image"
 .IX Subsection "image"
@@ -351,8 +351,8 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`hidden\*(C'\fR.
 Generate portable \f(CW\*(C`img\*(C'\fR tag.
 .PP
 .Vb 2
-\&  <img src="/path/to/images/foo.png" />
-\&  <img alt="Foo" src="/path/to/images/foo.png" />
+\&  <img src="/path/to/images/foo.png">
+\&  <img alt="Foo" src="/path/to/images/foo.png">
 .Ve
 .SS "input_tag"
 .IX Subsection "input_tag"
@@ -366,9 +366,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag. Previous input values will automatically g
 and shown as default.
 .PP
 .Vb 3
-\&  <input name="first_name" />
-\&  <input name="first_name" value="Default name" />
-\&  <input name="employed" type="checkbox" />
+\&  <input name="first_name">
+\&  <input name="first_name" value="Default name">
+\&  <input name="employed" type="checkbox">
 .Ve
 .SS "javascript"
 .IX Subsection "javascript"
@@ -382,7 +382,7 @@ and shown as default.
 Generate portable \f(CW\*(C`script\*(C'\fR tag for JavaScript asset.
 .PP
 .Vb 4
-\&  <script src="/path/to/script.js" />
+\&  <script src="/path/to/script.js"></script>
 \&  <script><![CDATA[
 \&    var a = \*(Aqb\*(Aq;
 \&  ]]></script>
@@ -454,9 +454,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`month\*(C'\fR. Previous i
 automatically get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="vacation" type="month" />
-\&  <input name="vacation" type="month" value="2012\-12" />
-\&  <input id="foo" name="vacation" type="month" value="2012\-12" />
+\&  <input name="vacation" type="month">
+\&  <input name="vacation" type="month" value="2012\-12">
+\&  <input id="foo" name="vacation" type="month" value="2012\-12">
 .Ve
 .SS "number_field"
 .IX Subsection "number_field"
@@ -470,9 +470,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`number\*(C'\fR. Previous 
 automatically get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="age" type="number" />
-\&  <input name="age" type="number" value="25" />
-\&  <input id="foo" max="200" min="0" name="age" type="number" value="25" />
+\&  <input name="age" type="number">
+\&  <input name="age" type="number" value="25">
+\&  <input id="foo" max="200" min="0" name="age" type="number" value="25">
 .Ve
 .SS "password_field"
 .IX Subsection "password_field"
@@ -484,8 +484,8 @@ automatically get picked up and shown as default.
 Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`password\*(C'\fR.
 .PP
 .Vb 2
-\&  <input name="pass" type="password" />
-\&  <input id="foo" name="pass" type="password" />
+\&  <input name="pass" type="password">
+\&  <input id="foo" name="pass" type="password">
 .Ve
 .SS "radio_button"
 .IX Subsection "radio_button"
@@ -498,8 +498,8 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`radio\*(C'\fR. Previous i
 automatically get picked up and shown as default.
 .PP
 .Vb 2
-\&  <input name="country" type="radio" value="germany" />
-\&  <input id="foo" name="country" type="radio" value="germany" />
+\&  <input name="country" type="radio" value="germany">
+\&  <input id="foo" name="country" type="radio" value="germany">
 .Ve
 .SS "range_field"
 .IX Subsection "range_field"
@@ -513,9 +513,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`range\*(C'\fR. Previous i
 automatically get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="age" type="range" />
-\&  <input name="age" type="range" value="25" />
-\&  <input id="foo" max="200" min="200" name="age" type="range" value="25" />
+\&  <input name="age" type="range">
+\&  <input name="age" type="range" value="25">
+\&  <input id="foo" max="200" min="200" name="age" type="range" value="25">
 .Ve
 .SS "search_field"
 .IX Subsection "search_field"
@@ -529,9 +529,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`search\*(C'\fR. Previous 
 automatically get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="q" type="search" />
-\&  <input name="q" type="search" value="perl" />
-\&  <input id="foo" name="q" type="search" value="perl" />
+\&  <input name="q" type="search">
+\&  <input name="q" type="search" value="perl">
+\&  <input id="foo" name="q" type="search" value="perl">
 .Ve
 .SS "select_field"
 .IX Subsection "select_field"
@@ -544,8 +544,8 @@ automatically get picked up and shown as default.
 .Ve
 .PP
 Generate \f(CW\*(C`select\*(C'\fR and \f(CW\*(C`option\*(C'\fR tags from array references and \f(CW\*(C`optgroup\*(C'\fR
-tags from Mojo::Collection objects. Previous input values will
-automatically get picked up and shown as default.
+tags from Mojo::Collection objects. Previous input values will automatically
+get picked up and shown as default.
 .PP
 .Vb 10
 \&  <select name="country">
@@ -589,7 +589,7 @@ automatically get picked up and shown as default.
 Generate portable \f(CW\*(C`style\*(C'\fR or \f(CW\*(C`link\*(C'\fR tag for \s-1CSS\s0 asset.
 .PP
 .Vb 4
-\&  <link href="/path/to/foo.css" rel="stylesheet" />
+\&  <link href="/path/to/foo.css" rel="stylesheet">
 \&  <style><![CDATA[
 \&    body {color: #000}
 \&  ]]></style>
@@ -604,8 +604,8 @@ Generate portable \f(CW\*(C`style\*(C'\fR or \f(CW\*(C`link\*(C'\fR tag for \s-1
 Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`submit\*(C'\fR.
 .PP
 .Vb 2
-\&  <input type="submit" value="Ok" />
-\&  <input id="foo" type="submit" value="Ok!" />
+\&  <input type="submit" value="Ok">
+\&  <input id="foo" type="submit" value="Ok!">
 .Ve
 .SS "t"
 .IX Subsection "t"
@@ -620,9 +620,10 @@ Alias for \*(L"tag\*(R".
 .Ve
 .SS "tag"
 .IX Subsection "tag"
-.Vb 9
+.Vb 10
+\&  %= tag \*(Aqbr\*(Aq
 \&  %= tag \*(Aqdiv\*(Aq
-\&  %= tag \*(Aqdiv\*(Aq, id => \*(Aqfoo\*(Aq
+\&  %= tag \*(Aqdiv\*(Aq, id => \*(Aqfoo\*(Aq, hidden => undef
 \&  %= tag div => \*(Aqtest & 123\*(Aq
 \&  %= tag div => (id => \*(Aqfoo\*(Aq) => \*(Aqtest & 123\*(Aq
 \&  %= tag div => (data => {my_id => 1, Name => \*(Aqtest\*(Aq}) => \*(Aqtest & 123\*(Aq
@@ -632,11 +633,13 @@ Alias for \*(L"tag\*(R".
 \&  <%= tag div => (id => \*(Aqfoo\*(Aq) => begin %>test & 123<% end %>
 .Ve
 .PP
-\&\s-1HTML/XML\s0 tag generator.
+\&\s-1HTML\s0 tag generator, the \f(CW\*(C`data\*(C'\fR attribute may contain a hash reference with
+key/value pairs to generate attributes from.
 .PP
-.Vb 9
-\&  <div />
-\&  <div id="foo" />
+.Vb 10
+\&  <br>
+\&  <div></div>
+\&  <div id="foo" hidden></div>
 \&  <div>test &amp; 123</div>
 \&  <div id="foo">test &amp; 123</div>
 \&  <div data\-my\-id="1" data\-name="test">test &amp; 123</div>
@@ -648,14 +651,15 @@ Alias for \*(L"tag\*(R".
 .PP
 Very useful for reuse in more specific tag helpers.
 .PP
-.Vb 3
-\&  $c\->tag(\*(Aqdiv\*(Aq);
-\&  $c\->tag(\*(Aqdiv\*(Aq, id => \*(Aqfoo\*(Aq);
-\&  $c\->tag(div => sub { \*(AqContent\*(Aq });
+.Vb 4
+\&  my $output = $c\->tag(\*(Aqmeta\*(Aq);
+\&  my $output = $c\->tag(\*(Aqmeta\*(Aq, charset => \*(AqUTF\-8\*(Aq);
+\&  my $output = $c\->tag(div => \*(Aq<p>This will be escaped</p>\*(Aq);
+\&  my $output = $c\->tag(div => sub { \*(Aq<p>This will not be escaped</p>\*(Aq });
 .Ve
 .PP
 Results are automatically wrapped in Mojo::ByteStream objects to prevent
-accidental double escaping.
+accidental double escaping in \f(CW\*(C`ep\*(C'\fR templates.
 .SS "tag_with_error"
 .IX Subsection "tag_with_error"
 .Vb 1
@@ -665,7 +669,7 @@ accidental double escaping.
 Same as \*(L"tag\*(R", but adds the class \f(CW\*(C`field\-with\-error\*(C'\fR.
 .PP
 .Vb 1
-\&  <input class="foo field\-with\-error" />
+\&  <input class="foo field\-with\-error">
 .Ve
 .SS "tel_field"
 .IX Subsection "tel_field"
@@ -679,9 +683,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`tel\*(C'\fR. Previous inp
 get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="work" type="tel" />
-\&  <input name="work" type="tel" value="123456789" />
-\&  <input id="foo" name="work" type="tel" value="123456789" />
+\&  <input name="work" type="tel">
+\&  <input name="work" type="tel" value="123456789">
+\&  <input id="foo" name="work" type="tel" value="123456789">
 .Ve
 .SS "text_area"
 .IX Subsection "text_area"
@@ -713,13 +717,13 @@ up and shown as default.
 \&  %= text_field first_name => \*(AqDefault name\*(Aq, class => \*(Aquser\*(Aq
 .Ve
 .PP
-Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`text\*(C'\fR. Previous input values will
-automatically get picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`text\*(C'\fR. Previous input values will automatically
+get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="first_name" type="text" />
-\&  <input name="first_name" type="text" value="Default name" />
-\&  <input class="user" name="first_name" type="text" value="Default name" />
+\&  <input name="first_name" type="text">
+\&  <input name="first_name" type="text" value="Default name">
+\&  <input class="user" name="first_name" type="text" value="Default name">
 .Ve
 .SS "time_field"
 .IX Subsection "time_field"
@@ -729,13 +733,13 @@ automatically get picked up and shown as default.
 \&  %= time_field start => \*(Aq23:59:59\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`time\*(C'\fR. Previous input values will
-automatically get picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`time\*(C'\fR. Previous input values will automatically
+get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="start" type="time" />
-\&  <input name="start" type="time" value="23:59:59" />
-\&  <input id="foo" name="start" type="time" value="23:59:59" />
+\&  <input name="start" type="time">
+\&  <input name="start" type="time" value="23:59:59">
+\&  <input id="foo" name="start" type="time" value="23:59:59">
 .Ve
 .SS "url_field"
 .IX Subsection "url_field"
@@ -749,9 +753,9 @@ Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`url\*(C'\fR. Previous inp
 get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="address" type="url" />
-\&  <input name="address" type="url" value="http://mojolicio.us" />
-\&  <input id="foo" name="address" type="url" value="http://mojolicio.us" />
+\&  <input name="address" type="url">
+\&  <input name="address" type="url" value="http://mojolicio.us">
+\&  <input id="foo" name="address" type="url" value="http://mojolicio.us">
 .Ve
 .SS "week_field"
 .IX Subsection "week_field"
@@ -761,13 +765,13 @@ get picked up and shown as default.
 \&  %= week_field vacation => \*(Aq2012\-W17\*(Aq, id => \*(Aqfoo\*(Aq
 .Ve
 .PP
-Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`week\*(C'\fR. Previous input values will
-automatically get picked up and shown as default.
+Generate \f(CW\*(C`input\*(C'\fR tag of type \f(CW\*(C`week\*(C'\fR. Previous input values will automatically
+get picked up and shown as default.
 .PP
 .Vb 3
-\&  <input name="vacation" type="week" />
-\&  <input name="vacation" type="week" value="2012\-W17" />
-\&  <input id="foo" name="vacation" type="week" value="2012\-W17" />
+\&  <input name="vacation" type="week">
+\&  <input name="vacation" type="week" value="2012\-W17">
+\&  <input id="foo" name="vacation" type="week" value="2012\-W17">
 .Ve
 .SH "METHODS"
 .IX Header "METHODS"

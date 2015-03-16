@@ -36,11 +36,12 @@ Mojolicious::Plugin::Mount - Application mount plugin
   # Mojolicious::Lite
   my $route = plugin Mount => {'/prefix' => '/home/sri/myapp.pl'};
 
-  # Adjust the generated route
+  # Adjust the generated route and mounted application
   my $example = plugin Mount => {'/example' => '/home/sri/example.pl'};
   $example->to(message => 'It works great!');
   my $app = $example->pattern->defaults->{app};
   $app->config(foo => 'bar');
+  $app->log(app->log);
 
   # Mount application with host
   plugin Mount => {'example.com' => '/home/sri/myapp.pl'};

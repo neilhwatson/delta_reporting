@@ -75,8 +75,8 @@ L<RFC 7231|http://tools.ietf.org/html/rfc7231>.
 
 =head1 EVENTS
 
-L<Mojo::Content::Single> inherits all events from L<Mojo::Content> and can
-emit the following new ones.
+L<Mojo::Content::Single> inherits all events from L<Mojo::Content> and can emit
+the following new ones.
 
 =head2 upgrade
 
@@ -104,7 +104,7 @@ implements the following new ones.
   $single   = $single->asset(Mojo::Asset::Memory->new);
 
 The actual content, defaults to a L<Mojo::Asset::Memory> object with
-C<auto_upgrade> enabled.
+L<Mojo::Asset::Memory/"auto_upgrade"> enabled.
 
 =head2 auto_upgrade
 
@@ -146,6 +146,8 @@ Get a chunk of content starting from a specific position.
 =head2 new
 
   my $single = Mojo::Content::Single->new;
+  my $single = Mojo::Content::Single->new(asset => Mojo::Asset::File->new);
+  my $single = Mojo::Content::Single->new({asset => Mojo::Asset::File->new});
 
 Construct a new L<Mojo::Content::Single> object and subscribe to L</"read">
 event with default content parser.

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Test::Mojo 3"
-.TH Test::Mojo 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Test::Mojo 3 "2015-03-09" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -170,9 +170,19 @@ Test::Mojo \- Testing Mojo!
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Test::Mojo is a collection of testing helpers for everyone developing
-Mojo and Mojolicious applications, it is usually used together with
-Test::More.
+Test::Mojo is a test user agent based on Mojo::UserAgent, it is usually
+used together with Test::More to test Mojolicious applications. Just run
+your tests with the command Mojolicious::Command::test or prove.
+.PP
+.Vb 3
+\&  $ ./script/my_app test
+\&  $ ./script/my_app test \-v t/foo.t
+\&  $ prove \-l \-v t/foo.t
+.Ve
+.PP
+If it is not already defined, the \f(CW\*(C`MOJO_LOG_LEVEL\*(C'\fR environment variable will
+be set to \f(CW\*(C`debug\*(C'\fR or \f(CW\*(C`fatal\*(C'\fR, depending on the value of the
+\&\f(CW\*(C`HARNESS_IS_VERBOSE\*(C'\fR environment variable.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Test::Mojo implements the following attributes.
@@ -228,7 +238,8 @@ True if the last test was successful.
 \&  $t     = $t\->tx(Mojo::Transaction::HTTP\->new);
 .Ve
 .PP
-Current transaction, usually a Mojo::Transaction::HTTP object.
+Current transaction, usually a Mojo::Transaction::HTTP or
+Mojo::Transaction::WebSocket object.
 .PP
 .Vb 3
 \&  # More specific tests
@@ -271,7 +282,7 @@ following new ones.
 .IX Subsection "app"
 .Vb 2
 \&  my $app = $t\->app;
-\&  $t      = $t\->app(MyApp\->new);
+\&  $t      = $t\->app(Mojolicious\->new);
 .Ve
 .PP
 Access application with \*(L"app\*(R" in Mojo::UserAgent::Server.
@@ -385,6 +396,16 @@ arguments as \*(L"delete\*(R" in Mojo::UserAgent, except for the callback.
 .PP
 Checks for existence of the \s-1CSS\s0 selectors first matching \s-1HTML/XML\s0 element with
 \&\*(L"at\*(R" in Mojo::DOM.
+.PP
+.Vb 7
+\&  # Check attribute values
+\&  $t\->get_ok(\*(Aq/login\*(Aq)
+\&    \->element_exists(\*(Aqlabel[for=email]\*(Aq)
+\&    \->element_exists(\*(Aqinput[name=email][type=text][value*="example.com"]\*(Aq)
+\&    \->element_exists(\*(Aqlabel[for=pass]\*(Aq)
+\&    \->element_exists(\*(Aqinput[name=pass][type=password]\*(Aq)
+\&    \->element_exists(\*(Aqinput[type=submit][value]\*(Aq);
+.Ve
 .SS "element_exists_not"
 .IX Subsection "element_exists_not"
 .Vb 2
@@ -425,9 +446,14 @@ arguments as \*(L"get\*(R" in Mojo::UserAgent, except for the callback.
 \&  # Run tests against remote host
 \&  $t\->get_ok(\*(Aqhttp://mojolicio.us/perldoc\*(Aq)\->status_is(200);
 \&
+\&  # Use relative URL for request with Basic authentication
+\&  $t\->get_ok(\*(Aq//sri:secr3t@/secrets.json\*(Aq)
+\&    \->status_is(200)
+\&    \->json_is(\*(Aq/1/content\*(Aq, \*(AqMojo rocks!\*(Aq);
+\&
 \&  # Run additional tests on the transaction
 \&  $t\->get_ok(\*(Aq/foo\*(Aq)\->status_is(200);
-\&  is $t\->tx\->res\->dom\->at(\*(Aqinput\*(Aq)\->val, \*(Aqwhatever\*(Aq, \*(Aqright value\*(Aq;
+\&  is $t\->tx\->res\->dom\->at(\*(Aqinput\*(Aq)\->{value}, \*(Aqwhatever\*(Aq, \*(Aqright value\*(Aq;
 .Ve
 .SS "head_ok"
 .IX Subsection "head_ok"
@@ -676,8 +702,8 @@ arguments as \*(L"post\*(R" in Mojo::UserAgent, except for the callback.
 .PP
 .Vb 3
 \&  # Test file upload
-\&  $t\->post_ok(\*(Aq/upload\*(Aq => form => {foo => {content => \*(Aqbar\*(Aq}})
-\&    \->status_is(200);
+\&  my $upload = {foo => {content => \*(Aqbar\*(Aq, filename => \*(Aqbaz.txt\*(Aq}};
+\&  $t\->post_ok(\*(Aq/upload\*(Aq => form => $upload)\->status_is(200);
 \&
 \&  # Test JSON API
 \&  $t\->post_ok(\*(Aq/hello.json\*(Aq => json => {hello => \*(Aqworld\*(Aq})
@@ -708,10 +734,15 @@ Perform request and check for transport errors.
 \&  my $tx = $t\->ua\->build_tx(FOO => \*(Aq/test.json\*(Aq => json => {foo => 1});
 \&  $t\->request_ok($tx)\->status_is(200)\->json_is({success => 1});
 \&
+\&  # Request with custom cookie
+\&  my $tx = $t\->ua\->build_tx(GET => \*(Aq/account\*(Aq);
+\&  $tx\->req\->cookies({name => \*(Aquser\*(Aq, value => \*(Aqsri\*(Aq});
+\&  $t\->request_ok($tx)\->status_is(200)\->text_is(\*(Aqhead > title\*(Aq => \*(AqHello sri\*(Aq);
+\&
 \&  # Custom WebSocket handshake
-\& my $tx = $t\->ua\->build_websocket_tx(\*(Aq/foo\*(Aq);
-\& $tx\->req\->headers\->remove(\*(AqUser\-Agent\*(Aq);
-\& $t\->request_ok($tx)\->message_ok\->message_is(\*(Aqbar\*(Aq)\->finish_ok;
+\&  my $tx = $t\->ua\->build_websocket_tx(\*(Aq/foo\*(Aq);
+\&  $tx\->req\->headers\->remove(\*(AqUser\-Agent\*(Aq);
+\&  $t\->request_ok($tx)\->message_ok\->message_is(\*(Aqbar\*(Aq)\->finish_ok;
 .Ve
 .SS "reset_session"
 .IX Subsection "reset_session"
@@ -803,7 +834,7 @@ arguments as \*(L"websocket\*(R" in Mojo::UserAgent, except for the callback.
 .PP
 .Vb 6
 \&  # WebSocket with permessage\-deflate compression
-\&  $t\->websocket(\*(Aq/x\*(Aq => {\*(AqSec\-WebSocket\-Extensions\*(Aq => \*(Aqpermessage\-deflate\*(Aq})
+\&  $t\->websocket_ok(\*(Aq/\*(Aq => {\*(AqSec\-WebSocket\-Extensions\*(Aq => \*(Aqpermessage\-deflate\*(Aq})
 \&    \->send_ok(\*(Aqy\*(Aq x 50000)
 \&    \->message_ok
 \&    \->message_is(\*(Aqz\*(Aq x 50000)

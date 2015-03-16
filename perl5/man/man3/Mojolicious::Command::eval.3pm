@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Command::eval 3"
-.TH Mojolicious::Command::eval 3 "2014-07-11" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Command::eval 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -150,8 +150,8 @@ Mojolicious::Command::eval \- Eval command
 \&    ./myapp.pl eval \-V \*(Aqapp\->renderer\->paths\*(Aq
 \&
 \&  Options:
-\&    \-v, \-\-verbose   Print return value to STDOUT.
-\&    \-V              Print returned data structure to STDOUT.
+\&    \-v, \-\-verbose   Print return value to STDOUT
+\&    \-V              Print returned data structure to STDOUT
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -170,7 +170,7 @@ Mojolicious::Command and implements the following new ones.
 .IX Subsection "description"
 .Vb 2
 \&  my $description = $eval\->description;
-\&  $eval           = $eval\->description(\*(AqFoo!\*(Aq);
+\&  $eval           = $eval\->description(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short description of this command, used for the command list.
@@ -178,14 +178,14 @@ Short description of this command, used for the command list.
 .IX Subsection "usage"
 .Vb 2
 \&  my $usage = $eval\->usage;
-\&  $eval     = $eval\->usage(\*(AqFoo!\*(Aq);
+\&  $eval     = $eval\->usage(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Usage information for this command, used for the help screen.
 .SH "METHODS"
 .IX Header "METHODS"
-Mojolicious::Command::eval inherits all methods from
-Mojolicious::Command and implements the following new ones.
+Mojolicious::Command::eval inherits all methods from Mojolicious::Command
+and implements the following new ones.
 .SS "run"
 .IX Subsection "run"
 .Vb 1

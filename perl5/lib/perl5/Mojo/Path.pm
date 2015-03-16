@@ -15,7 +15,9 @@ sub canonicalize {
 
   my $parts = $self->parts;
   for (my $i = 0; $i <= $#$parts;) {
-    if ($parts->[$i] eq '.' || $parts->[$i] eq '') { splice @$parts, $i, 1 }
+    if ($parts->[$i] eq '' || $parts->[$i] eq '.' || $parts->[$i] eq '...') {
+      splice @$parts, $i, 1;
+    }
     elsif ($i < 1 || $parts->[$i] ne '..' || $parts->[$i - 1] eq '..') { $i++ }
     else { splice @$parts, --$i, 2 }
   }
@@ -169,13 +171,17 @@ following new ones.
 
   $path = $path->canonicalize;
 
-Canonicalize path.
+Canonicalize path by resolving C<.> and C<..>, in addition C<...> will be
+treated as C<.> to protect from path traversal attacks.
 
   # "/foo/baz"
   Mojo::Path->new('/foo/./bar/../baz')->canonicalize;
 
   # "/../baz"
   Mojo::Path->new('/foo/../bar/../../baz')->canonicalize;
+
+  # "/foo/bar"
+  Mojo::Path->new('/foo/.../bar')->canonicalize;
 
 =head2 clone
 
@@ -207,11 +213,17 @@ Check if path contains given prefix.
 Path has a leading slash. Note that this method will normalize the path and
 that C<%2F> will be treated as C</> for security reasons.
 
+  # "/foo/bar"
+  Mojo::Path->new('foo/bar')->leading_slash(1);
+
+  # "foo/bar"
+  Mojo::Path->new('/foo/bar')->leading_slash(0);
+
 =head2 merge
 
   $path = $path->merge('/foo/bar');
   $path = $path->merge('foo/bar');
-  $path = $path->merge(Mojo::Path->new('foo/bar'));
+  $path = $path->merge(Mojo::Path->new);
 
 Merge paths. Note that this method will normalize both paths if necessary and
 that C<%2F> will be treated as C</> for security reasons.
@@ -300,6 +312,12 @@ Turn path into a string.
 
 Path has a trailing slash. Note that this method will normalize the path and
 that C<%2F> will be treated as C</> for security reasons.
+
+  # "/foo/bar/"
+  Mojo::Path->new('/foo/bar')->trailing_slash(1);
+
+  # "/foo/bar"
+  Mojo::Path->new('/foo/bar/')->trailing_slash(0);
 
 =head1 OPERATORS
 

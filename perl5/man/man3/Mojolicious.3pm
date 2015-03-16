@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious 3"
-.TH Mojolicious 3 "2014-10-23" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious 3 "2015-03-03" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -183,8 +183,8 @@ parsed.
 .PP
 This is a very powerful hook and should not be used lightly, it makes some
 rather advanced features such as upload progress bars possible. Note that this
-hook will not work for embedded applications. (Passed the transaction and
-application object)
+hook will not work for embedded applications, because only the host application
+gets to build transactions. (Passed the transaction and application object)
 .SS "before_dispatch"
 .IX Subsection "before_dispatch"
 Emitted right before the static file server and router start their work.
@@ -228,10 +228,9 @@ Mostly used for custom dispatchers and collecting metrics. (Passed the default
 controller object)
 .SS "around_action"
 .IX Subsection "around_action"
-Emitted right before an action gets invoked and wraps around it, so you have
-to manually forward to the next hook if you want to continue the chain.
-Default action dispatching is the last hook in the chain, yours will run
-before it.
+Emitted right before an action gets invoked and wraps around it, so you have to
+manually forward to the next hook if you want to continue the chain. Default
+action dispatching is the last hook in the chain, yours will run before it.
 .PP
 .Vb 5
 \&  $app\->hook(around_action => sub {
@@ -297,9 +296,8 @@ Useful for rewriting outgoing responses and other post-processing tasks.
 Emitted right before the \*(L"before_dispatch\*(R" hook and wraps around the whole
 dispatch process, so you have to manually forward to the next hook if you want
 to continue the chain. Default exception handling with
-\&\*(L"reply\->exception\*(R" in Mojolicious::Plugin::DefaultHelpers is the first
-hook in the chain and a call to \*(L"dispatch\*(R" the last, yours will be in
-between.
+\&\*(L"reply\->exception\*(R" in Mojolicious::Plugin::DefaultHelpers is the first hook
+in the chain and a call to \*(L"dispatch\*(R" the last, yours will be in between.
 .PP
 .Vb 6
 \&  $app\->hook(around_dispatch => sub {
@@ -384,10 +382,9 @@ The plugin manager, defaults to a Mojolicious::Plugins object. See the
 \&  $app         = $app\->renderer(Mojolicious::Renderer\->new);
 .Ve
 .PP
-Used in your application to render content, defaults to a
-Mojolicious::Renderer object. The two main renderer plugins
-Mojolicious::Plugin::EPRenderer and Mojolicious::Plugin::EPLRenderer
-contain more information.
+Used to render content, defaults to a Mojolicious::Renderer object. For more
+information about how to generate content see
+Mojolicious::Guides::Rendering.
 .PP
 .Vb 2
 \&  # Add another "templates" directory
@@ -428,8 +425,8 @@ change it!!! As long as you are using the insecure default there will be debug
 messages in the log file reminding you to change your passphrase. Only the
 first passphrase is used to create new signatures, but all of them for
 verification. So you can increase security without invalidating all your
-existing signed cookies by rotating passphrases, just add new ones to the
-front and remove old ones from the back.
+existing signed cookies by rotating passphrases, just add new ones to the front
+and remove old ones from the back.
 .PP
 .Vb 2
 \&  # Rotate passphrases
@@ -490,6 +487,14 @@ Mojolicious::Types object.
 .Ve
 .PP
 Validate parameters, defaults to a Mojolicious::Validator object.
+.PP
+.Vb 5
+\&  # Add validation check
+\&  $app\->validator\->add_check(foo => sub {
+\&    my ($validation, $name, $value) = @_;
+\&    return $value ne \*(Aqfoo\*(Aq;
+\&  });
+.Ve
 .SH "METHODS"
 .IX Header "METHODS"
 Mojolicious inherits all methods from Mojo and implements the following
@@ -530,6 +535,9 @@ request.
 .Vb 2
 \&  # Remove value
 \&  my $foo = delete $app\->defaults\->{foo};
+\&
+\&  # Assign multiple values at once
+\&  $app\->defaults(foo => \*(Aqtest\*(Aq, bar => 23);
 .Ve
 .SS "dispatch"
 .IX Subsection "dispatch"
@@ -593,8 +601,10 @@ requests indiscriminately, for a full list of available hooks see \*(L"\s-1HOOKS
 .Ve
 .SS "new"
 .IX Subsection "new"
-.Vb 1
+.Vb 3
 \&  my $app = Mojolicious\->new;
+\&  my $app = Mojolicious\->new(moniker => \*(Aqfoo_bar\*(Aq);
+\&  my $app = Mojolicious\->new({moniker => \*(Aqfoo_bar\*(Aq});
 .Ve
 .PP
 Construct a new Mojolicious application and call \*(L"startup\*(R". Will
@@ -626,10 +636,12 @@ Mojolicious distribution see \*(L"\s-1PLUGINS\*(R"\s0 in Mojolicious::Plugins.
 .Ve
 .PP
 Start the command line interface for your application, for a full list of
-commands available by default see \*(L"\s-1COMMANDS\*(R"\s0 in Mojolicious::Commands.
+commands available by default see \*(L"\s-1COMMANDS\*(R"\s0 in Mojolicious::Commands. Note
+that the options \f(CW\*(C`\-h\*(C'\fR/\f(CW\*(C`\-\-help\*(C'\fR, \f(CW\*(C`\-\-home\*(C'\fR and \f(CW\*(C`\-m\*(C'\fR/\f(CW\*(C`\-\-mode\*(C'\fR, which are
+shared by all commands, will be parsed from \f(CW@ARGV\fR during compile time.
 .PP
 .Vb 2
-\&  # Always start daemon and ignore @ARGV
+\&  # Always start daemon
 \&  $app\->start(\*(Aqdaemon\*(Aq, \*(Aq\-l\*(Aq, \*(Aqhttp://*:8080\*(Aq);
 .Ve
 .SS "startup"
@@ -656,8 +668,12 @@ Note that application helpers are always called with a new default controller
 object, so they can't depend on or change controller state, which includes
 request, response and stash.
 .PP
-.Vb 1
-\&  $app\->log\->debug($app\->dumper({foo => \*(Aqbar\*(Aq}));
+.Vb 2
+\&  # Call helper
+\&  say $app\->dumper({foo => \*(Aqbar\*(Aq});
+\&
+\&  # Longer version
+\&  say $app\->build_controller\->helpers\->dumper({foo => \*(Aqbar\*(Aq});
 .Ve
 .SH "BUNDLED FILES"
 .IX Header "BUNDLED FILES"
@@ -666,7 +682,7 @@ that have been bundled for internal use.
 .SS "Mojolicious Artwork"
 .IX Subsection "Mojolicious Artwork"
 .Vb 1
-\&  Copyright (C) 2010\-2014, Sebastian Riedel.
+\&  Copyright (C) 2010\-2015, Sebastian Riedel.
 .Ve
 .PP
 Licensed under the CC-SA License, Version 4.0
@@ -690,6 +706,8 @@ Licensed under the Apache License, Version 2.0
 .IX Header "CODE NAMES"
 Every major release of Mojolicious has a code name, these are the ones that
 have been used in the past.
+.PP
+6.0, \f(CW\*(C`Clinking Beer Mugs\*(C'\fR (U+1F37B)
 .PP
 5.0, \f(CW\*(C`Tiger Face\*(C'\fR (u1F42F)
 .PP
@@ -800,6 +818,8 @@ Christian Hansen
 chromatic
 .Sp
 Curt Tilmes
+.Sp
+Dan Book
 .Sp
 Daniel Kimsey
 .Sp
@@ -923,6 +943,8 @@ Peter Edwards
 .Sp
 Pierre-Yves Ritschard
 .Sp
+Piotr Roszatycki
+.Sp
 Quentin Carbonneaux
 .Sp
 Rafal Pocztarski
@@ -989,7 +1011,7 @@ Zak B. Elep
 .RE
 .SH "COPYRIGHT AND LICENSE"
 .IX Header "COPYRIGHT AND LICENSE"
-Copyright (C) 2008\-2014, Sebastian Riedel.
+Copyright (C) 2008\-2015, Sebastian Riedel.
 .PP
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

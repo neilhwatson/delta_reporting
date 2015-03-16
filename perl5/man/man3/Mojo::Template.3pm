@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Template 3"
-.TH Mojo::Template 3 "2014-09-06" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Template 3 "2015-03-09" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -159,12 +159,12 @@ Mojo::Template \- Perl\-ish templates!
 \&  say $output;
 \&
 \&  # More advanced
-\&  my $output = $mt\->render(<<\*(AqEOF\*(Aq, 23, \*(Aqfoo bar\*(Aq);
-\&  % my ($num, $text) = @_;
+\&  my $output = $mt\->render(<<\*(AqEOF\*(Aq, 23, \*(AqMore advanced\*(Aq);
+\&  % my ($num, $title) = @_;
 \&  %= 5 * 5
 \&  <!DOCTYPE html>
 \&  <html>
-\&    <head><title>More advanced</title></head>
+\&    <head><title><%= $title %></title></head>
 \&    <body>
 \&      test 123
 \&      foo <% my $i = $num + 2; %>
@@ -178,10 +178,10 @@ Mojo::Template \- Perl\-ish templates!
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Template is a minimalistic and very Perl-ish template engine,
-designed specifically for all those small tasks that come up during big
-projects. Like preprocessing a configuration file, generating text from
-heredocs and stuff like that.
+Mojo::Template is a minimalistic and very Perl-ish template engine, designed
+specifically for all those small tasks that come up during big projects. Like
+preprocessing a configuration file, generating text from heredocs and stuff
+like that.
 .PP
 See Mojolicious::Guides::Rendering for information on how to generate
 content with the Mojolicious renderer.
@@ -203,8 +203,8 @@ automatically enabled.
 \&  %% Replaced with "%", useful for generating templates
 .Ve
 .PP
-Escaping behavior can be reversed with the \*(L"auto_escape\*(R" attribute, this
-is the default in Mojolicious \f(CW\*(C`.ep\*(C'\fR templates for example.
+Escaping behavior can be reversed with the \*(L"auto_escape\*(R" attribute, this is
+the default in Mojolicious \f(CW\*(C`.ep\*(C'\fR templates for example.
 .PP
 .Vb 2
 \&  <%= Perl expression, replaced with XML escaped result %>
@@ -242,7 +242,9 @@ backslash.
 .Ve
 .PP
 You can capture whole template blocks for reuse later with the \f(CW\*(C`begin\*(C'\fR and
-\&\f(CW\*(C`end\*(C'\fR keywords.
+\&\f(CW\*(C`end\*(C'\fR keywords. Just be aware that both keywords are part of the surrounding
+tag and not actual Perl code, so there can only be whitespace after \f(CW\*(C`begin\*(C'\fR
+and before \f(CW\*(C`end\*(C'\fR.
 .PP
 .Vb 6
 \&  <% my $block = begin %>
@@ -304,8 +306,7 @@ Activate automatic escaping.
 .Ve
 .PP
 Append Perl code to compiled template. Note that this code should not contain
-newline characters, or line numbers in error messages might end up being
-wrong.
+newline characters, or line numbers in error messages might end up being wrong.
 .SS "capture_end"
 .IX Subsection "capture_end"
 .Vb 2
@@ -378,7 +379,7 @@ Encoding used for template files.
 .Ve
 .PP
 A callback used to escape the results of escaped expressions, defaults to
-\&\*(L"xml_escape\*(R" in Mojo::Util.
+\&\*(L"xss_escape\*(R" in Mojo::Util.
 .PP
 .Vb 4
 \&  $mt\->escape(sub {
@@ -450,8 +451,7 @@ since functions and global variables will not be cleared automatically.
 .Ve
 .PP
 Prepend Perl code to compiled template. Note that this code should not contain
-newline characters, or line numbers in error messages might end up being
-wrong.
+newline characters, or line numbers in error messages might end up being wrong.
 .SS "replace_mark"
 .IX Subsection "replace_mark"
 .Vb 2
@@ -488,14 +488,6 @@ Characters indicating the end of a tag, defaults to \f(CW\*(C`%>\*(C'\fR.
 .Vb 1
 \&  <%= $foo %>
 .Ve
-.SS "template"
-.IX Subsection "template"
-.Vb 2
-\&  my $template = $mt\->template;
-\&  $mt          = $mt\->template($template);
-.Ve
-.PP
-Raw unparsed template.
 .SS "tree"
 .IX Subsection "tree"
 .Vb 2
@@ -517,6 +509,14 @@ Character activating automatic whitespace trimming, defaults to \f(CW\*(C`=\*(C'
 .Vb 1
 \&  <%= $foo =%>
 .Ve
+.SS "unparsed"
+.IX Subsection "unparsed"
+.Vb 2
+\&  my $unparsed = $mt\->unparsed;
+\&  $mt          = $mt\->unparsed(\*(Aq<%= 1 + 1 %>\*(Aq);
+.Ve
+.PP
+Raw unparsed template.
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Template inherits all methods from Mojo::Base and implements the
@@ -553,15 +553,15 @@ Interpret \*(L"compiled\*(R" template code.
 .SS "parse"
 .IX Subsection "parse"
 .Vb 1
-\&  $mt = $mt\->parse($template);
+\&  $mt = $mt\->parse(\*(Aq<%= 1 + 1 %>\*(Aq);
 .Ve
 .PP
 Parse template into \*(L"tree\*(R".
 .SS "render"
 .IX Subsection "render"
 .Vb 2
-\&  my $output = $mt\->render($template);
-\&  my $output = $mt\->render($template, @args);
+\&  my $output = $mt\->render(\*(Aq<%= 1 + 1 %>\*(Aq);
+\&  my $output = $mt\->render(\*(Aq<%= shift() + shift() %>\*(Aq, @args);
 .Ve
 .PP
 Render template.

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Parameters 3"
-.TH Mojo::Parameters 3 "2014-10-08" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Parameters 3 "2015-02-26" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -156,8 +156,8 @@ Mojo::Parameters \- Parameters
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Parameters is a container for form parameters used by Mojo::URL
-and based on \s-1RFC 3986\s0 <http://tools.ietf.org/html/rfc3986> as well as the
+Mojo::Parameters is a container for form parameters used by Mojo::URL and
+based on \s-1RFC 3986\s0 <http://tools.ietf.org/html/rfc3986> as well as the
 \&\s-1HTML\s0 Living Standard <https://html.spec.whatwg.org>.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
@@ -181,15 +181,19 @@ Mojo::Parameters inherits all methods from Mojo::Base and implements the
 following new ones.
 .SS "append"
 .IX Subsection "append"
-.Vb 3
+.Vb 4
 \&  $params = $params\->append(foo => \*(Aqba&r\*(Aq);
 \&  $params = $params\->append(foo => [\*(Aqba&r\*(Aq, \*(Aqbaz\*(Aq]);
 \&  $params = $params\->append(foo => [\*(Aqbar\*(Aq, \*(Aqbaz\*(Aq], bar => 23);
+\&  $params = $params\->append(Mojo::Parameters\->new);
 .Ve
 .PP
 Append parameters. Note that this method will normalize the parameters.
 .PP
 .Vb 2
+\&  # "foo=bar&foo=baz"
+\&  Mojo::Parameters\->new(\*(Aqfoo=bar\*(Aq)\->append(Mojo::Parameters\->new(\*(Aqfoo=baz\*(Aq));
+\&
 \&  # "foo=bar&foo=baz"
 \&  Mojo::Parameters\->new(\*(Aqfoo=bar\*(Aq)\->append(foo => \*(Aqbaz\*(Aq);
 \&
@@ -221,12 +225,37 @@ array reference. Note that this method will normalize the parameters.
 .Ve
 .SS "merge"
 .IX Subsection "merge"
-.Vb 1
-\&  $params = $params\->merge(Mojo::Parameters\->new(foo => \*(Aqb&ar\*(Aq, baz => 23));
+.Vb 4
+\&  $params = $params\->merge(foo => \*(Aqba&r\*(Aq);
+\&  $params = $params\->merge(foo => [\*(Aqba&r\*(Aq, \*(Aqbaz\*(Aq]);
+\&  $params = $params\->merge(foo => [\*(Aqbar\*(Aq, \*(Aqbaz\*(Aq], bar => 23);
+\&  $params = $params\->merge(Mojo::Parameters\->new);
 .Ve
 .PP
-Merge Mojo::Parameters objects. Note that this method will normalize the
-parameters.
+Merge parameters. Note that this method will normalize the parameters.
+.PP
+.Vb 2
+\&  # "foo=baz"
+\&  Mojo::Parameters\->new(\*(Aqfoo=bar\*(Aq)\->merge(Mojo::Parameters\->new(\*(Aqfoo=baz\*(Aq));
+\&
+\&  # "yada=yada&foo=baz"
+\&  Mojo::Parameters\->new(\*(Aqfoo=bar&yada=yada\*(Aq)\->merge(foo => \*(Aqbaz\*(Aq);
+\&
+\&  # "yada=yada"
+\&  Mojo::Parameters\->new(\*(Aqfoo=bar&yada=yada\*(Aq)\->merge(foo => undef);
+.Ve
+.SS "names"
+.IX Subsection "names"
+.Vb 1
+\&  my $names = $params\->names;
+.Ve
+.PP
+Return a list of all parameter names.
+.PP
+.Vb 2
+\&  # Names of all parameters
+\&  say for @{$params\->names};
+.Ve
 .SS "new"
 .IX Subsection "new"
 .Vb 5
@@ -239,28 +268,26 @@ parameters.
 .PP
 Construct a new Mojo::Parameters object and \*(L"parse\*(R" parameters if
 necessary.
+.SS "pairs"
+.IX Subsection "pairs"
+.Vb 2
+\&  my $array = $params\->pairs;
+\&  $params   = $params\->pairs([foo => \*(Aqb&ar\*(Aq, baz => 23]);
+.Ve
+.PP
+Parsed parameter pairs. Note that this method will normalize the parameters.
 .SS "param"
 .IX Subsection "param"
-.Vb 6
-\&  my @names       = $params\->param;
-\&  my $value       = $params\->param(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $params\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
-\&  $params         = $params\->param(foo => \*(Aqba&r\*(Aq);
-\&  $params         = $params\->param(foo => qw(ba&r baz));
-\&  $params         = $params\->param(foo => [\*(Aqba;r\*(Aq, \*(Aqbaz\*(Aq]);
+.Vb 4
+\&  my $value = $params\->param(\*(Aqfoo\*(Aq);
+\&  $params   = $params\->param(foo => \*(Aqba&r\*(Aq);
+\&  $params   = $params\->param(foo => qw(ba&r baz));
+\&  $params   = $params\->param(foo => [\*(Aqba;r\*(Aq, \*(Aqbaz\*(Aq]);
 .Ve
 .PP
 Access parameter values. If there are multiple values sharing the same name,
 and you want to access more than just the last one, you can use
 \&\*(L"every_param\*(R". Note that this method will normalize the parameters.
-.SS "params"
-.IX Subsection "params"
-.Vb 2
-\&  my $array = $params\->params;
-\&  $params   = $params\->params([foo => \*(Aqb&ar\*(Aq, baz => 23]);
-.Ve
-.PP
-Parsed parameters. Note that this method will normalize the parameters.
 .SS "parse"
 .IX Subsection "parse"
 .Vb 1
@@ -286,8 +313,8 @@ Remove parameters. Note that this method will normalize the parameters.
 \&  my $hash = $params\->to_hash;
 .Ve
 .PP
-Turn parameters into a hash reference. Note that this method will normalize
-the parameters.
+Turn parameters into a hash reference. Note that this method will normalize the
+parameters.
 .PP
 .Vb 2
 \&  # "baz"
@@ -306,10 +333,10 @@ Mojo::Parameters overloads the following operators.
 .SS "array"
 .IX Subsection "array"
 .Vb 1
-\&  my @params = @$params;
+\&  my @pairs = @$params;
 .Ve
 .PP
-Alias for \*(L"params\*(R". Note that this will normalize the parameters.
+Alias for \*(L"pairs\*(R". Note that this will normalize the parameters.
 .PP
 .Vb 2
 \&  say $params\->[0];

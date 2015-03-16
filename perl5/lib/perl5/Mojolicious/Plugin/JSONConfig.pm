@@ -20,8 +20,9 @@ sub render {
   my ($self, $content, $file, $conf, $app) = @_;
 
   # Application instance and helper
-  my $prepend = q[my $app = shift; no strict 'refs'; no warnings 'redefine';];
-  $prepend .= q[sub app; local *app = sub { $app }; use Mojo::Base -strict;];
+  my $prepend = q[no strict 'refs'; no warnings 'redefine';];
+  $prepend .= q[my $app = shift; sub app; local *app = sub { $app };];
+  $prepend .= q[use Mojo::Base -strict; no warnings 'ambiguous';];
 
   my $mt = Mojo::Template->new($conf->{template} || {})->name($file);
   my $output = $mt->prepend($prepend . $mt->prepend)->render($content, $app);
@@ -68,9 +69,9 @@ L<Mojolicious::Plugin::JSONConfig> is a JSON configuration plugin that
 preprocesses its input with L<Mojo::Template>.
 
 The application object can be accessed via C<$app> or the C<app> function. You
-can extend the normal configuration file C<$moniker.json> with C<mode>
-specific ones like C<$moniker.$mode.json>. A default configuration filename
-will be generated from the value of L<Mojolicious/"moniker">.
+can extend the normal configuration file C<$moniker.json> with C<mode> specific
+ones like C<$moniker.$mode.json>. A default configuration filename will be
+generated from the value of L<Mojolicious/"moniker">.
 
 The code of this plugin is a good example for learning to build new plugins,
 you're welcome to fork it.

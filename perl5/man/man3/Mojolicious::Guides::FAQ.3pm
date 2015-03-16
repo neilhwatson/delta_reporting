@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides::FAQ 3"
-.TH Mojolicious::Guides::FAQ 3 "2014-09-14" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides::FAQ 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -149,16 +149,16 @@ Mojolicious.
 We hope these answers are to your satisfaction.
 .SS "How does Mojolicious compare to other Perl web frameworks?"
 .IX Subsection "How does Mojolicious compare to other Perl web frameworks?"
-The short answer is \*(L"it doesn't\*(R", because we interpret the term
-\&\*(L"web framework\*(R" much more literally than others. With the emergence of the
-real-time web and new technologies such as WebSockets, we are facing new
-challenges that go way beyond what commonly used modules like \s-1LWP\s0 were
-designed for. Because of this, Mojolicious contains a whole new \s-1HTTP\s0
-client/server stack called Mojo, which was heavily inspired by the original
-LWPng effort and carefully designed with these new requirements in mind. So
-while some of the higher abstraction layers might look similar to other web
-frameworks, it is more of a web toolkit and can even be used as the foundation
-for more advanced web frameworks.
+The short answer is \*(L"it doesn't\*(R", because we interpret the term \*(L"web framework\*(R"
+much more literally than others. With the emergence of the real-time web and
+new technologies such as WebSockets, we are facing new challenges that go way
+beyond what commonly used modules like \s-1LWP\s0 were designed for. Because of
+this, Mojolicious contains a whole new \s-1HTTP\s0 client/server stack called
+Mojo, which was heavily inspired by the original LWPng effort and carefully
+designed with these new requirements in mind. So while some of the higher
+abstraction layers might look similar to other web frameworks, it is more of a
+web toolkit and can even be used as the foundation for more advanced web
+frameworks.
 .SS "Why doesn't Mojolicious have any dependencies?"
 .IX Subsection "Why doesn't Mojolicious have any dependencies?"
 We are optimizing Mojolicious for user-friendliness and development speed,
@@ -166,9 +166,8 @@ without compromises. While there are no rules in
 Mojolicious::Guides::Contributing that forbid dependencies, we do currently
 discourage adding non-optional ones in favor of a faster and more painless
 installation process. And we do in fact already use several optional \s-1CPAN\s0
-modules such as \s-1EV\s0, IO::Socket::IP, IO::Socket::Socks,
-IO::Socket::SSL and Plack to provide advanced functionality if they are
-installed.
+modules such as \s-1EV\s0, IO::Socket::Socks, IO::Socket::SSL,
+Net::DNS::Native and Plack to provide advanced functionality if possible.
 .SS "Why reinvent wheels?"
 .IX Subsection "Why reinvent wheels?"
 Because we can make them rounder. Components specifically designed for
@@ -178,18 +177,19 @@ quest is to develop the best possible solutions for these two criteria.
 .SS "What about backwards compatibility?"
 .IX Subsection "What about backwards compatibility?"
 In conformance with Mojolicious::Guides::Contributing, we will always
-deprecate a feature before removing or changing it in incompatible ways
-between major releases. New features can however be marked as experimental to
-explicitly exclude them from these rules. This gives us the necessary freedom
-to ensure a healthy future for Mojolicious. So, as long as you are not
-using anything marked experimental, untested or undocumented, you can always
-count on backwards compatibility, everything else would be considered a bug.
+deprecate a feature for 3 months, before removing or changing it in
+incompatible ways between major releases. New features can however be marked as
+experimental to explicitly exclude them from these rules. This gives us the
+necessary freedom to ensure a healthy future for Mojolicious. So, as long as
+you are not using anything marked experimental, untested or undocumented, you
+can always count on backwards compatibility, everything else would be
+considered a bug.
 .SS "Why not split up Mojolicious into many smaller distributions?"
 .IX Subsection "Why not split up Mojolicious into many smaller distributions?"
-Because there are no advantages, it drastically increases maintenance costs
-and installation times without giving us anything in return. It would only
-make sense if we wanted to pass ownership of a module to a new maintainer,
-which we already have done in the past.
+Because there are no advantages, it drastically increases maintenance costs and
+installation times without giving us anything in return. It would only make
+sense if we wanted to pass ownership of a module to a new maintainer, which we
+already have done in the past.
 .SS "Which versions of Perl are supported by Mojolicious?"
 .IX Subsection "Which versions of Perl are supported by Mojolicious?"
 First of all, you need to be aware that according to the perlpolicy, only
@@ -197,37 +197,41 @@ the two most recent stable release series of Perl are supported by the
 community and receive bug fixes, which are currently 5.20.x and 5.18.x.
 Mojolicious follows this model and fully supports these two release series.
 In addition we will also keep the distribution installable up to a certain
-legacy version that we deem worthy of supporting, but not specifically
-optimize for it, this is currently 5.10.1.
+legacy version that we deem worthy of supporting, but not specifically optimize
+for it, this is currently 5.10.1.
 .SS "Do I need to clean my environment before testing Mojolicious?"
 .IX Subsection "Do I need to clean my environment before testing Mojolicious?"
 Mojolicious uses many environment variables both internally and externally,
 notably (but not exclusively) those starting with the prefix \f(CW\*(C`MOJO_*\*(C'\fR. The
-test suite expects a clean environment; testing with a non-standard
-environment is unsupported and is unlikely to succeed. Therefore when
-installing or upgrading Mojolicious and when running its tests, we highly
-recommend using an environment which does not set these variables.
+test suite expects a clean environment; testing with a non-standard environment
+is unsupported and is unlikely to succeed. Therefore when installing or
+upgrading Mojolicious and when running its tests, we highly recommend using
+an environment which does not set these variables.
 .SS "What is the difference between blocking and non-blocking operations?"
 .IX Subsection "What is the difference between blocking and non-blocking operations?"
 A \fIblocking\fR operation is a subroutine that blocks the execution of the
 calling subroutine until the subroutine is finished.
 .PP
-.Vb 2
-\&  my $result = blocking_subroutine();
-\&  ...
+.Vb 4
+\&  sub foo {
+\&    my $result = blocking_subroutine();
+\&    ...
+\&  }
 .Ve
 .PP
 A \fInon-blocking\fR operation on the other hand lets the calling subroutine
 continue execution even though the subroutine is not yet finished. Instead of
-waiting, the calling subroutine passes along a callback to be executed once
-the subroutine is finished, this is called continuation-passing style.
+waiting, the calling subroutine passes along a callback to be executed once the
+subroutine is finished, this is called continuation-passing style.
 .PP
-.Vb 5
-\&  non_blocking_subroutine(sub {
-\&    my $result = shift;
+.Vb 7
+\&  sub foo {
+\&    non_blocking_subroutine(sub {
+\&      my $result = shift;
+\&      ...
+\&    });
 \&    ...
-\&  });
-\&  ...
+\&  }
 .Ve
 .SS "Will my code magically become non-blocking with Mojolicious?"
 .IX Subsection "Will my code magically become non-blocking with Mojolicious?"
@@ -260,31 +264,47 @@ connections concurrently.
 .Ve
 .PP
 In Mojolicious this event loop is Mojo::IOLoop.
+.SS "Where did my file extension go?"
+.IX Subsection "Where did my file extension go?"
+Standard route placeholders will not match the \f(CW\*(C`.\*(C'\fR character, however
+Mojolicious routes automatically take file extensions like \f(CW\*(C`.html\*(C'\fR, remove
+the leading \f(CW\*(C`.\*(C'\fR, and store the result in the \f(CW\*(C`format\*(C'\fR stash value. This can
+be useful for URL-based content negotiation, such as automatically rendering
+different templates based on the file extension. See
+\&\*(L"Formats\*(R" in Mojolicious::Guides::Routing for information on customizing format
+detection, or consider using
+relaxed placeholders to
+allow matching of the \f(CW\*(C`.\*(C'\fR character.
 .ie n .SS "What does the error ""Maximum message size exceeded"" mean?"
 .el .SS "What does the error ``Maximum message size exceeded'' mean?"
 .IX Subsection "What does the error Maximum message size exceeded mean?"
-To protect your applications from excessively large requests and responses,
-our \s-1HTTP\s0 parser has a cap after which it will automatically stop accepting new
-data, and in most cases force the connection to be closed. This limit is
-around 10MB by default, you can use the attribute
-\&\*(L"max_message_size\*(R" in Mojo::Message or \f(CW\*(C`MOJO_MAX_MESSAGE_SIZE\*(C'\fR environment
-variable to change this value.
-.ie n .SS "What does the error ""Maximum line size exceeded"" mean?"
-.el .SS "What does the error ``Maximum line size exceeded'' mean?"
-.IX Subsection "What does the error Maximum line size exceeded mean?"
+To protect your applications from excessively large requests and responses, our
+\&\s-1HTTP\s0 parser has a cap after which it will automatically stop accepting new
+data, and in most cases force the connection to be closed. The limit is 16MB by
+default, you can use the attribute \*(L"max_message_size\*(R" in Mojo::Message or
+\&\f(CW\*(C`MOJO_MAX_MESSAGE_SIZE\*(C'\fR environment variable to change this value.
+.ie n .SS "What does the error ""Maximum start-line size exceeded"" mean?"
+.el .SS "What does the error ``Maximum start-line size exceeded'' mean?"
+.IX Subsection "What does the error Maximum start-line size exceeded mean?"
 This is a very similar protection mechanism to the one described in the
 previous answer, but a little more specific. It limits the maximum length of
-any \f(CW\*(C`\ex0d\ex0a\*(C'\fR terminated part of a \s-1HTTP\s0 message, such as request line,
-status line and headers. This limit is around 10KB by default, you can use the
-attributes \*(L"max_line_size\*(R" in Mojo::Message and
-\&\*(L"max_line_size\*(R" in Mojo::Headers or \f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable
-to change this value.
+the start-line for \s-1HTTP\s0 requests and responses. The limit is 8KB by default,
+you can use the attribute \*(L"max_line_size\*(R" in Mojo::Message or
+\&\f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable to change this value.
+.ie n .SS "What does the error ""Maximum header size exceeded"" mean?"
+.el .SS "What does the error ``Maximum header size exceeded'' mean?"
+.IX Subsection "What does the error Maximum header size exceeded mean?"
+Almost the same as the previous answer, but this protection mechanism limits
+the number and maximum length of \s-1HTTP\s0 request and response headers. The limits
+are 100 headers with 8KB each by default, you can use the attributes
+\&\*(L"max_lines\*(R" in Mojo::Headers and \*(L"max_line_size\*(R" in Mojo::Headers or the
+\&\f(CW\*(C`MOJO_MAX_LINES\*(C'\fR and \f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variables to change
+these values.
 .ie n .SS "What does the error ""Maximum buffer size exceeded"" mean?"
 .el .SS "What does the error ``Maximum buffer size exceeded'' mean?"
 .IX Subsection "What does the error Maximum buffer size exceeded mean?"
-This protection mechanism is very similar to those mentioned in the two
-previous answers. It limits how much content the \s-1HTTP\s0 parser is allowed to
-buffer when parsing chunked, compressed and multipart messages. This limit is
+This protection mechanism limits how much content the \s-1HTTP\s0 parser is allowed to
+buffer when parsing chunked, compressed and multipart messages. The limit is
 around 256KB by default, you can use the attribute
 \&\*(L"max_buffer_size\*(R" in Mojo::Content or \f(CW\*(C`MOJO_MAX_BUFFER_SIZE\*(C'\fR environment
 variable to change this value.
@@ -293,10 +313,9 @@ variable to change this value.
 .IX Subsection "What does the error EV does not work with ithreads mean?"
 The Mojolicious user agent and web servers are based on an event loop that
 supports multiple reactor backends. One of these backends is \s-1EV\s0, it is very
-fast and will be automatically used if installed. On Windows however, the
+fast and will be automatically used if possible. On Windows however, the
 \&\f(CW\*(C`ithreads\*(C'\fR based \f(CW\*(C`fork()\*(C'\fR emulation can interfere with it, and you may have
-to use the \f(CW\*(C`MOJO_REACTOR\*(C'\fR environment variable to enforce a more portable
-one.
+to use the \f(CW\*(C`MOJO_REACTOR\*(C'\fR environment variable to enforce a more portable one.
 .PP
 .Vb 1
 \&  MOJO_REACTOR=Mojo::Reactor::Poll
@@ -341,13 +360,13 @@ be closed immediately.
 .ie n .SS "What does ""Worker 31842 has no heartbeat, restarting"" mean?"
 .el .SS "What does ``Worker 31842 has no heartbeat, restarting'' mean?"
 .IX Subsection "What does Worker 31842 has no heartbeat, restarting mean?"
-As long as they are accepting new connections, worker processes of all
-built-in preforking web servers send heartbeat messages to the manager process
-at regular intervals, to signal that they are still responsive. A blocking
+As long as they are accepting new connections, worker processes of all built-in
+preforking web servers send heartbeat messages to the manager process at
+regular intervals, to signal that they are still responsive. A blocking
 operation such as an infinite loop in your application can prevent this, and
 will force the affected worker to be restarted after a timeout. This timeout
 defaults to \f(CW20\fR seconds and can be extended with the attribute
-\&\*(L"heartbeat_interval\*(R" in Mojo::Server::Prefork if your application requires it.
+\&\*(L"heartbeat_timeout\*(R" in Mojo::Server::Prefork if your application requires it.
 .SH "MORE"
 .IX Header "MORE"
 You can continue with Mojolicious::Guides now or take a look at the

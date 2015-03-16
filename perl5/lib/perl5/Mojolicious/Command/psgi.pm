@@ -3,7 +3,7 @@ use Mojo::Base 'Mojolicious::Command';
 
 use Mojo::Server::PSGI;
 
-has description => 'Start application with PSGI.';
+has description => 'Start application with PSGI';
 has usage => sub { shift->extract_usage };
 
 sub run { Mojo::Server::PSGI->new(app => shift->app)->to_psgi_app }
@@ -39,21 +39,21 @@ L<Mojolicious::Command> and implements the following new ones.
 =head2 description
 
   my $description = $psgi->description;
-  $psgi           = $psgi->description('Foo!');
+  $psgi           = $psgi->description('Foo');
 
 Short description of this command, used for the command list.
 
 =head2 usage
 
   my $usage = $psgi->usage;
-  $psgi     = $psgi->usage('Foo!');
+  $psgi     = $psgi->usage('Foo');
 
 Usage information for this command, used for the help screen.
 
 =head1 METHODS
 
-L<Mojolicious::Command::psgi> inherits all methods from
-L<Mojolicious::Command> and implements the following new ones.
+L<Mojolicious::Command::psgi> inherits all methods from L<Mojolicious::Command>
+and implements the following new ones.
 
 =head2 run
 

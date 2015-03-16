@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::JSON 3"
-.TH Mojo::JSON 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::JSON 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -153,12 +153,12 @@ Mojo::JSON \- Minimalistic JSON
 Mojo::JSON is a minimalistic and possibly the fastest pure-Perl
 implementation of \s-1RFC 7159\s0 <http://tools.ietf.org/html/rfc7159>.
 .PP
-It supports normal Perl data types like scalar, array reference, hash
-reference and will try to call the \f(CW\*(C`TO_JSON\*(C'\fR method on blessed references, or
-stringify them if it doesn't exist. Differentiating between strings and
-numbers in Perl is hard, depending on how it has been used, a scalar can be
-both at the same time. The string value has a higher precedence unless both
-representations are equivalent.
+It supports normal Perl data types like scalar, array reference, hash reference
+and will try to call the \f(CW\*(C`TO_JSON\*(C'\fR method on blessed references, or stringify
+them if it doesn't exist. Differentiating between strings and numbers in Perl
+is hard, depending on how it has been used, a scalar can be both at the same
+time. The string value has a higher precedence unless both representations are
+equivalent.
 .PP
 .Vb 2
 \&  [1, \-2, 3]     \-> [1, \-2, 3]
@@ -183,7 +183,11 @@ their values are true or false.
 .Ve
 .PP
 The two Unicode whitespace characters \f(CW\*(C`u2028\*(C'\fR and \f(CW\*(C`u2029\*(C'\fR will always be
-escaped to make \s-1JSONP\s0 easier.
+escaped to make \s-1JSONP\s0 easier, and the character \f(CW\*(C`/\*(C'\fR to prevent \s-1XSS\s0 attacks.
+.PP
+.Vb 1
+\&  "\ex{2028}\ex{2029}</script>" \-> "\eu2028\eu2029<\e/script>"
+.Ve
 .SH "FUNCTIONS"
 .IX Header "FUNCTIONS"
 Mojo::JSON implements the following functions, which can be imported
@@ -215,8 +219,8 @@ False value, used because Perl has no native equivalent.
 \&  my $value = from_json $chars;
 .Ve
 .PP
-Decode \s-1JSON\s0 text that is not \f(CW\*(C`UTF\-8\*(C'\fR encoded to Perl value and die if
-decoding fails.
+Decode \s-1JSON\s0 text that is not \f(CW\*(C`UTF\-8\*(C'\fR encoded to Perl value and die if decoding
+fails.
 .SS "j"
 .IX Subsection "j"
 .Vb 3
@@ -226,8 +230,8 @@ decoding fails.
 .Ve
 .PP
 Encode Perl data structure (which may only be an array reference or hash
-reference) or decode \s-1JSON,\s0 an \f(CW\*(C`undef\*(C'\fR return value indicates a bare \f(CW\*(C`null\*(C'\fR
-or that decoding failed.
+reference) or decode \s-1JSON,\s0 an \f(CW\*(C`undef\*(C'\fR return value indicates a bare \f(CW\*(C`null\*(C'\fR or
+that decoding failed.
 .SS "to_json"
 .IX Subsection "to_json"
 .Vb 1

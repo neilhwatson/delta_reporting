@@ -4,8 +4,8 @@ use Mojo::Base -base;
 use Mojo::Util qw(html_unescape xml_escape);
 use Scalar::Util 'weaken';
 
-has 'xml';
 has tree => sub { ['root'] };
+has 'xml';
 
 my $ATTR_RE = qr/
   ([^<>=\s\/]+|\/)   # Key
@@ -39,8 +39,7 @@ my $TOKEN_RE = qr/
     |
       \?(.*?)\?                                       # Processing Instruction
     |
-      (\s*[^<>\s]+                                    # Tag
-      \s*(?:(?:$ATTR_RE){0,32766})*+)                 # Attributes
+      \s*([^<>\s]+\s*(?:(?:$ATTR_RE){0,32766})*+)     # Tag
     )>
   |
     (<)                                               # Runaway "<"
@@ -102,11 +101,11 @@ my %BLOCK = map { $_ => 1 } (
 );
 
 sub parse {
-  my ($self, $html) = @_;
+  my ($self, $html) = (shift, "$_[0]");
 
   my $xml = $self->xml;
   my $current = my $tree = ['root'];
-  while ($html =~ m/\G$TOKEN_RE/gcso) {
+  while ($html =~ /\G$TOKEN_RE/gcso) {
     my ($text, $doctype, $comment, $cdata, $pi, $tag, $runaway)
       = ($1, $2, $3, $4, $5, $6, $11);
 
@@ -118,10 +117,10 @@ sub parse {
     if (defined $tag) {
 
       # End
-      if ($tag =~ /^\s*\/\s*(.+)/) { _end($xml ? $1 : lc $1, $xml, \$current) }
+      if ($tag =~ /^\/\s*(\S+)/) { _end($xml ? $1 : lc $1, $xml, \$current) }
 
       # Start
-      elsif ($tag =~ m!([^\s/]+)([\s\S]*)!) {
+      elsif ($tag =~ m!^([^\s/]+)([\s\S]*)!) {
         my ($start, $attr) = ($xml ? $1 : lc $1, $2);
 
         # Attributes
@@ -132,7 +131,7 @@ sub parse {
           # Empty tag
           ++$closing and next if $key eq '/';
 
-          $attrs{$key} = defined $value ? html_unescape($value) : $value;
+          $attrs{$key} = defined $value ? html_unescape $value : $value;
         }
 
         # "image" is an alias for "img"
@@ -145,7 +144,7 @@ sub parse {
 
         # Raw text elements
         next if $xml || !$RAW{$start} && !$RCDATA{$start};
-        next unless $html =~ m!\G(.*?)<\s*/\s*$start\s*>!gcsi;
+        next unless $html =~ m!\G(.*?)<\s*/\s*\Q$start\E\s*>!gcsi;
         _node($current, 'raw', $RCDATA{$start} ? html_unescape $1 : $1);
         _end($start, 0, \$current);
       }
@@ -219,43 +218,30 @@ sub _render {
   # Processing instruction
   return '<?' . $tree->[1] . '?>' if $type eq 'pi';
 
+  # Root
+  return join '', map { _render($_, $xml) } @$tree[1 .. $#$tree]
+    if $type eq 'root';
+
   # Start tag
-  my $result = '';
-  if ($type eq 'tag') {
+  my $tag    = $tree->[1];
+  my $result = "<$tag";
 
-    # Open tag
-    my $tag = $tree->[1];
-    $result .= "<$tag";
-
-    # Attributes
-    my @attrs;
-    for my $key (sort keys %{$tree->[2]}) {
-
-      # No value
-      push @attrs, $key and next unless defined(my $value = $tree->[2]{$key});
-
-      # Key and value
-      push @attrs, $key . '="' . xml_escape($value) . '"';
-    }
-    $result .= join ' ', '', @attrs if @attrs;
-
-    # Element without end tag
-    return $xml ? "$result />" : $EMPTY{$tag} ? "$result>" : "$result></$tag>"
-      unless $tree->[4];
-
-    # Close tag
-    $result .= '>';
+  # Attributes
+  for my $key (sort keys %{$tree->[2]}) {
+    $result .= " $key" and next unless defined(my $value = $tree->[2]{$key});
+    $result .= " $key" . '="' . xml_escape($value) . '"';
   }
 
-  # Render whole tree
+  # No children
+  return $xml ? "$result />" : $EMPTY{$tag} ? "$result>" : "$result></$tag>"
+    unless $tree->[4];
+
+  # Children
   no warnings 'recursion';
-  $result .= _render($tree->[$_], $xml)
-    for ($type eq 'root' ? 1 : 4) .. $#$tree;
+  $result .= '>' . join '', map { _render($_, $xml) } @$tree[4 .. $#$tree];
 
   # End tag
-  $result .= '</' . $tree->[1] . '>' if $type eq 'tag';
-
-  return $result;
+  return "$result</$tag>";
 }
 
 sub _start {
@@ -302,8 +288,8 @@ Mojo::DOM::HTML - HTML/XML engine
 
 =head1 DESCRIPTION
 
-L<Mojo::DOM::HTML> is the HTML/XML engine used by L<Mojo::DOM> and based on
-the L<HTML Living Standard|https://html.spec.whatwg.org> as well as the
+L<Mojo::DOM::HTML> is the HTML/XML engine used by L<Mojo::DOM> and based on the
+L<HTML Living Standard|https://html.spec.whatwg.org> as well as the
 L<Extensible Markup Language (XML) 1.0|http://www.w3.org/TR/xml/>.
 
 =head1 ATTRIBUTES
@@ -323,7 +309,7 @@ carefully since it is very dynamic.
   my $bool = $html->xml;
   $html    = $html->xml($bool);
 
-Disable HTML semantics in parser and activate case sensitivity, defaults to
+Disable HTML semantics in parser and activate case-sensitivity, defaults to
 auto detection based on processing instructions.
 
 =head1 METHODS

@@ -69,7 +69,7 @@ sub header_size { length shift->build_headers }
 
 sub is_chunked { !!shift->headers->transfer_encoding }
 
-sub is_compressed { (shift->headers->content_encoding // '') =~ /^gzip$/i }
+sub is_compressed { lc(shift->headers->content_encoding // '') eq 'gzip' }
 
 sub is_dynamic { $_[0]{dynamic} && !defined $_[0]->headers->content_length }
 
@@ -317,9 +317,10 @@ Mojo::Content - HTTP content base class
 
 =head1 DESCRIPTION
 
-L<Mojo::Content> is an abstract base class for HTTP content based on
+L<Mojo::Content> is an abstract base class for HTTP content containers based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230> and
-L<RFC 7231|http://tools.ietf.org/html/rfc7231>.
+L<RFC 7231|http://tools.ietf.org/html/rfc7231>, like
+L<Mojo::Content::MultiPart> and L<Mojo::Content::Single>.
 
 =head1 EVENTS
 
@@ -435,8 +436,8 @@ Skip body parsing and finish after headers.
 
 =head1 METHODS
 
-L<Mojo::Content> inherits all methods from L<Mojo::EventEmitter> and
-implements the following new ones.
+L<Mojo::Content> inherits all methods from L<Mojo::EventEmitter> and implements
+the following new ones.
 
 =head2 body_contains
 
@@ -522,8 +523,8 @@ Check if content is gzip compressed.
 
   my $bool = $content->is_dynamic;
 
-Check if content will be dynamically generated, which prevents L</"clone">
-from working.
+Check if content will be dynamically generated, which prevents L</"clone"> from
+working.
 
 =head2 is_finished
 
@@ -579,8 +580,8 @@ Size of content already received from message in bytes.
   $content = $content->write($bytes);
   $content = $content->write($bytes => sub {...});
 
-Write dynamic content non-blocking, the optional drain callback will be
-invoked once all data has been written.
+Write dynamic content non-blocking, the optional drain callback will be invoked
+once all data has been written.
 
 =head2 write_chunk
 

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Types 3"
-.TH Mojolicious::Types 3 "2014-07-11" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Types 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -186,14 +186,14 @@ The most common ones are already defined.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojolicious::Types implements the following attributes.
-.SS "types"
-.IX Subsection "types"
+.SS "mapping"
+.IX Subsection "mapping"
 .Vb 2
-\&  my $map = $types\->types;
-\&  $types  = $types\->types({png => [\*(Aqimage/png\*(Aq]});
+\&  my $mapping = $types\->mapping;
+\&  $types      = $types\->mapping({png => [\*(Aqimage/png\*(Aq]});
 .Ve
 .PP
-List of \s-1MIME\s0 types.
+\&\s-1MIME\s0 type mapping.
 .SH "METHODS"
 .IX Header "METHODS"
 Mojolicious::Types inherits all methods from Mojo::Base and implements

@@ -97,7 +97,7 @@ sub element_exists_not {
 
 sub finish_ok {
   my $self = shift;
-  $self->tx->finish(@_);
+  $self->tx->finish(@_) if $self->tx->is_websocket;
   Mojo::IOLoop->one_tick while !$self->{finished};
   return $self->_test('ok', 1, 'closed WebSocket');
 }
@@ -258,9 +258,13 @@ sub reset_session {
 
 sub send_ok {
   my ($self, $msg, $desc) = @_;
+
+  $desc ||= 'send message';
+  return $self->_test('ok', 0, $desc) unless $self->tx->is_websocket;
+
   $self->tx->send($msg => sub { Mojo::IOLoop->stop });
   Mojo::IOLoop->start;
-  return $self->_test('ok', 1, $desc || 'send message');
+  return $self->_test('ok', 1, $desc);
 }
 
 sub status_is {
@@ -324,11 +328,11 @@ sub _message {
   if (ref $value eq 'HASH') {
     my $expect = exists $value->{text} ? 'text' : 'binary';
     $value = $value->{$expect};
-    $msg = '' unless $type eq $expect;
+    $msg = '' unless ($type // '') eq $expect;
   }
 
   # Decode text frame if there is no type check
-  else { $msg = decode 'UTF-8', $msg if $type eq 'text' }
+  else { $msg = decode 'UTF-8', $msg if ($type // '') eq 'text' }
 
   return $self->_test($name, $msg // '', $value, $desc);
 }
@@ -344,7 +348,7 @@ sub _request_ok {
     $self->ua->start(
       $tx => sub {
         my ($ua, $tx) = @_;
-        $self->tx($tx);
+        $self->{finished} = [] unless $self->tx($tx)->tx->is_websocket;
         $tx->on(finish => sub { shift; $self->{finished} = [@_] });
         $tx->on(binary => sub { push @{$self->{messages}}, [binary => pop] });
         $tx->on(text   => sub { push @{$self->{messages}}, [text   => pop] });
@@ -353,7 +357,7 @@ sub _request_ok {
     );
     Mojo::IOLoop->start;
 
-    my $desc = encode 'UTF-8', "WebSocket $url";
+    my $desc = encode 'UTF-8', "WebSocket handshake with $url";
     return $self->_test('ok', $self->tx->is_websocket, $desc);
   }
 
@@ -420,9 +424,17 @@ Test::Mojo - Testing Mojo!
 
 =head1 DESCRIPTION
 
-L<Test::Mojo> is a collection of testing helpers for everyone developing
-L<Mojo> and L<Mojolicious> applications, it is usually used together with
-L<Test::More>.
+L<Test::Mojo> is a test user agent based on L<Mojo::UserAgent>, it is usually
+used together with L<Test::More> to test L<Mojolicious> applications. Just run
+your tests with the command L<Mojolicious::Command::test> or L<prove>.
+
+  $ ./script/my_app test
+  $ ./script/my_app test -v t/foo.t
+  $ prove -l -v t/foo.t
+
+If it is not already defined, the C<MOJO_LOG_LEVEL> environment variable will
+be set to C<debug> or C<fatal>, depending on the value of the
+C<HARNESS_IS_VERBOSE> environment variable.
 
 =head1 ATTRIBUTES
 
@@ -472,7 +484,8 @@ True if the last test was successful.
   my $tx = $t->tx;
   $t     = $t->tx(Mojo::Transaction::HTTP->new);
 
-Current transaction, usually a L<Mojo::Transaction::HTTP> object.
+Current transaction, usually a L<Mojo::Transaction::HTTP> or
+L<Mojo::Transaction::WebSocket> object.
 
   # More specific tests
   is $t->tx->res->json->{foo}, 'bar', 'right value';
@@ -511,7 +524,7 @@ following new ones.
 =head2 app
 
   my $app = $t->app;
-  $t      = $t->app(MyApp->new);
+  $t      = $t->app(Mojolicious->new);
 
 Access application with L<Mojo::UserAgent::Server/"app">.
 
@@ -613,6 +626,14 @@ arguments as L<Mojo::UserAgent/"delete">, except for the callback.
 Checks for existence of the CSS selectors first matching HTML/XML element with
 L<Mojo::DOM/"at">.
 
+  # Check attribute values
+  $t->get_ok('/login')
+    ->element_exists('label[for=email]')
+    ->element_exists('input[name=email][type=text][value*="example.com"]')
+    ->element_exists('label[for=pass]')
+    ->element_exists('input[name=pass][type=password]')
+    ->element_exists('input[type=submit][value]');
+
 =head2 element_exists_not
 
   $t = $t->element_exists_not('div.foo[x=y]');
@@ -647,9 +668,14 @@ arguments as L<Mojo::UserAgent/"get">, except for the callback.
   # Run tests against remote host
   $t->get_ok('http://mojolicio.us/perldoc')->status_is(200);
 
+  # Use relative URL for request with Basic authentication
+  $t->get_ok('//sri:secr3t@/secrets.json')
+    ->status_is(200)
+    ->json_is('/1/content', 'Mojo rocks!');
+
   # Run additional tests on the transaction
   $t->get_ok('/foo')->status_is(200);
-  is $t->tx->res->dom->at('input')->val, 'whatever', 'right value';
+  is $t->tx->res->dom->at('input')->{value}, 'whatever', 'right value';
 
 =head2 head_ok
 
@@ -867,8 +893,8 @@ Perform a C<POST> request and check for transport errors, takes the same
 arguments as L<Mojo::UserAgent/"post">, except for the callback.
 
   # Test file upload
-  $t->post_ok('/upload' => form => {foo => {content => 'bar'}})
-    ->status_is(200);
+  my $upload = {foo => {content => 'bar', filename => 'baz.txt'}};
+  $t->post_ok('/upload' => form => $upload)->status_is(200);
 
   # Test JSON API
   $t->post_ok('/hello.json' => json => {hello => 'world'})
@@ -895,10 +921,15 @@ Perform request and check for transport errors.
   my $tx = $t->ua->build_tx(FOO => '/test.json' => json => {foo => 1});
   $t->request_ok($tx)->status_is(200)->json_is({success => 1});
 
+  # Request with custom cookie
+  my $tx = $t->ua->build_tx(GET => '/account');
+  $tx->req->cookies({name => 'user', value => 'sri'});
+  $t->request_ok($tx)->status_is(200)->text_is('head > title' => 'Hello sri');
+
   # Custom WebSocket handshake
- my $tx = $t->ua->build_websocket_tx('/foo');
- $tx->req->headers->remove('User-Agent');
- $t->request_ok($tx)->message_ok->message_is('bar')->finish_ok;
+  my $tx = $t->ua->build_websocket_tx('/foo');
+  $tx->req->headers->remove('User-Agent');
+  $t->request_ok($tx)->message_ok->message_is('bar')->finish_ok;
 
 =head2 reset_session
 
@@ -977,7 +1008,7 @@ Open a WebSocket connection with transparent handshake, takes the same
 arguments as L<Mojo::UserAgent/"websocket">, except for the callback.
 
   # WebSocket with permessage-deflate compression
-  $t->websocket('/x' => {'Sec-WebSocket-Extensions' => 'permessage-deflate'})
+  $t->websocket_ok('/' => {'Sec-WebSocket-Extensions' => 'permessage-deflate'})
     ->send_ok('y' x 50000)
     ->message_ok
     ->message_is('z' x 50000)

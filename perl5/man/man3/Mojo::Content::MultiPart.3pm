@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Content::MultiPart 3"
-.TH Mojo::Content::MultiPart 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Content::MultiPart 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -238,8 +238,12 @@ Get a chunk of content starting from a specific position.
 True.
 .SS "new"
 .IX Subsection "new"
-.Vb 1
+.Vb 5
 \&  my $multi = Mojo::Content::MultiPart\->new;
+\&  my $multi
+\&    = Mojo::Content::MultiPart\->new(parts => [Mojo::Content::Single\->new]);
+\&  my $multi
+\&    = Mojo::Content::MultiPart\->new({parts => [Mojo::Content::Single\->new]});
 .Ve
 .PP
 Construct a new Mojo::Content::MultiPart object and subscribe to \*(L"read\*(R"

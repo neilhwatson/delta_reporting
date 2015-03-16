@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Headers 3"
-.TH Mojo::Headers 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Headers 3 "2015-03-09" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -174,7 +174,16 @@ Mojo::Headers implements the following attributes.
 .Ve
 .PP
 Maximum header line size in bytes, defaults to the value of the
-\&\f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable or \f(CW10240\fR (10KB).
+\&\f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable or \f(CW8192\fR (8KB).
+.SS "max_lines"
+.IX Subsection "max_lines"
+.Vb 2
+\&  my $num  = $headers\->max_lines;
+\&  $headers = $headers\->max_lines(200);
+.Ve
+.PP
+Maximum number of header lines, defaults to the value of the \f(CW\*(C`MOJO_MAX_LINES\*(C'\fR
+environment variable or \f(CW100\fR.
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Headers inherits all methods from Mojo::Base and implements the
@@ -344,6 +353,15 @@ Shortcut for the \f(CW\*(C`Content\-Location\*(C'\fR header.
 .Ve
 .PP
 Shortcut for the \f(CW\*(C`Content\-Range\*(C'\fR header.
+.SS "content_security_policy"
+.IX Subsection "content_security_policy"
+.Vb 2
+\&  my $policy = $headers\->content_security_policy;
+\&  $headers   = $headers\->content_security_policy(\*(Aqdefault\-src https:\*(Aq);
+.Ve
+.PP
+Shortcut for the \f(CW\*(C`Content\-Security\-Policy\*(C'\fR header from
+Content Security Policy 1.0 <http://www.w3.org/TR/CSP/>.
 .SS "content_type"
 .IX Subsection "content_type"
 .Vb 2
@@ -457,7 +475,7 @@ Check if header parser is finished.
 \&  my $bool = $headers\->is_limit_exceeded;
 .Ve
 .PP
-Check if a header has exceeded \f(CW\*(C`max_line_size\*(C'\fR.
+Check if headers have exceeded \*(L"max_line_size\*(R" or \*(L"max_lines\*(R".
 .SS "last_modified"
 .IX Subsection "last_modified"
 .Vb 2
@@ -472,7 +490,7 @@ Shortcut for the \f(CW\*(C`Last\-Modified\*(C'\fR header.
 \&  my $bytes = $headers\->leftovers;
 .Ve
 .PP
-Get leftover data from header parser.
+Get and remove leftover data from header parser.
 .SS "link"
 .IX Subsection "link"
 .Vb 2

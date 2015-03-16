@@ -64,3 +64,25 @@ C<EXE_FILES: script/hypnotoad script/mojo script/morbo>
 
 =back
 
+=head2 Sat Mar 14 14:50:24 2015: C<Module> L<Mojolicious|Mojolicious>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 6.02>
+
+=item *
+
+C<EXE_FILES: script/hypnotoad script/mojo script/morbo>
+
+=back
+

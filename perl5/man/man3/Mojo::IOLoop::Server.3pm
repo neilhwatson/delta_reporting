@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::IOLoop::Server 3"
-.TH Mojo::IOLoop::Server 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::IOLoop::Server 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -221,8 +221,8 @@ Get handle for server.
 \&  $server\->listen(port => 3000);
 .Ve
 .PP
-Create a new listen socket. Note that \s-1TLS\s0 support depends on
-IO::Socket::SSL (1.84+) and IPv6 support on IO::Socket::IP (0.20+).
+Create a new listen socket. Note that \s-1TLS\s0 support depends on IO::Socket::SSL
+(1.94+).
 .PP
 These options are currently available:
 .IP "address" 2
@@ -231,7 +231,7 @@ These options are currently available:
 \&  address => \*(Aq127.0.0.1\*(Aq
 .Ve
 .Sp
-Local address to listen on, defaults to all.
+Local address to listen on, defaults to \f(CW0.0.0.0\fR.
 .IP "backlog" 2
 .IX Item "backlog"
 .Vb 1
@@ -296,6 +296,13 @@ Path to the \s-1TLS\s0 key file, defaults to a built-in test key.
 .Ve
 .Sp
 \&\s-1TLS\s0 verification mode, defaults to \f(CW0x03\fR.
+.SS "port"
+.IX Subsection "port"
+.Vb 1
+\&  my $port = $server\->port;
+.Ve
+.PP
+Get port this server is listening on.
 .SS "start"
 .IX Subsection "start"
 .Vb 1

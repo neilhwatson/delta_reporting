@@ -9,12 +9,12 @@ use Mojo::JSON 'j';
 use Mojo::JSON::Pointer;
 use Mojo::Parameters;
 use Mojo::Upload;
-use Mojo::Util qw(decode split_header);
+use Mojo::Util 'decode';
 
 has content => sub { Mojo::Content::Single->new };
 has default_charset  => 'UTF-8';
-has max_line_size    => sub { $ENV{MOJO_MAX_LINE_SIZE} || 10240 };
-has max_message_size => sub { $ENV{MOJO_MAX_MESSAGE_SIZE} // 10485760 };
+has max_line_size    => sub { $ENV{MOJO_MAX_LINE_SIZE} || 8192 };
+has max_message_size => sub { $ENV{MOJO_MAX_MESSAGE_SIZE} // 16777216 };
 has version          => '1.1';
 
 sub body {
@@ -99,7 +99,8 @@ sub fix_headers {
   # Content-Length or Connection (unless chunked transfer encoding is used)
   my $content = $self->content;
   my $headers = $content->headers;
-  return $self if $content->is_chunked || $headers->content_length;
+  if ($content->is_multipart) { $headers->remove('Content-Length') }
+  elsif ($content->is_chunked || $headers->content_length) { return $self }
   if   ($content->is_dynamic) { $headers->connection('close') }
   else                        { $headers->content_length($self->body_size) }
 
@@ -143,22 +144,19 @@ sub json {
 }
 
 sub parse {
-  my ($self, $chunk) = @_;
+  my $self = shift;
 
-  # Check message size
-  my $max = $self->max_message_size;
-  return $self->_limit('Maximum message size exceeded', 413)
-    if $max && ($self->{raw_size} += length($chunk //= '')) > $max;
-
+  return $self if $self->{error};
+  $self->{raw_size} += length(my $chunk = shift // '');
   $self->{buffer} .= $chunk;
 
-  # Start line
+  # Start-line
   unless ($self->{state}) {
 
-    # Check line size
+    # Check start-line size
     my $len = index $self->{buffer}, "\x0a";
     $len = length $self->{buffer} if $len < 0;
-    return $self->_limit('Maximum line size exceeded', 431)
+    return $self->_limit('Maximum start-line size exceeded')
       if $len > $self->max_line_size;
 
     $self->{state} = 'content' if $self->extract_start_line(\$self->{buffer});
@@ -169,13 +167,17 @@ sub parse {
   $self->content($self->content->parse(delete $self->{buffer}))
     if $state eq 'content' || $state eq 'finished';
 
-  # Check line size
-  return $self->_limit('Maximum line size exceeded', 431)
+  # Check message size
+  my $max = $self->max_message_size;
+  return $self->_limit('Maximum message size exceeded')
+    if $max && $max < $self->{raw_size};
+
+  # Check header size
+  return $self->_limit('Maximum header size exceeded')
     if $self->headers->is_limit_exceeded;
 
   # Check buffer size
-  return $self->error(
-    {message => 'Maximum buffer size exceeded', advice => 400})
+  return $self->_limit('Maximum buffer size exceeded')
     if $self->content->is_limit_exceeded;
 
   return $self->emit('progress')->content->is_finished ? $self->finish : $self;
@@ -186,7 +188,7 @@ sub start_line_size { length shift->build_start_line }
 sub text {
   my $self    = shift;
   my $body    = $self->body;
-  my $charset = $self->content->charset;
+  my $charset = $self->content->charset || $self->default_charset;
   return $charset ? decode($charset, $body) // $body : $body;
 }
 
@@ -217,8 +219,7 @@ sub uploads {
 sub _build {
   my ($self, $method) = @_;
 
-  my $buffer = '';
-  my $offset = 0;
+  my ($buffer, $offset) = ('', 0);
   while (1) {
 
     # No chunk yet, try again
@@ -237,9 +238,6 @@ sub _build {
 sub _cache {
   my ($self, $method, $all, $name) = @_;
 
-  # Multiple names
-  return map { $self->$method($_) } @$name if ref $name eq 'ARRAY';
-
   # Cache objects by name
   $method .= 's';
   unless ($self->{$method}) {
@@ -251,11 +249,7 @@ sub _cache {
   return $all ? $objects : $objects->[-1];
 }
 
-sub _limit {
-  my ($self, $msg, $code) = @_;
-  $self->{limit} = 1;
-  return $self->error({message => $msg, advice => $code});
-}
+sub _limit { ++$_[0]{limit} and return $_[0]->error({message => $_[1]}) }
 
 sub _parse_formdata {
   my ($self, $upload) = @_;
@@ -311,10 +305,11 @@ Mojo::Message - HTTP message base class
 
 =head1 DESCRIPTION
 
-L<Mojo::Message> is an abstract base class for HTTP messages based on
+L<Mojo::Message> is an abstract base class for HTTP message containers based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230>,
 L<RFC 7231|http://tools.ietf.org/html/rfc7231> and
-L<RFC 2388|http://tools.ietf.org/html/rfc2388>.
+L<RFC 2388|http://tools.ietf.org/html/rfc2388>, like L<Mojo::Message::Request>
+and L<Mojo::Message::Response>.
 
 =head1 EVENTS
 
@@ -375,15 +370,17 @@ Message content, defaults to a L<Mojo::Content::Single> object.
   my $charset = $msg->default_charset;
   $msg        = $msg->default_charset('UTF-8');
 
-Default charset used for form-data parsing, defaults to C<UTF-8>.
+Default charset used by L</"text"> and to extract data from
+C<application/x-www-form-urlencoded> or C<multipart/form-data> message body,
+defaults to C<UTF-8>.
 
 =head2 max_line_size
 
   my $size = $msg->max_line_size;
   $msg     = $msg->max_line_size(1024);
 
-Maximum start line size in bytes, defaults to the value of the
-C<MOJO_MAX_LINE_SIZE> environment variable or C<10240> (10KB).
+Maximum start-line size in bytes, defaults to the value of the
+C<MOJO_MAX_LINE_SIZE> environment variable or C<8192> (8KB).
 
 =head2 max_message_size
 
@@ -391,7 +388,7 @@ C<MOJO_MAX_LINE_SIZE> environment variable or C<10240> (10KB).
   $msg     = $msg->max_message_size(1024);
 
 Maximum message size in bytes, defaults to the value of the
-C<MOJO_MAX_MESSAGE_SIZE> environment variable or C<10485760> (10MB). Setting
+C<MOJO_MAX_MESSAGE_SIZE> environment variable or C<16777216> (16MB). Setting
 the value to C<0> will allow messages of indefinite size. Note that increasing
 this value can also drastically increase memory usage, should you for example
 attempt to parse an excessively large message body with the L</"body_params">,
@@ -406,8 +403,8 @@ HTTP version of message, defaults to C<1.1>.
 
 =head1 METHODS
 
-L<Mojo::Message> inherits all methods from L<Mojo::EventEmitter> and
-implements the following new ones.
+L<Mojo::Message> inherits all methods from L<Mojo::EventEmitter> and implements
+the following new ones.
 
 =head2 body
 
@@ -422,14 +419,14 @@ automatically downgraded to L<Mojo::Content::Single>.
   my $params = $msg->body_params;
 
 C<POST> parameters extracted from C<application/x-www-form-urlencoded> or
-C<multipart/form-data> message body, usually a L<Mojo::Parameters> object.
-Note that this method caches all data, so it should not be called before the
-entire message body has been received. Parts of the message body need to be
-loaded into memory to parse C<POST> parameters, so you have to make sure it is
-not excessively large, there's a 10MB limit by default.
+C<multipart/form-data> message body, usually a L<Mojo::Parameters> object. Note
+that this method caches all data, so it should not be called before the entire
+message body has been received. Parts of the message body need to be loaded
+into memory to parse C<POST> parameters, so you have to make sure it is not
+excessively large, there's a 16MB limit by default.
 
-  # Get POST parameter value
-  say $msg->body_params->param('foo');
+  # Get POST parameter names and values
+  my $hash = $msg->body_params->to_hash;
 
 =head2 body_size
 
@@ -453,12 +450,11 @@ Render all headers.
 
   my $bytes = $msg->build_start_line;
 
-Render start line.
+Render start-line.
 
 =head2 cookie
 
-  my $cookie      = $msg->cookie('foo');
-  my ($foo, $bar) = $msg->cookie(['foo', 'bar']);
+  my $cookie = $msg->cookie('foo');
 
 Access message cookies, usually L<Mojo::Cookie::Request> or
 L<Mojo::Cookie::Response> objects. If there are multiple cookies sharing the
@@ -480,27 +476,34 @@ Access message cookies. Meant to be overloaded in a subclass.
   my $dom        = $msg->dom;
   my $collection = $msg->dom('a[href]');
 
-Turns message body into a L<Mojo::DOM> object and takes an optional selector
-to call the method L<Mojo::DOM/"find"> on it right away, which returns a
-L<Mojo::Collection> object. Note that this method caches all data, so it
-should not be called before the entire message body has been received. The
-whole message body needs to be loaded into memory to parse it, so you have to
-make sure it is not excessively large, there's a 10MB limit by default.
+Retrieve message body from L</"text"> and turn it into a L<Mojo::DOM> object,
+an optional selector can be used to call the method L<Mojo::DOM/"find"> on it
+right away, which then returns a L<Mojo::Collection> object. Note that this
+method caches all data, so it should not be called before the entire message
+body has been received. The whole message body needs to be loaded into memory
+to parse it, so you have to make sure it is not excessively large, there's a
+16MB limit by default.
 
   # Perform "find" right away
-  say $msg->dom('h1, h2, h3')->text;
+  say $msg->dom('h1, h2, h3')->map('text')->join("\n");
 
   # Use everything else Mojo::DOM has to offer
   say $msg->dom->at('title')->text;
-  say $msg->dom->html->body->children->type->uniq;
+  say $msg->dom->at('body')->children->map('tag')->uniq->join("\n");
 
 =head2 error
 
   my $err = $msg->error;
-  $msg    = $msg->error({message => 'Parser error', advice => 500});
+  $msg    = $msg->error({message => 'Parser error'});
 
 Get or set message error, an C<undef> return value indicates that there is no
 error.
+
+  # Connection or parser error
+  $msg->error({message => 'Connection refused'});
+
+  # 4xx/5xx response
+  $msg->error({message => 'Internal Server Error', code => 500});
 
 =head2 every_cookie
 
@@ -526,7 +529,7 @@ an array reference.
 
   my $bool = $msg->extract_start_line(\$str);
 
-Extract start line from string. Meant to be overloaded in a subclass.
+Extract start-line from string. Meant to be overloaded in a subclass.
 
 =head2 finish
 
@@ -556,7 +559,7 @@ Get a chunk of header data, starting from a specific position.
 
   my $bytes = $msg->get_start_line_chunk($offset);
 
-Get a chunk of start line data starting from a specific position. Meant to be
+Get a chunk of start-line data starting from a specific position. Meant to be
 overloaded in a subclass.
 
 =head2 header_size
@@ -571,6 +574,9 @@ Size of headers in bytes.
 
 Message headers, usually a L<Mojo::Headers> object.
 
+  # Longer version
+  my $headers = $msg->content->headers;
+
 =head2 is_finished
 
   my $bool = $msg->is_finished;
@@ -581,7 +587,8 @@ Check if message parser/generator is finished.
 
   my $bool = $msg->is_limit_exceeded;
 
-Check if message has exceeded L</"max_line_size"> or L</"max_message_size">.
+Check if message has exceeded L</"max_line_size">, L</"max_message_size">,
+L<Mojo::Content/"max_buffer_size"> or L<Mojo::Headers/"max_line_size">.
 
 =head2 json
 
@@ -589,12 +596,12 @@ Check if message has exceeded L</"max_line_size"> or L</"max_message_size">.
   my $value = $msg->json('/foo/bar');
 
 Decode JSON message body directly using L<Mojo::JSON> if possible, an C<undef>
-return value indicates a bare C<null> or that decoding failed. An optional
-JSON Pointer can be used to extract a specific value with
-L<Mojo::JSON::Pointer>. Note that this method caches all data, so it should
-not be called before the entire message body has been received. The whole
-message body needs to be loaded into memory to parse it, so you have to make
-sure it is not excessively large, there's a 10MB limit by default.
+return value indicates a bare C<null> or that decoding failed. An optional JSON
+Pointer can be used to extract a specific value with L<Mojo::JSON::Pointer>.
+Note that this method caches all data, so it should not be called before the
+entire message body has been received. The whole message body needs to be
+loaded into memory to parse it, so you have to make sure it is not excessively
+large, there's a 16MB limit by default.
 
   # Extract JSON values
   say $msg->json->{foo}{bar}[23];
@@ -610,14 +617,14 @@ Parse message chunk.
 
   my $size = $msg->start_line_size;
 
-Size of the start line in bytes.
+Size of the start-line in bytes.
 
 =head2 text
 
   my $str = $msg->text;
 
-Retrieve L</"body"> and try to decode it if a charset could be extracted with
-L<Mojo::Content/"charset">.
+Retrieve L</"body"> and try to decode it with L<Mojo::Content/"charset"> or
+L</"default_charset">.
 
 =head2 to_string
 
@@ -627,14 +634,13 @@ Render whole message.
 
 =head2 upload
 
-  my $upload      = $msg->upload('foo');
-  my ($foo, $bar) = $msg->upload(['foo', 'bar']);
+  my $upload = $msg->upload('foo');
 
-Access C<multipart/form-data> file uploads, usually L<Mojo::Upload> objects.
-If there are multiple uploads sharing the same name, and you want to access
-more than just the last one, you can use L</"every_upload">. Note that this
-method caches all data, so it should not be called before the entire message
-body has been received.
+Access C<multipart/form-data> file uploads, usually L<Mojo::Upload> objects. If
+there are multiple uploads sharing the same name, and you want to access more
+than just the last one, you can use L</"every_upload">. Note that this method
+caches all data, so it should not be called before the entire message body has
+been received.
 
   # Get content of uploaded file
   say $msg->upload('foo')->asset->slurp;
@@ -644,6 +650,9 @@ body has been received.
   my $uploads = $msg->uploads;
 
 All C<multipart/form-data> file uploads, usually L<Mojo::Upload> objects.
+
+  # Names of all uploads
+  say $_->name for @{$msg->uploads};
 
 =head1 SEE ALSO
 

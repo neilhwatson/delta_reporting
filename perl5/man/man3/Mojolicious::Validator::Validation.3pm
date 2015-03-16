@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Validator::Validation 3"
-.TH Mojolicious::Validator::Validation 3 "2014-10-17" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Validator::Validation 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -221,8 +221,7 @@ checks will be performed on them after the first one failed.
 Validate \f(CW\*(C`csrf_token\*(C'\fR and protect from cross-site request forgery.
 .SS "error"
 .IX Subsection "error"
-.Vb 3
-\&  my @names   = $validation\->error;
+.Vb 2
 \&  my $err     = $validation\->error(\*(Aqfoo\*(Aq);
 \&  $validation = $validation\->error(foo => [\*(Aqcustom_check\*(Aq]);
 .Ve
@@ -230,7 +229,8 @@ Validate \f(CW\*(C`csrf_token\*(C'\fR and protect from cross-site request forger
 Get or set details for failed validation check, at any given time there can
 only be one per field.
 .PP
-.Vb 1
+.Vb 2
+\&  # Details about failed validation
 \&  my ($check, $result, @args) = @{$validation\->error(\*(Aqfoo\*(Aq)};
 .Ve
 .SS "every_param"
@@ -245,6 +245,18 @@ array reference.
 .Vb 2
 \&  # Get first value
 \&  my $first = $validation\->every_param(\*(Aqfoo\*(Aq)\->[0];
+.Ve
+.SS "failed"
+.IX Subsection "failed"
+.Vb 1
+\&  my $names = $validation\->failed;
+.Ve
+.PP
+Return a list of all names for parameters that failed validation.
+.PP
+.Vb 2
+\&  # Names of all parameters that failed
+\&  say for @{$validation\->failed};
 .Ve
 .SS "has_data"
 .IX Subsection "has_data"
@@ -279,33 +291,47 @@ the current \*(L"topic\*(R".
 Change validation \*(L"topic\*(R".
 .SS "param"
 .IX Subsection "param"
-.Vb 3
-\&  my @names       = $validation\->param;
-\&  my $value       = $validation\->param(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $validation\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+.Vb 1
+\&  my $value = $validation\->param(\*(Aqfoo\*(Aq);
 .Ve
 .PP
 Access validated parameters. If there are multiple values sharing the same
 name, and you want to access more than just the last one, you can use
 \&\*(L"every_param\*(R".
+.SS "passed"
+.IX Subsection "passed"
+.Vb 1
+\&  my $names = $validation\->passed;
+.Ve
+.PP
+Return a list of all names for parameters that passed validation.
+.PP
+.Vb 2
+\&  # Names of all parameters that passed
+\&  say for @{$validation\->passed};
+.Ve
 .SS "required"
 .IX Subsection "required"
 .Vb 1
 \&  $validation = $validation\->required(\*(Aqfoo\*(Aq);
 .Ve
 .PP
-Change validation \*(L"topic\*(R" and make sure a value is present and not an
-empty string.
+Change validation \*(L"topic\*(R" and make sure a value is present and not an empty
+string.
 .SH "AUTOLOAD"
 .IX Header "AUTOLOAD"
 In addition to the \*(L"\s-1ATTRIBUTES\*(R"\s0 and \*(L"\s-1METHODS\*(R"\s0 above, you can also call
 validation checks provided by \*(L"validator\*(R" on
 Mojolicious::Validator::Validation objects, similar to \*(L"check\*(R".
 .PP
-.Vb 3
+.Vb 4
+\&  # Call validation checks
 \&  $validation\->required(\*(Aqfoo\*(Aq)\->size(2, 5)\->like(qr/^[A\-Z]/);
 \&  $validation\->optional(\*(Aqbar\*(Aq)\->equal_to(\*(Aqfoo\*(Aq);
 \&  $validation\->optional(\*(Aqbaz\*(Aq)\->in(qw(test 123));
+\&
+\&  # Longer version
+\&  $validation\->required(\*(Aqfoo\*(Aq)\->check(\*(Aqsize\*(Aq, 2,5)\->check(\*(Aqlike\*(Aq, qr/^[A\-Z]/);
 .Ve
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"

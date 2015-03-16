@@ -6,7 +6,7 @@ use Mojo::Asset::File;
 use Mojo::Asset::Memory;
 use Mojo::Date;
 use Mojo::Home;
-use Mojo::Loader;
+use Mojo::Loader 'data_section';
 use Mojo::Util 'md5_sum';
 
 has classes => sub { ['main'] };
@@ -15,8 +15,6 @@ has paths   => sub { [] };
 # Bundled files
 my $HOME   = Mojo::Home->new;
 my $PUBLIC = $HOME->parse($HOME->mojo_lib_dir)->rel_dir('Mojolicious/public');
-
-my $LOADER = Mojo::Loader->new;
 
 sub dispatch {
   my ($self, $c) = @_;
@@ -32,9 +30,9 @@ sub dispatch {
   $path = $stash->{path} ? $path->new($stash->{path}) : $path->clone;
   return undef unless my @parts = @{$path->canonicalize->parts};
 
-  # Serve static file and prevent directory traversal
+  # Serve static file and prevent path traversal
   return undef if $parts[0] eq '..' || !$self->serve($c, join('/', @parts));
-  $stash->{'mojo.static'}++;
+  $stash->{'mojo.static'} = 1;
   return !!$c->rendered;
 }
 
@@ -105,7 +103,7 @@ sub serve_asset {
 
   # Not satisfiable
   return $res->code(416) unless my $size = $asset->size;
-  return $res->code(416) unless $range =~ m/^bytes=(\d+)?-(\d+)?/;
+  return $res->code(416) unless $range =~ /^bytes=(\d+)?-(\d+)?/;
   my ($start, $end) = ($1 // 0, defined $2 && $2 < $size ? $2 : $size - 1);
   return $res->code(416) if $start > $end;
 
@@ -127,21 +125,21 @@ sub _get_data_file {
 
   # Find file
   return undef
-    unless defined(my $data = $LOADER->data($self->{index}{$rel}, $rel));
+    unless defined(my $data = data_section($self->{index}{$rel}, $rel));
   return Mojo::Asset::Memory->new->add_chunk($data);
 }
 
 sub _get_file {
   my ($self, $path) = @_;
   no warnings 'newline';
-  return -f $path && -r $path ? Mojo::Asset::File->new(path => $path) : undef;
+  return -f $path && -r _ ? Mojo::Asset::File->new(path => $path) : undef;
 }
 
 sub _warmup {
   my $self = shift;
   my $index = $self->{index} = {};
   for my $class (reverse @{$self->classes}) {
-    $index->{$_} = $class for keys %{$LOADER->data($class)};
+    $index->{$_} = $class for keys %{data_section $class};
   }
 }
 
@@ -177,8 +175,9 @@ L<Mojolicious::Static> implements the following attributes.
   my $classes = $static->classes;
   $static     = $static->classes(['main']);
 
-Classes to use for finding files in C<DATA> sections, first one has the
-highest precedence, defaults to C<main>.
+Classes to use for finding files in C<DATA> sections with L<Mojo::Loader>,
+first one has the highest precedence, defaults to C<main>. Only files with
+exactly one extension will be used, like C<index.html>.
 
   # Add another class with static files in DATA section
   push @{$static->classes}, 'Mojolicious::Plugin::Fun';
@@ -210,8 +209,9 @@ Serve static file for L<Mojolicious::Controller> object.
   my $asset = $static->file('../lib/MyApp.pm');
 
 Build L<Mojo::Asset::File> or L<Mojo::Asset::Memory> object for a file,
-relative to L</"paths"> or from L</"classes">. Note that this method does not
-protect from traversing to parent directories.
+relative to L</"paths"> or from L</"classes">, or return C<undef> if it doesn't
+exist. Note that this method does not protect from traversing to parent
+directories.
 
   my $content = $static->file('foo/bar.html')->slurp;
 
@@ -246,8 +246,8 @@ Add C<Last-Modified> header before comparing.
   my $bool = $static->serve(Mojolicious::Controller->new, 'images/logo.png');
   my $bool = $static->serve(Mojolicious::Controller->new, '../lib/MyApp.pm');
 
-Serve a specific file, relative to L</"paths"> or from L</"classes">. Note
-that this method does not protect from traversing to parent directories.
+Serve a specific file, relative to L</"paths"> or from L</"classes">. Note that
+this method does not protect from traversing to parent directories.
 
 =head2 serve_asset
 

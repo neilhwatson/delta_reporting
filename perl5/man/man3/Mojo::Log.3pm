@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Log 3"
-.TH Mojo::Log 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Log 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -152,11 +152,11 @@ Mojo::Log \- Simple logger
 \&  my $log = Mojo::Log\->new(path => \*(Aq/var/log/mojo.log\*(Aq, level => \*(Aqwarn\*(Aq);
 \&
 \&  # Log messages
-\&  $log\->debug(\*(AqWhy is this not working?\*(Aq);
-\&  $log\->info(\*(AqFYI: it happened again.\*(Aq);
-\&  $log\->warn(\*(AqThis might be a problem.\*(Aq);
-\&  $log\->error(\*(AqGarden variety error.\*(Aq);
-\&  $log\->fatal(\*(AqBoom!\*(Aq);
+\&  $log\->debug(\*(AqNot sure what is happening here\*(Aq);
+\&  $log\->info(\*(AqFYI: it happened again\*(Aq);
+\&  $log\->warn(\*(AqThis might be a problem\*(Aq);
+\&  $log\->error(\*(AqGarden variety error\*(Aq);
+\&  $log\->fatal(\*(AqBoom\*(Aq);
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -198,7 +198,7 @@ A callback for formatting log messages.
 .Vb 4
 \&  $log\->format(sub {
 \&    my ($time, $level, @lines) = @_;
-\&    return "[Thu May 15 17:47:04 2014] [info] I X Mojolicious.\en";
+\&    return "[Thu May 15 17:47:04 2014] [info] I X Mojolicious\en";
 \&  });
 .Ve
 .SS "handle"
@@ -214,7 +214,7 @@ Log filehandle used by default \*(L"message\*(R" event, defaults to opening
 .IX Subsection "history"
 .Vb 2
 \&  my $history = $log\->history;
-\&  $log        = $log\->history([[time, \*(Aqdebug\*(Aq, \*(AqThat went wrong.\*(Aq]]);
+\&  $log        = $log\->history([[time, \*(Aqdebug\*(Aq, \*(AqThat went wrong\*(Aq]]);
 .Ve
 .PP
 The last few logged messages.
@@ -235,8 +235,7 @@ Active log level, defaults to \f(CW\*(C`debug\*(C'\fR. Available log levels are 
 \&  $log     = $log\->max_history_size(5);
 .Ve
 .PP
-Maximum number of logged messages to store in \*(L"history\*(R", defaults to
-\&\f(CW10\fR.
+Maximum number of logged messages to store in \*(L"history\*(R", defaults to \f(CW10\fR.
 .SS "path"
 .IX Subsection "path"
 .Vb 2
@@ -247,54 +246,47 @@ Maximum number of logged messages to store in \*(L"history\*(R", defaults to
 Log file path used by \*(L"handle\*(R".
 .SH "METHODS"
 .IX Header "METHODS"
-Mojo::Log inherits all methods from Mojo::EventEmitter and implements
-the following new ones.
+Mojo::Log inherits all methods from Mojo::EventEmitter and implements the
+following new ones.
 .SS "append"
 .IX Subsection "append"
 .Vb 1
-\&  $log\->append("[Thu May 15 17:47:04 2014] [info] I X Mojolicious.\en");
+\&  $log\->append("[Thu May 15 17:47:04 2014] [info] I X Mojolicious\en");
 .Ve
 .PP
 Append message to \*(L"handle\*(R".
 .SS "debug"
 .IX Subsection "debug"
 .Vb 2
-\&  $log = $log\->debug(\*(AqYou screwed up, but that is ok.\*(Aq);
-\&  $log = $log\->debug(\*(AqAll\*(Aq, \*(Aqcool!\*(Aq);
+\&  $log = $log\->debug(\*(AqYou screwed up, but that is ok\*(Aq);
+\&  $log = $log\->debug(\*(AqAll\*(Aq, \*(Aqcool\*(Aq);
 .Ve
 .PP
-Log debug message.
+Emit \*(L"message\*(R" event and log debug message.
 .SS "error"
 .IX Subsection "error"
 .Vb 2
-\&  $log = $log\->error(\*(AqYou really screwed up this time.\*(Aq);
-\&  $log = $log\->error(\*(AqWow\*(Aq, \*(Aqseriously!\*(Aq);
+\&  $log = $log\->error(\*(AqYou really screwed up this time\*(Aq);
+\&  $log = $log\->error(\*(AqWow\*(Aq, \*(Aqseriously\*(Aq);
 .Ve
 .PP
-Log error message.
+Emit \*(L"message\*(R" event and log error message.
 .SS "fatal"
 .IX Subsection "fatal"
 .Vb 2
 \&  $log = $log\->fatal(\*(AqIts over...\*(Aq);
-\&  $log = $log\->fatal(\*(AqBye\*(Aq, \*(Aqbye!\*(Aq);
+\&  $log = $log\->fatal(\*(AqBye\*(Aq, \*(Aqbye\*(Aq);
 .Ve
 .PP
-Log fatal message.
+Emit \*(L"message\*(R" event and log fatal message.
 .SS "info"
 .IX Subsection "info"
 .Vb 2
-\&  $log = $log\->info(\*(AqYou are bad, but you prolly know already.\*(Aq);
-\&  $log = $log\->info(\*(AqOk\*(Aq, \*(Aqthen!\*(Aq);
+\&  $log = $log\->info(\*(AqYou are bad, but you prolly know already\*(Aq);
+\&  $log = $log\->info(\*(AqOk\*(Aq, \*(Aqthen\*(Aq);
 .Ve
 .PP
-Log info message.
-.SS "is_level"
-.IX Subsection "is_level"
-.Vb 1
-\&  my $bool = $log\->is_level(\*(Aqdebug\*(Aq);
-.Ve
-.PP
-Check log level.
+Emit \*(L"message\*(R" event and log info message.
 .SS "is_debug"
 .IX Subsection "is_debug"
 .Vb 1
@@ -309,13 +301,6 @@ Check for debug log level.
 .Ve
 .PP
 Check for error log level.
-.SS "is_fatal"
-.IX Subsection "is_fatal"
-.Vb 1
-\&  my $bool = $log\->is_fatal;
-.Ve
-.PP
-Check for fatal log level.
 .SS "is_info"
 .IX Subsection "is_info"
 .Vb 1
@@ -330,14 +315,6 @@ Check for info log level.
 .Ve
 .PP
 Check for warn log level.
-.SS "log"
-.IX Subsection "log"
-.Vb 2
-\&  $log = $log\->log(debug => \*(AqThis should work.\*(Aq);
-\&  $log = $log\->log(debug => \*(AqThis\*(Aq, \*(Aqtoo!\*(Aq);
-.Ve
-.PP
-Emit \*(L"message\*(R" event.
 .SS "new"
 .IX Subsection "new"
 .Vb 1
@@ -350,10 +327,10 @@ default logger.
 .IX Subsection "warn"
 .Vb 2
 \&  $log = $log\->warn(\*(AqDont do that Dave...\*(Aq);
-\&  $log = $log\->warn(\*(AqNo\*(Aq, \*(Aqreally!\*(Aq);
+\&  $log = $log\->warn(\*(AqNo\*(Aq, \*(Aqreally\*(Aq);
 .Ve
 .PP
-Log warn message.
+Emit \*(L"message\*(R" event and log warn message.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

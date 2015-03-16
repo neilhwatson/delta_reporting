@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Command::prefork 3"
-.TH Mojolicious::Command::prefork 3 "2014-09-03" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Command::prefork 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -145,43 +145,38 @@ Mojolicious::Command::prefork \- Prefork command
 .Vb 1
 \&  Usage: APPLICATION prefork [OPTIONS]
 \&
+\&    ./myapp.pl prefork
 \&    ./myapp.pl prefork \-m production \-l http://*:8080
 \&    ./myapp.pl prefork \-l http://127.0.0.1:8080 \-l https://[::]:8081
 \&    ./myapp.pl prefork \-l \*(Aqhttps://*:443?cert=./server.crt&key=./server.key\*(Aq
 \&
 \&  Options:
-\&    \-A, \-\-accepts <number>               Number of connections for workers to
-\&                                         accept, defaults to 1000.
-\&    \-a, \-\-accept\-interval <seconds>      Accept interval, defaults to 0.025.
+\&    \-a, \-\-accepts <number>               Number of connections for workers to
+\&                                         accept, defaults to 1000
 \&    \-b, \-\-backlog <size>                 Listen backlog size, defaults to
-\&                                         SOMAXCONN.
-\&    \-c, \-\-clients <number>               Maximum number of concurrent clients,
-\&                                         defaults to 1000.
+\&                                         SOMAXCONN
+\&    \-c, \-\-clients <number>               Maximum number of concurrent
+\&                                         connections, defaults to 1000
 \&    \-G, \-\-graceful\-timeout <seconds>     Graceful timeout, defaults to 20.
-\&    \-g, \-\-group <name>                   Group name for process.
-\&        \-\-heartbeat\-interval <seconds>   Heartbeat interval, defaults to 5.
-\&    \-H, \-\-heartbeat\-timeout <seconds>    Heartbeat timeout, defaults to 20.
-\&    \-i, \-\-inactivity <seconds>           Inactivity timeout, defaults to the
-\&                                         value of MOJO_INACTIVITY_TIMEOUT or
-\&                                         15.
-\&        \-\-lock\-file <path>               Path to lock file, defaults to a
-\&                                         random file.
-\&    \-L, \-\-lock\-timeout <seconds>         Lock timeout, defaults to 1.
+\&    \-g, \-\-group <name>                   Group name for process
+\&    \-I, \-\-heartbeat\-interval <seconds>   Heartbeat interval, defaults to 5
+\&    \-H, \-\-heartbeat\-timeout <seconds>    Heartbeat timeout, defaults to 20
+\&    \-i, \-\-inactivity\-timeout <seconds>   Inactivity timeout, defaults to the
+\&                                         value of MOJO_INACTIVITY_TIMEOUT or 15
 \&    \-l, \-\-listen <location>              One or more locations you want to
 \&                                         listen on, defaults to the value of
-\&                                         MOJO_LISTEN or "http://*:3000".
-\&        \-\-multi\-accept <number>          Number of connection to accept at
-\&                                         once, defaults to 50.
-\&    \-P, \-\-pid\-file <path>                Path to process id file, defaults to
-\&                                         a random file.
+\&                                         MOJO_LISTEN or "http://*:3000"
+\&    \-M, \-\-multi\-accept <number>          Number of connections to accept at
+\&                                         once, defaults to 50
+\&    \-P, \-\-pid\-file <path>                Path to process id file, defaults to a
+\&                                         random file
 \&    \-p, \-\-proxy                          Activate reverse proxy support,
 \&                                         defaults to the value of
-\&                                         MOJO_REVERSE_PROXY.
+\&                                         MOJO_REVERSE_PROXY
 \&    \-r, \-\-requests <number>              Maximum number of requests per
-\&                                         keep\-alive connection, defaults to
-\&                                         25.
-\&    \-u, \-\-user <name>                    Username for process.
-\&    \-w, \-\-workers <number>               Number of workers, defaults to 4.
+\&                                         keep\-alive connection, defaults to 25
+\&    \-u, \-\-user <name>                    Username for process
+\&    \-w, \-\-workers <number>               Number of workers, defaults to 4
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -201,7 +196,7 @@ Mojolicious::Command and implements the following new ones.
 .IX Subsection "description"
 .Vb 2
 \&  my $description = $prefork\->description;
-\&  $prefork        = $prefork\->description(\*(AqFoo!\*(Aq);
+\&  $prefork        = $prefork\->description(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short description of this command, used for the command list.
@@ -209,7 +204,7 @@ Short description of this command, used for the command list.
 .IX Subsection "usage"
 .Vb 2
 \&  my $usage = $prefork\->usage;
-\&  $prefork  = $prefork\->usage(\*(AqFoo!\*(Aq);
+\&  $prefork  = $prefork\->usage(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Usage information for this command, used for the help screen.

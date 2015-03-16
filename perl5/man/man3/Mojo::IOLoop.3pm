@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::IOLoop 3"
-.TH Mojo::IOLoop 3 "2014-09-12" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::IOLoop 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -186,9 +186,9 @@ Mojo::IOLoop \- Minimalistic event loop
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::IOLoop is a very minimalistic event loop based on Mojo::Reactor,
-it has been reduced to the absolute minimal feature set required to build
-solid and scalable non-blocking \s-1TCP\s0 clients and servers.
+Mojo::IOLoop is a very minimalistic event loop based on Mojo::Reactor, it
+has been reduced to the absolute minimal feature set required to build solid
+and scalable non-blocking \s-1TCP\s0 clients and servers.
 .PP
 Depending on operating system, the default per-process and system-wide file
 descriptor limits are often very low and need to be tuned for better
@@ -206,49 +206,35 @@ scalable \f(CW\*(C`select\*(C'\fR.
 The event loop will be resilient to time jumps if a monotonic clock is
 available through Time::HiRes. A \s-1TLS\s0 certificate and key are also built
 right in, to make writing test servers as easy as possible. Also note that for
-convenience the \f(CW\*(C`PIPE\*(C'\fR signal will be set to \f(CW\*(C`IGNORE\*(C'\fR when Mojo::IOLoop
-is loaded.
+convenience the \f(CW\*(C`PIPE\*(C'\fR signal will be set to \f(CW\*(C`IGNORE\*(C'\fR when Mojo::IOLoop is
+loaded.
 .PP
-For better scalability (epoll, kqueue) and to provide IPv6, \s-1SOCKS5\s0 as well as
-\&\s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+),
-IO::Socket::Socks (0.64+) and IO::Socket::SSL (1.84+) will be used
-automatically if they are installed. Individual features can also be disabled
-with the \f(CW\*(C`MOJO_NO_IPV6\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and \f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment
-variables.
+For better scalability (epoll, kqueue) and to provide non-blocking name
+resolution, \s-1SOCKS5\s0 as well as \s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+),
+Net::DNS::Native (0.15+), IO::Socket::Socks (0.64+) and
+IO::Socket::SSL (1.94+) will be used automatically if possible. Individual
+features can also be disabled with the \f(CW\*(C`MOJO_NO_NDN\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and
+\&\f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment variables.
 .PP
 See \*(L"REAL-TIME \s-1WEB\*(R"\s0 in Mojolicious::Guides::Cookbook for more.
+.SH "EVENTS"
+.IX Header "EVENTS"
+Mojo::IOLoop inherits all events from Mojo::EventEmitter and can emit the
+following new ones.
+.SS "finish"
+.IX Subsection "finish"
+.Vb 4
+\&  $loop\->on(finish => sub {
+\&    my $loop = shift;
+\&    ...
+\&  });
+.Ve
+.PP
+Emitted when the event loop wants to shut down gracefully and is just waiting
+for all existing connections to be closed.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojo::IOLoop implements the following attributes.
-.SS "accept_interval"
-.IX Subsection "accept_interval"
-.Vb 2
-\&  my $interval = $loop\->accept_interval;
-\&  $loop        = $loop\->accept_interval(0.5);
-.Ve
-.PP
-Interval in seconds for trying to reacquire the accept mutex, defaults to
-\&\f(CW0.025\fR. Note that changing this value can affect performance and idle \s-1CPU\s0
-usage.
-.SS "lock"
-.IX Subsection "lock"
-.Vb 2
-\&  my $cb = $loop\->lock;
-\&  $loop  = $loop\->lock(sub {...});
-.Ve
-.PP
-A callback for acquiring the accept mutex, used to sync multiple server
-processes. The callback should return true or false. Note that exceptions in
-this callback are not captured.
-.PP
-.Vb 2
-\&  $loop\->lock(sub {
-\&    my $blocking = shift;
-\&
-\&    # Got the accept mutex, start accepting new connections
-\&    return 1;
-\&  });
-.Ve
 .SS "max_accepts"
 .IX Subsection "max_accepts"
 .Vb 2
@@ -257,8 +243,8 @@ this callback are not captured.
 .Ve
 .PP
 The maximum number of connections this event loop is allowed to accept before
-shutting down gracefully without interrupting existing connections, defaults
-to \f(CW0\fR. Setting the value to \f(CW0\fR will allow this event loop to accept new
+shutting down gracefully without interrupting existing connections, defaults to
+\&\f(CW0\fR. Setting the value to \f(CW0\fR will allow this event loop to accept new
 connections indefinitely. Note that up to half of this value can be subtracted
 randomly to improve load balancing between multiple server processes.
 .SS "max_connections"
@@ -269,10 +255,7 @@ randomly to improve load balancing between multiple server processes.
 .Ve
 .PP
 The maximum number of concurrent connections this event loop is allowed to
-handle before stopping to accept new incoming connections, defaults to
-\&\f(CW1000\fR. Setting the value to \f(CW0\fR will make this event loop stop accepting
-new connections and allow it to shut down gracefully without interrupting
-existing connections.
+handle before stopping to accept new incoming connections, defaults to \f(CW1000\fR.
 .SS "multi_accept"
 .IX Subsection "multi_accept"
 .Vb 2
@@ -280,7 +263,8 @@ existing connections.
 \&  $loop     = $loop\->multi_accept(100);
 .Ve
 .PP
-Number of connections to accept at once, defaults to \f(CW50\fR.
+Number of connections to accept at once, defaults to \f(CW50\fR or \f(CW1\fR, depending
+on if the value of \*(L"max_connections\*(R" is smaller than \f(CW50\fR.
 .SS "reactor"
 .IX Subsection "reactor"
 .Vb 2
@@ -301,20 +285,14 @@ Mojo::Reactor::EV object with a default subscriber to the event
 \&
 \&  # Change to watching only if handle becomes writable
 \&  $loop\->reactor\->watch($handle, 0, 1);
+\&
+\&  # Remove handle again
+\&  $loop\->reactor\->remove($handle);
 .Ve
-.SS "unlock"
-.IX Subsection "unlock"
-.Vb 2
-\&  my $cb = $loop\->unlock;
-\&  $loop  = $loop\->unlock(sub {...});
-.Ve
-.PP
-A callback for releasing the accept mutex, used to sync multiple server
-processes. Note that exceptions in this callback are not captured.
 .SH "METHODS"
 .IX Header "METHODS"
-Mojo::IOLoop inherits all methods from Mojo::Base and implements the
-following new ones.
+Mojo::IOLoop inherits all methods from Mojo::EventEmitter and implements
+the following new ones.
 .SS "acceptor"
 .IX Subsection "acceptor"
 .Vb 3
@@ -337,7 +315,7 @@ Open \s-1TCP\s0 connection with Mojo::IOLoop::Client, takes the same arguments a
 \&\*(L"connect\*(R" in Mojo::IOLoop::Client.
 .PP
 .Vb 5
-\&  # Connect to localhost on port 3000
+\&  # Connect to 127.0.0.1 on port 3000
 \&  Mojo::IOLoop\->client({port => 3000} => sub {
 \&    my ($loop, $err, $stream) = @_;
 \&    ...
@@ -352,10 +330,10 @@ Open \s-1TCP\s0 connection with Mojo::IOLoop::Client, takes the same arguments a
 \&  my $delay = $loop\->delay(sub {...}, sub {...});
 .Ve
 .PP
-Build Mojo::IOLoop::Delay object to manage callbacks and control the flow
-of events for this event loop, which can help you avoid deep nested closures
-and memory leaks that often result from continuation-passing style. Callbacks
-will be passed along to \*(L"steps\*(R" in Mojo::IOLoop::Delay.
+Build Mojo::IOLoop::Delay object to manage callbacks and control the flow of
+events for this event loop, which can help you avoid deep nested closures and
+memory leaks that often result from continuation-passing style. Callbacks will
+be passed along to \*(L"steps\*(R" in Mojo::IOLoop::Delay.
 .PP
 .Vb 10
 \&  # Synchronize multiple events
@@ -509,7 +487,7 @@ as \*(L"listen\*(R" in Mojo::IOLoop::Server.
 \&    my ($loop, $stream, $id) = @_;
 \&    ...
 \&  });
-\&  my $port = Mojo::IOLoop\->acceptor($id)\->handle\->sockport;
+\&  my $port = Mojo::IOLoop\->acceptor($id)\->port;
 .Ve
 .SS "singleton"
 .IX Subsection "singleton"
@@ -517,8 +495,8 @@ as \*(L"listen\*(R" in Mojo::IOLoop::Server.
 \&  my $loop = Mojo::IOLoop\->singleton;
 .Ve
 .PP
-The global Mojo::IOLoop singleton, used to access a single shared event
-loop object from everywhere inside the process.
+The global Mojo::IOLoop singleton, used to access a single shared event loop
+object from everywhere inside the process.
 .PP
 .Vb 3
 \&  # Many methods also allow you to take shortcuts
@@ -528,6 +506,13 @@ loop object from everywhere inside the process.
 \&  # Restart active timer
 \&  my $id = Mojo::IOLoop\->timer(3 => sub { say \*(AqTimeout!\*(Aq });
 \&  Mojo::IOLoop\->singleton\->reactor\->again($id);
+\&
+\&  # Turn file descriptor into handle and watch if it becomes readable
+\&  my $handle = IO::Handle\->new_from_fd($fd, \*(Aqr\*(Aq);
+\&  Mojo::IOLoop\->singleton\->reactor\->io($handle => sub {
+\&    my ($reactor, $writable) = @_;
+\&    say $writable ? \*(AqHandle is writable\*(Aq : \*(AqHandle is readable\*(Aq;
+\&  })\->watch($handle, 1, 0);
 .Ve
 .SS "start"
 .IX Subsection "start"
@@ -552,6 +537,15 @@ some reactors stop automatically if there are no events being watched anymore.
 .PP
 Stop the event loop, this will not interrupt any existing connections and the
 event loop can be restarted by running \*(L"start\*(R" again.
+.SS "stop_gracefully"
+.IX Subsection "stop_gracefully"
+.Vb 2
+\&  Mojo::IOLoop\->stop_gracefully;
+\&  $loop\->stop_gracefully;
+.Ve
+.PP
+Stop accepting new connections and wait for all existing connections to be
+closed before stopping the event loop.
 .SS "stream"
 .IX Subsection "stream"
 .Vb 3

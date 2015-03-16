@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Routes::Pattern 3"
-.TH Mojolicious::Routes::Pattern 3 "2014-09-27" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Routes::Pattern 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -182,14 +182,6 @@ Default parameters.
 .Ve
 .PP
 Compiled regular expression for format matching.
-.SS "pattern"
-.IX Subsection "pattern"
-.Vb 2
-\&  my $raw  = $pattern\->pattern;
-\&  $pattern = $pattern\->pattern(\*(Aq/(foo)/(bar)\*(Aq);
-.Ve
-.PP
-Raw unparsed pattern.
 .SS "placeholder_start"
 .IX Subsection "placeholder_start"
 .Vb 2
@@ -247,6 +239,14 @@ Character indicating a relaxed placeholder, defaults to \f(CW\*(C`#\*(C'\fR.
 .PP
 Pattern in parsed form. Note that this structure should only be used very
 carefully since it is very dynamic.
+.SS "unparsed"
+.IX Subsection "unparsed"
+.Vb 2
+\&  my $unparsed = $pattern\->unparsed;
+\&  $pattern     = $pattern\->unparsed(\*(Aq/(foo)/(bar)\*(Aq);
+.Ve
+.PP
+Raw unparsed pattern.
 .SS "wildcard_start"
 .IX Subsection "wildcard_start"
 .Vb 2
@@ -278,7 +278,8 @@ Match pattern against path and remove matching parts, format detection is
 disabled by default.
 .SS "new"
 .IX Subsection "new"
-.Vb 4
+.Vb 5
+\&  my $pattern = Mojolicious::Routes::Pattern\->new;
 \&  my $pattern = Mojolicious::Routes::Pattern\->new(\*(Aq/:action\*(Aq);
 \&  my $pattern
 \&    = Mojolicious::Routes::Pattern\->new(\*(Aq/:action\*(Aq, action => qr/\ew+/);

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Controller 3"
-.TH Mojolicious::Controller 3 "2014-10-17" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Controller 3 "2015-02-27" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -171,12 +171,12 @@ implements the following new ones.
 \&  $c      = $c\->app(Mojolicious\->new);
 .Ve
 .PP
-A reference back to the application that dispatched to this controller,
-defaults to a Mojolicious object.
+A reference back to the application that dispatched to this controller, usually
+a Mojolicious object.
 .PP
 .Vb 2
 \&  # Use application logger
-\&  $c\->app\->log\->debug(\*(AqHello Mojo!\*(Aq);
+\&  $c\->app\->log\->debug(\*(AqHello Mojo\*(Aq);
 \&
 \&  # Generate path
 \&  my $path = $c\->app\->home\->rel_file(\*(Aqtemplates/foo/bar.html.ep\*(Aq);
@@ -204,8 +204,8 @@ Mojolicious::Routes::Match object.
 .Ve
 .PP
 The transaction that is currently being processed, usually a
-Mojo::Transaction::HTTP or Mojo::Transaction::WebSocket object. Note
-that this reference is usually weakened, so the object needs to be referenced
+Mojo::Transaction::HTTP or Mojo::Transaction::WebSocket object. Note that
+this reference is usually weakened, so the object needs to be referenced
 elsewhere as well when you're performing non-blocking operations and the
 underlying connection might get closed early.
 .PP
@@ -214,10 +214,13 @@ underlying connection might get closed early.
 \&  my $address = $c\->tx\->remote_address;
 \&  my $port    = $c\->tx\->remote_port;
 \&
+\&  # Increase size limit for WebSocket messages to 16MB
+\&  $c\->tx\->max_websocket_size(16777216) if $c\->tx\->is_websocket;
+\&
 \&  # Perform non\-blocking operation without knowing the connection status
 \&  my $tx = $c\->tx;
 \&  Mojo::IOLoop\->timer(2 => sub {
-\&    $c\->app\->log\->debug($tx\->is_finished ? \*(AqFinished.\*(Aq : \*(AqIn progress.\*(Aq);
+\&    $c\->app\->log\->debug($tx\->is_finished ? \*(AqFinished\*(Aq : \*(AqIn progress\*(Aq);
 \&  });
 .Ve
 .SH "METHODS"
@@ -230,14 +233,14 @@ implements the following new ones.
 \&  $c\->continue;
 .Ve
 .PP
-Continue dispatch chain with \*(L"continue\*(R" in Mojolicious::Routes.
+Continue dispatch chain from an intermediate destination with
+\&\*(L"continue\*(R" in Mojolicious::Routes.
 .SS "cookie"
 .IX Subsection "cookie"
-.Vb 4
-\&  my $value       = $c\->cookie(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $c\->cookie([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
-\&  $c              = $c\->cookie(foo => \*(Aqbar\*(Aq);
-\&  $c              = $c\->cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
+.Vb 3
+\&  my $value = $c\->cookie(\*(Aqfoo\*(Aq);
+\&  $c        = $c\->cookie(foo => \*(Aqbar\*(Aq);
+\&  $c        = $c\->cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
 .Ve
 .PP
 Access request cookie values and create new response cookies. If there are
@@ -254,8 +257,8 @@ the last one, you can use \*(L"every_cookie\*(R".
 \&  my $values = $c\->every_cookie(\*(Aqfoo\*(Aq);
 .Ve
 .PP
-Similar to \*(L"cookie\*(R", but returns all request cookie values sharing the
-same name as an array reference.
+Similar to \*(L"cookie\*(R", but returns all request cookie values sharing the same
+name as an array reference.
 .PP
 .Vb 2
 \&  $ Get first cookie value
@@ -305,8 +308,7 @@ Close WebSocket connection or long poll stream gracefully.
 \&  $c      = $c\->flash(foo => \*(Aqbar\*(Aq);
 .Ve
 .PP
-Data storage persistent only for the next request, stored in the
-\&\*(L"session\*(R".
+Data storage persistent only for the next request, stored in the \*(L"session\*(R".
 .PP
 .Vb 3
 \&  # Show message after redirect
@@ -326,6 +328,9 @@ Mojolicious::Plugin::DefaultHelpers and Mojolicious::Plugin::TagHelpers.
 .Vb 2
 \&  # Make sure to use the "title" helper and not the controller method
 \&  $c\->helpers\->title(\*(AqWelcome!\*(Aq);
+\&
+\&  # Use a nested helper instead of the "reply" controller method
+\&  $c\->helpers\->reply\->not_found;
 .Ve
 .SS "on"
 .IX Subsection "on"
@@ -342,7 +347,7 @@ status.
 \&  # Do something after the transaction has been finished
 \&  $c\->on(finish => sub {
 \&    my $c = shift;
-\&    $c\->app\->log\->debug(\*(AqWe are done!\*(Aq);
+\&    $c\->app\->log\->debug(\*(AqWe are done\*(Aq);
 \&  });
 \&
 \&  # Receive WebSocket message
@@ -361,18 +366,16 @@ status.
 \&  $c\->on(binary => sub {
 \&    my ($c, $bytes) = @_;
 \&    my $len = length $bytes;
-\&    $c\->app\->log\->debug("Received $len bytes.");
+\&    $c\->app\->log\->debug("Received $len bytes");
 \&  });
 .Ve
 .SS "param"
 .IX Subsection "param"
-.Vb 6
-\&  my @names       = $c\->param;
-\&  my $value       = $c\->param(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $c\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
-\&  $c              = $c\->param(foo => \*(Aqba;r\*(Aq);
-\&  $c              = $c\->param(foo => qw(ba;r baz));
-\&  $c              = $c\->param(foo => [\*(Aqba;r\*(Aq, \*(Aqbaz\*(Aq]);
+.Vb 4
+\&  my $value = $c\->param(\*(Aqfoo\*(Aq);
+\&  $c        = $c\->param(foo => \*(Aqba;r\*(Aq);
+\&  $c        = $c\->param(foo => qw(ba;r baz));
+\&  $c        = $c\->param(foo => [\*(Aqba;r\*(Aq, \*(Aqbaz\*(Aq]);
 .Ve
 .PP
 Access route placeholder values that are not reserved stash values, file
@@ -381,8 +384,8 @@ string and \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`m
 message body, in that order. If there are multiple values sharing the same
 name, and you want to access more than just the last one, you can use
 \&\*(L"every_param\*(R". Parts of the request body need to be loaded into memory to
-parse \f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is not excessively
-large, there's a 10MB limit by default.
+parse \f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is not excessively large,
+there's a 16MB limit by default.
 .PP
 .Vb 2
 \&  # Get first value
@@ -393,7 +396,7 @@ For more control you can also access request information directly.
 .PP
 .Vb 2
 \&  # Only GET parameters
-\&  my $foo = $c\->req\->url\->query\->param(\*(Aqfoo\*(Aq);
+\&  my $foo = $c\->req\->query_params\->param(\*(Aqfoo\*(Aq);
 \&
 \&  # Only POST parameters
 \&  my $foo = $c\->req\->body_params\->param(\*(Aqfoo\*(Aq);
@@ -409,8 +412,8 @@ For more control you can also access request information directly.
 .Vb 4
 \&  $c = $c\->redirect_to(\*(Aqnamed\*(Aq, foo => \*(Aqbar\*(Aq);
 \&  $c = $c\->redirect_to(\*(Aqnamed\*(Aq, {foo => \*(Aqbar\*(Aq});
-\&  $c = $c\->redirect_to(\*(Aq/perldoc\*(Aq);
-\&  $c = $c\->redirect_to(\*(Aqhttp://mojolicio.us/perldoc\*(Aq);
+\&  $c = $c\->redirect_to(\*(Aq/index.html\*(Aq);
+\&  $c = $c\->redirect_to(\*(Aqhttp://example.com/index.html\*(Aq);
 .Ve
 .PP
 Prepare a \f(CW302\fR redirect response, takes the same arguments as \*(L"url_for\*(R".
@@ -434,15 +437,18 @@ Prepare a \f(CW302\fR redirect response, takes the same arguments as \*(L"url_fo
 \&  my $bool = $c\->render(\*(Aqfoo/index\*(Aq);
 .Ve
 .PP
-Render content with \*(L"render\*(R" in Mojolicious::Renderer and emit hooks
-\&\*(L"before_render\*(R" in Mojolicious as well as \*(L"after_render\*(R" in Mojolicious. If no
-template is provided a default one based on controller and action or route
-name will be generated with \*(L"template_for\*(R" in Mojolicious::Renderer, all
-additional pairs get merged into the \*(L"stash\*(R".
+Render content with \*(L"renderer\*(R" in Mojolicious and emit hooks
+\&\*(L"before_render\*(R" in Mojolicious as well as \*(L"after_render\*(R" in Mojolicious, or
+call \*(L"reply\->not_found\*(R" in Mojolicious::Plugin::DefaultHelpers if no
+response could be generated, all additional key/value pairs get merged into the
+\&\*(L"stash\*(R".
 .PP
 .Vb 2
 \&  # Render characters
 \&  $c\->render(text => \*(AqI X Mojolicious!\*(Aq);
+\&
+\&  # Render characters (alternative)
+\&  $c\->stash(text => \*(AqI X Mojolicious!\*(Aq)\->render;
 \&
 \&  # Render binary data
 \&  use Mojo::JSON \*(Aqencode_json\*(Aq;
@@ -451,23 +457,21 @@ additional pairs get merged into the \*(L"stash\*(R".
 \&  # Render JSON
 \&  $c\->render(json => {test => \*(AqI X Mojolicious!\*(Aq});
 \&
+\&  # Render inline template
+\&  $c\->render(inline => \*(Aq<%= 1 + 1 %>\*(Aq);
+\&
 \&  # Render template "foo/bar.html.ep"
 \&  $c\->render(template => \*(Aqfoo/bar\*(Aq, format => \*(Aqhtml\*(Aq, handler => \*(Aqep\*(Aq);
 \&
-\&  # Render template "foo/bar.*.*"
-\&  $c\->render(template => \*(Aqfoo/bar\*(Aq);
+\&  # Render template "test.*.*" with arbitrary values "foo" and "bar"
+\&  $c\->render(template => \*(Aqtest\*(Aq, foo => \*(Aqtest\*(Aq, bar => 23);
 \&
 \&  # Render template "test.xml.*"
+\&  $c\->render(template => \*(Aqtest\*(Aq, format => \*(Aqxml\*(Aq);
+\&
+\&  # Render template "test.xml.*" (alternative)
 \&  $c\->render(\*(Aqtest\*(Aq, format => \*(Aqxml\*(Aq);
 .Ve
-.SS "render_exception"
-.IX Subsection "render_exception"
-.Vb 2
-\&  $c = $c\->render_exception(\*(AqOops!\*(Aq);
-\&  $c = $c\->render_exception(Mojo::Exception\->new(\*(AqOops!\*(Aq));
-.Ve
-.PP
-Alias for \*(L"reply\->exception\*(R" in Mojolicious::Plugin::DefaultHelpers.
 .SS "render_later"
 .IX Subsection "render_later"
 .Vb 1
@@ -500,13 +504,6 @@ could be generated, takes the same arguments as \*(L"render\*(R".
 \&  # Render template "index_local" only if it exists
 \&  $c\->render_maybe(\*(Aqindex_local\*(Aq) or $c\->render(\*(Aqindex\*(Aq);
 .Ve
-.SS "render_not_found"
-.IX Subsection "render_not_found"
-.Vb 1
-\&  $c = $c\->render_not_found;
-.Ve
-.PP
-Alias for \*(L"reply\->not_found\*(R" in Mojolicious::Plugin::DefaultHelpers.
 .SS "render_to_string"
 .IX Subsection "render_to_string"
 .Vb 1
@@ -517,6 +514,11 @@ Try to render content and return it wrapped in a Mojo::ByteStream object or
 return \f(CW\*(C`undef\*(C'\fR, all arguments get localized automatically and are only
 available during this render operation, takes the same arguments as
 \&\*(L"render\*(R".
+.PP
+.Vb 2
+\&  # Render inline template
+\&  my $two = $c\->render_to_string(inline => \*(Aq<%= 1 + 1 %>\*(Aq);
+.Ve
 .SS "rendered"
 .IX Subsection "rendered"
 .Vb 2
@@ -575,6 +577,10 @@ Get Mojo::Message::Response object from \*(L"tx\*(R".
 \&
 \&  # Force file download by setting a custom response header
 \&  $c\->res\->headers\->content_disposition(\*(Aqattachment; filename=foo.png;\*(Aq);
+\&
+\&  # Make sure response is cached correctly
+\&  $c\->res\->headers\->cache_control(\*(Aqpublic, max\-age=300\*(Aq);
+\&  $c\->res\->headers\->append(Vary => \*(AqAccept\-Encoding\*(Aq);
 .Ve
 .SS "respond_to"
 .IX Subsection "respond_to"
@@ -588,12 +594,15 @@ Get Mojo::Message::Response object from \*(L"tx\*(R".
 .PP
 Automatically select best possible representation for resource from \f(CW\*(C`Accept\*(C'\fR
 request header, \f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \f(CW\*(C`GET\*(C'\fR/\f(CW\*(C`POST\*(C'\fR parameter,
-defaults to rendering an empty \f(CW204\fR response. Since browsers often don't
-really know what they actually want, unspecific \f(CW\*(C`Accept\*(C'\fR request headers with
-more than one \s-1MIME\s0 type will be ignored, unless the \f(CW\*(C`X\-Requested\-With\*(C'\fR header
-is set to the value \f(CW\*(C`XMLHttpRequest\*(C'\fR.
+defaults to rendering an empty \f(CW204\fR response. Each representation can be
+handled with a callback or a hash reference containing arguments to be passed
+to \*(L"render\*(R". Since browsers often don't really know what they actually
+want, unspecific \f(CW\*(C`Accept\*(C'\fR request headers with more than one \s-1MIME\s0 type will be
+ignored, unless the \f(CW\*(C`X\-Requested\-With\*(C'\fR header is set to the value
+\&\f(CW\*(C`XMLHttpRequest\*(C'\fR.
 .PP
-.Vb 5
+.Vb 6
+\&  # Everything else than "json" and "xml" gets a 204 response
 \&  $c\->respond_to(
 \&    json => sub { $c\->render(json => {just => \*(Aqworks\*(Aq}) },
 \&    xml  => {text => \*(Aq<just>works</just>\*(Aq},
@@ -615,9 +624,7 @@ For more advanced negotiation logic you can also use the helper
 .Ve
 .PP
 Send message or frame non-blocking via WebSocket, the optional drain callback
-will be invoked once all data has been written. Note that this method will
-automatically respond to WebSocket handshake requests with a \f(CW101\fR response
-status.
+will be invoked once all data has been written.
 .PP
 .Vb 2
 \&  # Send "Text" message
@@ -641,8 +648,8 @@ status.
 .Ve
 .PP
 For mostly idle WebSockets you might also want to increase the inactivity
-timeout with \*(L"inactivity_timeout\*(R" in Mojolicious::Plugin::DefaultHelpers,
-which usually defaults to \f(CW15\fR seconds.
+timeout with \*(L"inactivity_timeout\*(R" in Mojolicious::Plugin::DefaultHelpers, which
+usually defaults to \f(CW15\fR seconds.
 .PP
 .Vb 2
 \&  # Increase inactivity timeout for connection to 300 seconds
@@ -659,8 +666,8 @@ which usually defaults to \f(CW15\fR seconds.
 .PP
 Persistent data storage for the next few requests, all session data gets
 serialized with Mojo::JSON and stored Base64 encoded in \s-1HMAC\-SHA1\s0 signed
-cookies. Note that cookies usually have a \f(CW4096\fR byte (4KB) limit, depending
-on browser.
+cookies, to prevent tampering. Note that cookies usually have a \f(CW4096\fR byte
+(4KB) limit, depending on browser.
 .PP
 .Vb 4
 \&  # Manipulate session
@@ -679,17 +686,17 @@ on browser.
 .Ve
 .SS "signed_cookie"
 .IX Subsection "signed_cookie"
-.Vb 4
-\&  my $value       = $c\->signed_cookie(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $c\->signed_cookie([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
-\&  $c              = $c\->signed_cookie(foo => \*(Aqbar\*(Aq);
-\&  $c              = $c\->signed_cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
+.Vb 3
+\&  my $value = $c\->signed_cookie(\*(Aqfoo\*(Aq);
+\&  $c        = $c\->signed_cookie(foo => \*(Aqbar\*(Aq);
+\&  $c        = $c\->signed_cookie(foo => \*(Aqbar\*(Aq, {path => \*(Aq/\*(Aq});
 .Ve
 .PP
 Access signed request cookie values and create new signed response cookies. If
 there are multiple values sharing the same name, and you want to access more
-than just the last one, you can use \*(L"every_signed_cookie\*(R". Cookies failing
-\&\s-1HMAC\-SHA1\s0 signature verification will be automatically discarded.
+than just the last one, you can use \*(L"every_signed_cookie\*(R". Cookies are
+cryptographically signed with \s-1HMAC\-SHA1,\s0 to prevent tampering, and the ones
+failing signature verification will be automatically discarded.
 .SS "stash"
 .IX Subsection "stash"
 .Vb 4
@@ -710,6 +717,9 @@ reserved for internal use.
 .Vb 2
 \&  # Remove value
 \&  my $foo = delete $c\->stash\->{foo};
+\&
+\&  # Assign multiple values at once
+\&  $c\->stash(foo => \*(Aqtest\*(Aq, bar => 23);
 .Ve
 .SS "url_for"
 .IX Subsection "url_for"
@@ -719,23 +729,23 @@ reserved for internal use.
 \&  my $url = $c\->url_for({name => \*(Aqsebastian\*(Aq});
 \&  my $url = $c\->url_for(\*(Aqtest\*(Aq, name => \*(Aqsebastian\*(Aq);
 \&  my $url = $c\->url_for(\*(Aqtest\*(Aq, {name => \*(Aqsebastian\*(Aq});
-\&  my $url = $c\->url_for(\*(Aq/perldoc\*(Aq);
-\&  my $url = $c\->url_for(\*(Aq//mojolicio.us/perldoc\*(Aq);
-\&  my $url = $c\->url_for(\*(Aqhttp://mojolicio.us/perldoc\*(Aq);
+\&  my $url = $c\->url_for(\*(Aq/index.html\*(Aq);
+\&  my $url = $c\->url_for(\*(Aq//example.com/index.html\*(Aq);
+\&  my $url = $c\->url_for(\*(Aqhttp://example.com/index.html\*(Aq);
 \&  my $url = $c\->url_for(\*(Aqmailto:sri@example.com\*(Aq);
 .Ve
 .PP
 Generate a portable Mojo::URL object with base for a path, \s-1URL\s0 or route.
 .PP
 .Vb 2
-\&  # "http://127.0.0.1:3000/perldoc" if application has been started with Morbo
-\&  $c\->url_for(\*(Aq/perldoc\*(Aq)\->to_abs;
+\&  # "http://127.0.0.1:3000/index.html" if application was started with Morbo
+\&  $c\->url_for(\*(Aq/index.html\*(Aq)\->to_abs;
 \&
-\&  # "/perldoc?foo=bar" if application is deployed under "/"
-\&  $c\->url_for(\*(Aq/perldoc\*(Aq)\->query(foo => \*(Aqbar\*(Aq);
+\&  # "/index.html?foo=bar" if application is deployed under "/"
+\&  $c\->url_for(\*(Aq/index.html\*(Aq)\->query(foo => \*(Aqbar\*(Aq);
 \&
-\&  # "/myapp/perldoc?foo=bar" if application is deployed under "/myapp"
-\&  $c\->url_for(\*(Aq/perldoc\*(Aq)\->query(foo => \*(Aqbar\*(Aq);
+\&  # "/myapp/index.html?foo=bar" if application is deployed under "/myapp"
+\&  $c\->url_for(\*(Aq/index.html\*(Aq)\->query(foo => \*(Aqbar\*(Aq);
 .Ve
 .PP
 You can also use the helper \*(L"url_with\*(R" in Mojolicious::Plugin::DefaultHelpers
@@ -756,7 +766,7 @@ validate \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`POST\*(C'\fR parameters extracted f
 \&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body.
 Parts of the request body need to be loaded into memory to parse \f(CW\*(C`POST\*(C'\fR
 parameters, so you have to make sure it is not excessively large, there's a
-10MB limit by default.
+16MB limit by default.
 .PP
 .Vb 3
 \&  my $validation = $c\->validation;
@@ -772,8 +782,8 @@ parameters, so you have to make sure it is not excessively large, there's a
 \&  $c = $c\->write($bytes => sub {...});
 .Ve
 .PP
-Write dynamic content non-blocking, the optional drain callback will be
-invoked once all data has been written.
+Write dynamic content non-blocking, the optional drain callback will be invoked
+once all data has been written.
 .PP
 .Vb 6
 \&  # Keep connection alive (with Content\-Length header)
@@ -793,9 +803,9 @@ invoked once all data has been written.
 \&  });
 .Ve
 .PP
-For Comet (long polling) you might also want to increase the inactivity
-timeout with \*(L"inactivity_timeout\*(R" in Mojolicious::Plugin::DefaultHelpers,
-which usually defaults to \f(CW15\fR seconds.
+For Comet (long polling) you might also want to increase the inactivity timeout
+with \*(L"inactivity_timeout\*(R" in Mojolicious::Plugin::DefaultHelpers, which usually
+defaults to \f(CW15\fR seconds.
 .PP
 .Vb 2
 \&  # Increase inactivity timeout for connection to 300 seconds
@@ -842,9 +852,13 @@ helpers provided by \*(L"app\*(R" on Mojolicious::Controller objects. This
 includes all helpers from Mojolicious::Plugin::DefaultHelpers and
 Mojolicious::Plugin::TagHelpers.
 .PP
-.Vb 2
+.Vb 3
+\&  # Call helpers
 \&  $c\->layout(\*(Aqgreen\*(Aq);
 \&  $c\->title(\*(AqWelcome!\*(Aq);
+\&
+\&  # Longer version
+\&  $c\->helpers\->layout(\*(Aqgreen\*(Aq);
 .Ve
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"

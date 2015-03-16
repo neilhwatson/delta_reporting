@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Message::Response 3"
-.TH Mojo::Message::Response 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Message::Response 3 "2015-02-27" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -203,6 +203,11 @@ implements the following new ones.
 .Ve
 .PP
 Access response cookies, usually Mojo::Cookie::Response objects.
+.PP
+.Vb 2
+\&  # Names of all cookies
+\&  say $_\->name for @{$res\->cookies};
+.Ve
 .SS "default_message"
 .IX Subsection "default_message"
 .Vb 2
@@ -218,7 +223,7 @@ Generate default response message for status code, defaults to using
 \&  my $bool = $res\->extract_start_line(\e$str);
 .Ve
 .PP
-Extract status line from string.
+Extract status-line from string.
 .SS "fix_headers"
 .IX Subsection "fix_headers"
 .Vb 1
@@ -232,7 +237,7 @@ Make sure response has all required headers.
 \&  my $bytes = $res\->get_start_line_chunk($offset);
 .Ve
 .PP
-Get a chunk of status line data starting from a specific position.
+Get a chunk of status-line data starting from a specific position.
 .SS "is_empty"
 .IX Subsection "is_empty"
 .Vb 1

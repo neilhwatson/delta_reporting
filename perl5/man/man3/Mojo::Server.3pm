@@ -133,13 +133,13 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Server 3"
-.TH Mojo::Server 3 "2014-10-20" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Server 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-Mojo::Server \- HTTP server base class
+Mojo::Server \- HTTP/WebSocket server base class
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .Vb 2
@@ -158,11 +158,14 @@ Mojo::Server \- HTTP server base class
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Server is an abstract \s-1HTTP\s0 server base class.
+Mojo::Server is an abstract base class for HTTP/WebSocket servers and server
+interfaces, like Mojo::Server::CGI, Mojo::Server::Daemon,
+Mojo::Server::Hypnotoad, Mojo::Server::Morbo, Mojo::Server::Prefork
+and Mojo::Server::PSGI.
 .SH "EVENTS"
 .IX Header "EVENTS"
-Mojo::Server inherits all events from Mojo::EventEmitter and can emit
-the following new ones.
+Mojo::Server inherits all events from Mojo::EventEmitter and can emit the
+following new ones.
 .SS "request"
 .IX Subsection "request"
 .Vb 4
@@ -227,7 +230,7 @@ the following new ones.
 .SS "build_app"
 .IX Subsection "build_app"
 .Vb 1
-\&  my $app = $server\->build_app(\*(AqMojo::HelloWorld\*(Aq);
+\&  my $app = $server\->build_app(\*(AqMyApp\*(Aq);
 .Ve
 .PP
 Build application from class.
@@ -258,8 +261,10 @@ Load application from script.
 .Ve
 .SS "new"
 .IX Subsection "new"
-.Vb 1
+.Vb 3
 \&  my $server = Mojo::Server\->new;
+\&  my $server = Mojo::Server\->new(reverse_proxy => 1);
+\&  my $server = Mojo::Server\->new({reverse_proxy => 1});
 .Ve
 .PP
 Construct a new Mojo::Server object and subscribe to \*(L"request\*(R" event

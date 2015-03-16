@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::IOLoop::Client 3"
-.TH Mojo::IOLoop::Client 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::IOLoop::Client 3 "2015-02-26" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -209,8 +209,9 @@ implements the following new ones.
 \&  $client\->connect(address => \*(Aq127.0.0.1\*(Aq, port => 3000);
 .Ve
 .PP
-Open a socket connection to a remote host. Note that \s-1TLS\s0 support depends on
-IO::Socket::SSL (1.84+) and IPv6 support on IO::Socket::IP (0.20+).
+Open a socket connection to a remote host. Note that non-blocking name
+resolution depends on Net::DNS::Native (0.15+), \s-1SOCKS5\s0 support on
+IO::Socket::Socks (0.64), and \s-1TLS\s0 support on IO::Socket::SSL (1.94+).
 .PP
 These options are currently available:
 .IP "address" 2
@@ -219,7 +220,7 @@ These options are currently available:
 \&  address => \*(Aqmojolicio.us\*(Aq
 .Ve
 .Sp
-Address or host name of the peer to connect to, defaults to \f(CW\*(C`localhost\*(C'\fR.
+Address or host name of the peer to connect to, defaults to \f(CW127.0.0.1\fR.
 .IP "handle" 2
 .IX Item "handle"
 .Vb 1

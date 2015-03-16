@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Command::cpanify 3"
-.TH Mojolicious::Command::cpanify 3 "2014-10-15" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Command::cpanify 3 "2015-02-22" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -148,8 +148,8 @@ Mojolicious::Command::cpanify \- Cpanify command
 \&    mojo cpanify \-u sri \-p secr3t Mojolicious\-Plugin\-MyPlugin\-0.01.tar.gz
 \&
 \&  Options:
-\&    \-p, \-\-password <password>   PAUSE password.
-\&    \-u, \-\-user <name>           PAUSE username.
+\&    \-p, \-\-password <password>   PAUSE password
+\&    \-u, \-\-user <name>           PAUSE username
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -168,7 +168,7 @@ Mojolicious::Command and implements the following new ones.
 .IX Subsection "description"
 .Vb 2
 \&  my $description = $cpanify\->description;
-\&  $cpanify        = $cpanify\->description(\*(AqFoo!\*(Aq);
+\&  $cpanify        = $cpanify\->description(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short description of this command, used for the command list.
@@ -176,7 +176,7 @@ Short description of this command, used for the command list.
 .IX Subsection "usage"
 .Vb 2
 \&  my $usage = $cpanify\->usage;
-\&  $cpanify  = $cpanify\->usage(\*(AqFoo!\*(Aq);
+\&  $cpanify  = $cpanify\->usage(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Usage information for this command, used for the help screen.

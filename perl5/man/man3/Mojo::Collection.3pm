@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Collection 3"
-.TH Mojo::Collection 3 "2014-10-20" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Collection 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -148,16 +148,13 @@ Mojo::Collection \- Collection
 \&  # Manipulate collection
 \&  my $collection = Mojo::Collection\->new(qw(just works));
 \&  unshift @$collection, \*(Aqit\*(Aq;
+\&  say $collection\->join("\en");
 \&
 \&  # Chain methods
 \&  $collection\->map(sub { ucfirst })\->shuffle\->each(sub {
-\&    my ($word, $count) = @_;
-\&    say "$count: $word";
+\&    my ($word, $num) = @_;
+\&    say "$num: $word";
 \&  });
-\&
-\&  # Stringify collection
-\&  say $collection\->join("\en");
-\&  say "$collection";
 \&
 \&  # Use the alternative constructor
 \&  use Mojo::Collection \*(Aqc\*(Aq;
@@ -195,6 +192,11 @@ Mojo::Collection implements the following methods.
 .PP
 Create a new collection with all elements that are defined and not an empty
 string.
+.PP
+.Vb 2
+\&  # "0, 1, 2, 3"
+\&  Mojo::Collection\->new(0, 1, undef, 2, \*(Aq\*(Aq, 3)\->compact\->join(\*(Aq, \*(Aq);
+.Ve
 .SS "each"
 .IX Subsection "each"
 .Vb 2
@@ -209,8 +211,8 @@ to the callback and is also available as \f(CW$_\fR.
 .Vb 5
 \&  # Make a numbered list
 \&  $collection\->each(sub {
-\&    my ($e, $count) = @_;
-\&    say "$count: $e";
+\&    my ($e, $num) = @_;
+\&    say "$num: $e";
 \&  });
 .Ve
 .SS "first"
@@ -227,6 +229,9 @@ callback returned true. The element will be the first argument passed to the
 callback and is also available as \f(CW$_\fR.
 .PP
 .Vb 2
+\&  # Find first value that contains the word "mojo"
+\&  my $interesting = $collection\->first(qr/mojo/i);
+\&
 \&  # Find first value that is greater than 5
 \&  my $greater = $collection\->first(sub { $_ > 5 });
 .Ve
@@ -238,6 +243,11 @@ callback and is also available as \f(CW$_\fR.
 .PP
 Flatten nested collections/arrays recursively and create a new collection with
 all elements.
+.PP
+.Vb 2
+\&  # "1, 2, 3, 4, 5, 6, 7"
+\&  Mojo::Collection\->new(1, [2, [3, 4], 5, [6]], 7)\->flatten\->join(\*(Aq, \*(Aq);
+.Ve
 .SS "grep"
 .IX Subsection "grep"
 .Vb 2
@@ -247,12 +257,15 @@ all elements.
 .PP
 Evaluate regular expression or callback for each element in collection and
 create a new collection with all elements that matched the regular expression,
-or for which the callback returned true. The element will be the first
-argument passed to the callback and is also available as \f(CW$_\fR.
+or for which the callback returned true. The element will be the first argument
+passed to the callback and is also available as \f(CW$_\fR.
 .PP
 .Vb 2
 \&  # Find all values that contain the word "mojo"
 \&  my $interesting = $collection\->grep(qr/mojo/i);
+\&
+\&  # Find all values that are greater than 5
+\&  my $greater = $collection\->grep(sub { $_ > 5 });
 .Ve
 .SS "join"
 .IX Subsection "join"
@@ -276,15 +289,20 @@ Turn collection into Mojo::ByteStream.
 Return the last element in collection.
 .SS "map"
 .IX Subsection "map"
-.Vb 1
+.Vb 3
 \&  my $new = $collection\->map(sub {...});
+\&  my $new = $collection\->map($method);
+\&  my $new = $collection\->map($method, @args);
 .Ve
 .PP
-Evaluate callback for each element in collection and create a new collection
-from the results. The element will be the first argument passed to the
-callback and is also available as \f(CW$_\fR.
+Evaluate callback for, or call method on, each element in collection and create
+a new collection from the results. The element will be the first argument
+passed to the callback and is also available as \f(CW$_\fR.
 .PP
 .Vb 2
+\&  # Longer version
+\&  my $new = $collection\->map(sub { $_\->$method(@args) });
+\&
 \&  # Append the word "mojo" to all values
 \&  my $mojoified = $collection\->map(sub { $_ . \*(Aqmojo\*(Aq });
 .Ve
@@ -295,22 +313,6 @@ callback and is also available as \f(CW$_\fR.
 .Ve
 .PP
 Construct a new array-based Mojo::Collection object.
-.SS "pluck"
-.IX Subsection "pluck"
-.Vb 3
-\&  my $new = $collection\->pluck($key);
-\&  my $new = $collection\->pluck($method);
-\&  my $new = $collection\->pluck($method, @args);
-.Ve
-.PP
-Extract hash reference value from, or call method on, each element in
-collection and create a new collection from the results.
-.PP
-.Vb 3
-\&  # Longer version
-\&  my $new = $collection\->map(sub { $_\->{$key} });
-\&  my $new = $collection\->map(sub { $_\->$method(@args) });
-.Ve
 .SS "reduce"
 .IX Subsection "reduce"
 .Vb 2
@@ -342,6 +344,11 @@ Create a new collection with all elements in reverse order.
 .Ve
 .PP
 Create a new collection with all selected elements.
+.PP
+.Vb 2
+\&  # "B C E"
+\&  Mojo::Collection\->new(\*(AqA\*(Aq, \*(AqB\*(Aq, \*(AqC\*(Aq, \*(AqD\*(Aq, \*(AqE\*(Aq)\->slice(1, 2, 4)\->join(\*(Aq \*(Aq);
+.Ve
 .SS "shuffle"
 .IX Subsection "shuffle"
 .Vb 1
@@ -367,8 +374,8 @@ Sort elements based on return value of callback and create a new collection
 from the results.
 .PP
 .Vb 2
-\&  # Sort values case insensitive
-\&  my $insensitive = $collection\->sort(sub { uc($a) cmp uc($b) });
+\&  # Sort values case\-insensitive
+\&  my $case_insensitive = $collection\->sort(sub { uc($a) cmp uc($b) });
 .Ve
 .SS "tap"
 .IX Subsection "tap"
@@ -377,6 +384,13 @@ from the results.
 .Ve
 .PP
 Alias for \*(L"tap\*(R" in Mojo::Base.
+.SS "to_array"
+.IX Subsection "to_array"
+.Vb 1
+\&  my $array = $collection\->to_array;
+.Ve
+.PP
+Turn collection into array reference.
 .SS "uniq"
 .IX Subsection "uniq"
 .Vb 1
@@ -384,35 +398,11 @@ Alias for \*(L"tap\*(R" in Mojo::Base.
 .Ve
 .PP
 Create a new collection without duplicate elements.
-.SH "AUTOLOAD"
-.IX Header "AUTOLOAD"
-In addition to the \*(L"\s-1METHODS\*(R"\s0 above, you can also call methods provided by
-all elements in the collection directly and create a new collection from the
-results, similar to \*(L"pluck\*(R".
 .PP
-.Vb 4
-\&  # "<h2>Test1</h2><h2>Test2</h2>"
-\&  my $collection = Mojo::Collection\->new(
-\&    Mojo::DOM\->new("<h1>1</h1>"), Mojo::DOM\->new("<h1>2</h1>"));
-\&  $collection\->at(\*(Aqh1\*(Aq)\->type(\*(Aqh2\*(Aq)\->prepend_content(\*(AqTest\*(Aq)\->join;
+.Vb 2
+\&  # "foo bar baz"
+\&  Mojo::Collection\->new(\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq, \*(Aqbar\*(Aq, \*(Aqbaz\*(Aq)\->uniq\->join(\*(Aq \*(Aq);
 .Ve
-.SH "OPERATORS"
-.IX Header "OPERATORS"
-Mojo::Collection overloads the following operators.
-.SS "bool"
-.IX Subsection "bool"
-.Vb 1
-\&  my $bool = !!$collection;
-.Ve
-.PP
-Always true.
-.SS "stringify"
-.IX Subsection "stringify"
-.Vb 1
-\&  my $str = "$collection";
-.Ve
-.PP
-Stringify elements in collection and \*(L"join\*(R" them with newlines.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

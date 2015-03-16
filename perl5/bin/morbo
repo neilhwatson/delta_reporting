@@ -1,4 +1,7 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
+
+eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
 
 use strict;
 use warnings;
@@ -18,9 +21,9 @@ if ($help || !$app) {
   die Mojolicious::Command->new->extract_usage;
 }
 
-$ENV{MOJO_LISTEN} = join ',', @listen if @listen;
 require Mojo::Server::Morbo;
 my $morbo = Mojo::Server::Morbo->new;
+$morbo->daemon->listen(\@listen) if @listen;
 $morbo->watch(\@watch) if @watch;
 $morbo->run($app);
 
@@ -34,27 +37,27 @@ morbo - Morbo HTTP and WebSocket development server
 
   Usage: morbo [OPTIONS] [APPLICATION]
 
-    morbo ./script/myapp
+    morbo ./script/my_app
     morbo ./myapp.pl
     morbo -m production -l https://*:443 -l http://[::]:3000 ./myapp.pl
     morbo -l 'https://*:443?cert=./server.crt&key=./server.key' ./myapp.pl
     morbo -w /usr/local/lib -w public ./myapp.pl
 
   Options:
-    -h, --help                     Show this message.
-    -l, --listen <location>        One or more locations you want to listen
-                                   on, defaults to the value of MOJO_LISTEN or
-                                   "http://*:3000".
+    -h, --help                     Show this message
+    -l, --listen <location>        One or more locations you want to listen on,
+                                   defaults to the value of MOJO_LISTEN or
+                                   "http://*:3000"
     -m, --mode <name>              Operating mode for your application,
                                    defaults to the value of
-                                   MOJO_MODE/PLACK_ENV or "development".
+                                   MOJO_MODE/PLACK_ENV or "development"
     -v, --verbose                  Print details about what files changed to
-                                   STDOUT.
+                                   STDOUT
     -w, --watch <directory/file>   One or more directories and files to watch
                                    for changes, defaults to the application
                                    script as well as the "lib" and "templates"
                                    directories in the current working
-                                   directory.
+                                   directory
 
 =head1 DESCRIPTION
 

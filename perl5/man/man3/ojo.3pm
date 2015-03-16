@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "ojo 3"
-.TH ojo 3 "2014-10-15" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH ojo 3 "2015-03-03" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -167,6 +167,9 @@ Every ojo one-liner is also a Mojolicious::Lite application.
 .Vb 1
 \&  $ perl \-Mojo \-E \*(Aqget "/" => {inline => "%= time"}; app\->start\*(Aq get /
 .Ve
+.PP
+If it is not already defined, the \f(CW\*(C`MOJO_LOG_LEVEL\*(C'\fR environment variable will
+be set to \f(CW\*(C`fatal\*(C'\fR.
 .SH "FUNCTIONS"
 .IX Header "FUNCTIONS"
 ojo implements the following functions, which are automatically exported.
@@ -177,9 +180,9 @@ ojo implements the following functions, which are automatically exported.
 .Ve
 .PP
 Create a route with \*(L"any\*(R" in Mojolicious::Lite and return the current
-Mojolicious::Lite object. The current controller object is also available
-to actions as \f(CW$_\fR. See also the Mojolicious::Lite tutorial for more
-argument variations.
+Mojolicious::Lite object. The current controller object is also available to
+actions as \f(CW$_\fR. See also Mojolicious::Guides::Tutorial for more argument
+variations.
 .PP
 .Vb 1
 \&  $ perl \-Mojo \-E \*(Aqa("/hello" => {text => "Hello Mojo!"})\->start\*(Aq daemon
@@ -204,31 +207,37 @@ Turn string into a Mojo::ByteStream object.
 Turn list into a Mojo::Collection object.
 .SS "d"
 .IX Subsection "d"
-.Vb 2
+.Vb 4
 \&  my $res = d(\*(Aqexample.com\*(Aq);
 \&  my $res = d(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  my $res = d(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  my $res = d(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
-Perform \f(CW\*(C`DELETE\*(C'\fR request with \*(L"delete\*(R" in Mojo::UserAgent and return
-resulting Mojo::Message::Response object.
+Perform \f(CW\*(C`DELETE\*(C'\fR request with \*(L"delete\*(R" in Mojo::UserAgent and return resulting
+Mojo::Message::Response object.
 .SS "g"
 .IX Subsection "g"
-.Vb 2
+.Vb 4
 \&  my $res = g(\*(Aqexample.com\*(Aq);
 \&  my $res = g(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  my $res = g(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  my $res = g(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Perform \f(CW\*(C`GET\*(C'\fR request with \*(L"get\*(R" in Mojo::UserAgent and return resulting
 Mojo::Message::Response object.
 .PP
 .Vb 1
-\&  $ perl \-Mojo \-E \*(Aqsay g("mojolicio.us")\->dom("h1, h2, h3")\->text\*(Aq
+\&  $ perl \-Mojo \-E \*(Aqsay g("mojolicio.us")\->dom("h1")\->map("text")\->join("\en")\*(Aq
 .Ve
 .SS "h"
 .IX Subsection "h"
-.Vb 2
+.Vb 4
 \&  my $res = h(\*(Aqexample.com\*(Aq);
 \&  my $res = h(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  my $res = h(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  my $res = h(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Perform \f(CW\*(C`HEAD\*(C'\fR request with \*(L"head\*(R" in Mojo::UserAgent and return resulting
@@ -261,18 +270,22 @@ iterations, which defaults to \f(CW1\fR.
 .Ve
 .SS "o"
 .IX Subsection "o"
-.Vb 2
+.Vb 4
 \&  my $res = o(\*(Aqexample.com\*(Aq);
 \&  my $res = o(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  my $res = o(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  my $res = o(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Perform \f(CW\*(C`OPTIONS\*(C'\fR request with \*(L"options\*(R" in Mojo::UserAgent and return
 resulting Mojo::Message::Response object.
 .SS "p"
 .IX Subsection "p"
-.Vb 2
+.Vb 4
 \&  my $res = p(\*(Aqexample.com\*(Aq);
 \&  my $res = p(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  my $res = p(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  my $res = p(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Perform \f(CW\*(C`POST\*(C'\fR request with \*(L"post\*(R" in Mojo::UserAgent and return resulting
@@ -290,18 +303,22 @@ Dump a Perl data structure with \*(L"dumper\*(R" in Mojo::Util.
 .Ve
 .SS "t"
 .IX Subsection "t"
-.Vb 2
+.Vb 4
 \&  my $res = t(\*(Aqexample.com\*(Aq);
 \&  my $res = t(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  my $res = t(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  my $res = t(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Perform \f(CW\*(C`PATCH\*(C'\fR request with \*(L"patch\*(R" in Mojo::UserAgent and return resulting
 Mojo::Message::Response object.
 .SS "u"
 .IX Subsection "u"
-.Vb 2
+.Vb 4
 \&  my $res = u(\*(Aqexample.com\*(Aq);
 \&  my $res = u(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
+\&  my $res = u(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&  my $res = u(\*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Perform \f(CW\*(C`PUT\*(C'\fR request with \*(L"put\*(R" in Mojo::UserAgent and return resulting

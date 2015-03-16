@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Content::Single 3"
-.TH Mojo::Content::Single 3 "2014-10-22" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Content::Single 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -156,8 +156,8 @@ Mojo::Content::Single is a container for \s-1HTTP\s0 content based on
 \&\s-1RFC 7231\s0 <http://tools.ietf.org/html/rfc7231>.
 .SH "EVENTS"
 .IX Header "EVENTS"
-Mojo::Content::Single inherits all events from Mojo::Content and can
-emit the following new ones.
+Mojo::Content::Single inherits all events from Mojo::Content and can emit
+the following new ones.
 .SS "upgrade"
 .IX Subsection "upgrade"
 .Vb 4
@@ -188,7 +188,7 @@ implements the following new ones.
 .Ve
 .PP
 The actual content, defaults to a Mojo::Asset::Memory object with
-\&\f(CW\*(C`auto_upgrade\*(C'\fR enabled.
+\&\*(L"auto_upgrade\*(R" in Mojo::Asset::Memory enabled.
 .SS "auto_upgrade"
 .IX Subsection "auto_upgrade"
 .Vb 2
@@ -232,8 +232,10 @@ Clone content if possible, otherwise return \f(CW\*(C`undef\*(C'\fR.
 Get a chunk of content starting from a specific position.
 .SS "new"
 .IX Subsection "new"
-.Vb 1
+.Vb 3
 \&  my $single = Mojo::Content::Single\->new;
+\&  my $single = Mojo::Content::Single\->new(asset => Mojo::Asset::File\->new);
+\&  my $single = Mojo::Content::Single\->new({asset => Mojo::Asset::File\->new});
 .Ve
 .PP
 Construct a new Mojo::Content::Single object and subscribe to \*(L"read\*(R"

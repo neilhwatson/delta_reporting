@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Asset::Memory 3"
-.TH Mojo::Asset::Memory 3 "2014-09-12" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Asset::Memory 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -154,8 +154,8 @@ Mojo::Asset::Memory \- In\-memory storage for HTTP content
 Mojo::Asset::Memory is an in-memory storage backend for \s-1HTTP\s0 content.
 .SH "EVENTS"
 .IX Header "EVENTS"
-Mojo::Asset::Memory inherits all events from Mojo::Asset and can emit
-the following new ones.
+Mojo::Asset::Memory inherits all events from Mojo::Asset and can emit the
+following new ones.
 .SS "upgrade"
 .IX Subsection "upgrade"
 .Vb 4
@@ -239,13 +239,6 @@ chunk size of \f(CW131072\fR bytes (128KB).
 .Ve
 .PP
 Move asset data into a specific file.
-.SS "new"
-.IX Subsection "new"
-.Vb 1
-\&  my $mem = Mojo::Asset::Memory\->new;
-.Ve
-.PP
-Construct a new Mojo::Asset::Memory object.
 .SS "size"
 .IX Subsection "size"
 .Vb 1

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::ByteStream 3"
-.TH Mojo::ByteStream 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::ByteStream 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -160,8 +160,8 @@ Mojo::ByteStream \- ByteStream
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::ByteStream is a scalar-based container for bytestreams that provides
-a more friendly \s-1API\s0 for many of the functions in Mojo::Util.
+Mojo::ByteStream is a scalar-based container for bytestreams that provides a
+more friendly \s-1API\s0 for many of the functions in Mojo::Util.
 .PP
 .Vb 3
 \&  # Access scalar directly to manipulate bytestream
@@ -198,8 +198,9 @@ Base64 decode bytestream with \*(L"b64_decode\*(R" in Mojo::Util.
 .PP
 Base64 encode bytestream with \*(L"b64_encode\*(R" in Mojo::Util.
 .PP
-.Vb 1
-\&  b(\*(Aqfoo bar baz\*(Aq)\->b64_encode(\*(Aq\*(Aq)\->say;
+.Vb 2
+\&  # "Zm9vIGJhciBiYXo="
+\&  b(\*(Aqfoo bar baz\*(Aq)\->b64_encode(\*(Aq\*(Aq);
 .Ve
 .SS "camelize"
 .IX Subsection "camelize"
@@ -229,10 +230,11 @@ Decamelize bytestream with \*(L"decamelize\*(R" in Mojo::Util.
 \&  $stream = $stream\->decode(\*(Aqiso\-8859\-1\*(Aq);
 .Ve
 .PP
-Decode bytestream with \*(L"decode\*(R" in Mojo::Util, defaults to \f(CW\*(C`UTF\-8\*(C'\fR.
+Decode bytestream with \*(L"decode\*(R" in Mojo::Util, defaults to using \f(CW\*(C`UTF\-8\*(C'\fR.
 .PP
-.Vb 1
-\&  $stream\->decode(\*(AqUTF\-16LE\*(Aq)\->unquote\->trim\->say;
+.Vb 2
+\&  # "X"
+\&  b(\*(Aq%E2%99%A5\*(Aq)\->url_unescape\->decode;
 .Ve
 .SS "encode"
 .IX Subsection "encode"
@@ -241,10 +243,11 @@ Decode bytestream with \*(L"decode\*(R" in Mojo::Util, defaults to \f(CW\*(C`UTF
 \&  $stream = $stream\->encode(\*(Aqiso\-8859\-1\*(Aq);
 .Ve
 .PP
-Encode bytestream with \*(L"encode\*(R" in Mojo::Util, defaults to \f(CW\*(C`UTF\-8\*(C'\fR.
+Encode bytestream with \*(L"encode\*(R" in Mojo::Util, defaults to using \f(CW\*(C`UTF\-8\*(C'\fR.
 .PP
-.Vb 1
-\&  $stream\->trim\->quote\->encode\->say;
+.Vb 2
+\&  # "%E2%99%A5"
+\&  b(\*(AqX\*(Aq)\->encode\->url_escape;
 .Ve
 .SS "hmac_sha1_sum"
 .IX Subsection "hmac_sha1_sum"
@@ -254,8 +257,9 @@ Encode bytestream with \*(L"encode\*(R" in Mojo::Util, defaults to \f(CW\*(C`UTF
 .PP
 Generate \s-1HMAC\-SHA1\s0 checksum for bytestream with \*(L"hmac_sha1_sum\*(R" in Mojo::Util.
 .PP
-.Vb 1
-\&  b(\*(Aqfoo bar baz\*(Aq)\->hmac_sha1_sum(\*(Aqsecr3t\*(Aq)\->quote\->say;
+.Vb 2
+\&  # "7fbdc89263974a89210ea71f171c77d3f8c21471"
+\&  b(\*(Aqfoo bar baz\*(Aq)\->hmac_sha1_sum(\*(Aqsecr3t\*(Aq);
 .Ve
 .SS "html_unescape"
 .IX Subsection "html_unescape"
@@ -265,8 +269,9 @@ Generate \s-1HMAC\-SHA1\s0 checksum for bytestream with \*(L"hmac_sha1_sum\*(R" 
 .PP
 Unescape all \s-1HTML\s0 entities in bytestream with \*(L"html_unescape\*(R" in Mojo::Util.
 .PP
-.Vb 1
-\&  b(\*(Aq&lt;html&gt;\*(Aq)\->html_unescape\->url_escape\->say;
+.Vb 2
+\&  # "%3Chtml%3E"
+\&  b(\*(Aq&lt;html&gt;\*(Aq)\->html_unescape\->url_escape;
 .Ve
 .SS "md5_bytes"
 .IX Subsection "md5_bytes"
@@ -317,7 +322,7 @@ Quote bytestream with \*(L"quote\*(R" in Mojo::Util.
 \&  $stream = $stream\->say(*STDERR);
 .Ve
 .PP
-Print bytestream to handle and append a newline, defaults to \f(CW\*(C`STDOUT\*(C'\fR.
+Print bytestream to handle and append a newline, defaults to using \f(CW\*(C`STDOUT\*(C'\fR.
 .SS "secure_compare"
 .IX Subsection "secure_compare"
 .Vb 1
@@ -325,10 +330,6 @@ Print bytestream to handle and append a newline, defaults to \f(CW\*(C`STDOUT\*(
 .Ve
 .PP
 Compare bytestream with \*(L"secure_compare\*(R" in Mojo::Util.
-.PP
-.Vb 1
-\&  say \*(AqMatch!\*(Aq if b(\*(Aqfoo\*(Aq)\->secure_compare(\*(Aqfoo\*(Aq);
-.Ve
 .SS "sha1_bytes"
 .IX Subsection "sha1_bytes"
 .Vb 1
@@ -358,7 +359,8 @@ Size of bytestream.
 .PP
 Read all data at once from file into bytestream with \*(L"slurp\*(R" in Mojo::Util.
 .PP
-.Vb 1
+.Vb 2
+\&  # Read file and print lines in random order
 \&  b(\*(Aq/home/sri/myapp.pl\*(Aq)\->slurp\->split("\en")\->shuffle\->join("\en")\->say;
 .Ve
 .SS "spurt"
@@ -369,7 +371,8 @@ Read all data at once from file into bytestream with \*(L"slurp\*(R" in Mojo::Ut
 .PP
 Write all data from bytestream at once to file with \*(L"spurt\*(R" in Mojo::Util.
 .PP
-.Vb 1
+.Vb 2
+\&  # Remove unnecessary whitespace from file
 \&  b(\*(Aq/home/sri/foo.txt\*(Aq)\->slurp\->squish\->spurt(\*(Aq/home/sri/bar.txt\*(Aq);
 .Ve
 .SS "split"
@@ -381,8 +384,9 @@ Write all data from bytestream at once to file with \*(L"spurt\*(R" in Mojo::Uti
 Turn bytestream into Mojo::Collection object containing Mojo::ByteStream
 objects.
 .PP
-.Vb 1
-\&  b(\*(Aqa,b,c\*(Aq)\->split(\*(Aq,\*(Aq)\->quote\->join(\*(Aq,\*(Aq)\->say;
+.Vb 2
+\&  # "One,Two,Three"
+\&  b("one,two,three")\->split(\*(Aq,\*(Aq)\->map(\*(Aqcamelize\*(Aq)\->join(\*(Aq,\*(Aq);
 .Ve
 .SS "squish"
 .IX Subsection "squish"
@@ -400,6 +404,18 @@ consecutive groups of whitespace into one space each with
 .Ve
 .PP
 Alias for \*(L"tap\*(R" in Mojo::Base.
+.SS "term_escape"
+.IX Subsection "term_escape"
+.Vb 1
+\&  $stream = $stream\->term_escape;
+.Ve
+.PP
+Escape \s-1POSIX\s0 control characters in bytestream with \*(L"term_escape\*(R" in Mojo::Util.
+.PP
+.Vb 2
+\&  # Print binary checksum to terminal
+\&  b(\*(Aqfoo\*(Aq)\->sha1_bytes\->term_escape\->say;
+.Ve
 .SS "to_string"
 .IX Subsection "to_string"
 .Vb 1
@@ -439,8 +455,9 @@ Unquote bytestream with \*(L"unquote\*(R" in Mojo::Util.
 Percent encode all unsafe characters in bytestream with
 \&\*(L"url_escape\*(R" in Mojo::Util.
 .PP
-.Vb 1
-\&  b(\*(Aqfoo bar baz\*(Aq)\->url_escape\->say;
+.Vb 2
+\&  # "%E2%98%83"
+\&  b(\*(AqX\*(Aq)\->encode\->url_escape;
 .Ve
 .SS "url_unescape"
 .IX Subsection "url_unescape"
@@ -451,8 +468,9 @@ Percent encode all unsafe characters in bytestream with
 Decode percent encoded characters in bytestream with
 \&\*(L"url_unescape\*(R" in Mojo::Util.
 .PP
-.Vb 1
-\&  b(\*(Aq%3Chtml%3E\*(Aq)\->url_unescape\->xml_escape\->say;
+.Vb 2
+\&  # "&lt;html&gt;"
+\&  b(\*(Aq%3Chtml%3E\*(Aq)\->url_unescape\->xml_escape;
 .Ve
 .SS "xml_escape"
 .IX Subsection "xml_escape"
@@ -469,6 +487,11 @@ bytestream with \*(L"xml_escape\*(R" in Mojo::Util.
 .Ve
 .PP
 \&\s-1XOR\s0 encode bytestream with \*(L"xor_encode\*(R" in Mojo::Util.
+.PP
+.Vb 2
+\&  # "%04%0E%15B%03%1B%10"
+\&  b(\*(Aqfoo bar\*(Aq)\->xor_encode(\*(Aqbaz\*(Aq)\->url_escape;
+.Ve
 .SH "OPERATORS"
 .IX Header "OPERATORS"
 Mojo::ByteStream overloads the following operators.

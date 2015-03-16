@@ -2,7 +2,6 @@ package Mojo::Reactor::EV;
 use Mojo::Base 'Mojo::Reactor::Poll';
 
 use EV 4.0;
-use Scalar::Util 'weaken';
 
 my $EV;
 
@@ -35,38 +34,32 @@ sub watch {
   $mode |= EV::WRITE if $write;
 
   my $fd = fileno $handle;
-  my $io = $self->{io}{$fd};
-  if ($mode == 0) { delete $io->{watcher} }
-  elsif (my $w = $io->{watcher}) { $w->set($fd, $mode) }
+  if ($mode == 0) { delete $self->{io}{$fd}{watcher} }
+  elsif (my $w = $self->{io}{$fd}{watcher}) { $w->events($mode) }
   else {
-    weaken $self;
-    $io->{watcher} = EV::io($fd, $mode, sub { $self->_io($fd, @_) });
+    my $cb = sub {
+      my ($w, $revents) = @_;
+      $self->_sandbox('Read', $self->{io}{$fd}{cb}, 0) if EV::READ & $revents;
+      $self->_sandbox('Write', $self->{io}{$fd}{cb}, 1)
+        if EV::WRITE & $revents && $self->{io}{$fd};
+    };
+    $self->{io}{$fd}{watcher} = EV::io($fd, $mode, $cb);
   }
 
   return $self;
-}
-
-sub _io {
-  my ($self, $fd, $w, $revents) = @_;
-  my $io = $self->{io}{$fd};
-  $self->_sandbox('Read', $io->{cb}, 0) if EV::READ & $revents;
-  $self->_sandbox('Write', $io->{cb}, 1)
-    if EV::WRITE & $revents && $self->{io}{$fd};
 }
 
 sub _timer {
   my ($self, $recurring, $after, $cb) = @_;
   $after ||= 0.0001 if $recurring;
 
-  my $id = $self->SUPER::_timer(0, 0, $cb);
-  weaken $self;
-  $self->{timers}{$id}{watcher} = EV::timer(
-    $after => $after => sub {
-      my $timer = $self->{timers}{$id};
-      delete delete($self->{timers}{$id})->{watcher} unless $recurring;
-      $self->_sandbox("Timer $id", $timer->{cb});
-    }
-  );
+  my $id      = $self->_id;
+  my $wrapper = sub {
+    delete $self->{timers}{$id} unless $recurring;
+    $self->_sandbox("Timer $id", $cb);
+  };
+  EV::now_update() if $after > 0;
+  $self->{timers}{$id}{watcher} = EV::timer($after, $after, $wrapper);
 
   return $id;
 }
@@ -85,18 +78,26 @@ Mojo::Reactor::EV - Low-level event reactor with libev support
 
   # Watch if handle becomes readable or writable
   my $reactor = Mojo::Reactor::EV->new;
-  $reactor->io($handle => sub {
+  $reactor->io($first => sub {
     my ($reactor, $writable) = @_;
-    say $writable ? 'Handle is writable' : 'Handle is readable';
+    say $writable ? 'First handle is writable' : 'First handle is readable';
   });
 
   # Change to watching only if handle becomes writable
-  $reactor->watch($handle, 0, 1);
+  $reactor->watch($first, 0, 1);
+
+  # Turn file descriptor into handle and watch if it becomes readable
+  my $second = IO::Handle->new_from_fd($fd, 'r');
+  $reactor->io($second => sub {
+    my ($reactor, $writable) = @_;
+    say $writable ? 'Second handle is writable' : 'Second handle is readable';
+  })->watch($second, 1, 0);
 
   # Add a timer
   $reactor->timer(15 => sub {
     my $reactor = shift;
-    $reactor->remove($handle);
+    $reactor->remove($first);
+    $reactor->remove($second);
     say 'Timeout!';
   });
 

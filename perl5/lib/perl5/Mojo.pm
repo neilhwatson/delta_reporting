@@ -3,19 +3,19 @@ use Mojo::Base -base;
 
 # "Professor: These old Doomsday devices are dangerously unstable. I'll rest
 #             easier not knowing where they are."
-use Carp 'croak';
+use Carp ();
 use Mojo::Home;
 use Mojo::Log;
 use Mojo::Transaction::HTTP;
 use Mojo::UserAgent;
 use Mojo::Util;
-use Scalar::Util 'weaken';
+use Scalar::Util ();
 
-has home => sub { Mojo::Home->new };
+has home => sub { Mojo::Home->new->detect(ref shift) };
 has log  => sub { Mojo::Log->new };
 has ua   => sub {
   my $ua = Mojo::UserAgent->new;
-  weaken $ua->server->app(shift)->{app};
+  Scalar::Util::weaken $ua->server->app(shift)->{app};
   return $ua;
 };
 
@@ -23,19 +23,7 @@ sub build_tx { Mojo::Transaction::HTTP->new }
 
 sub config { Mojo::Util::_stash(config => @_) }
 
-sub handler { croak 'Method "handler" not implemented in subclass' }
-
-sub new {
-  my $self = shift->SUPER::new(@_);
-
-  # Check if we have a log directory
-  my $home = $self->home;
-  $home->detect(ref $self) unless @{$home->parts};
-  $self->log->path($home->rel_file('log/mojo.log'))
-    if -w $home->rel_file('log');
-
-  return $self;
-}
+sub handler { Carp::croak 'Method "handler" not implemented in subclass' }
 
 1;
 
@@ -99,7 +87,7 @@ which stringifies to the actual path.
 The logging layer of your application, defaults to a L<Mojo::Log> object.
 
   # Log debug message
-  $app->log->debug('It works!');
+  $app->log->debug('It works');
 
 =head2 ua
 
@@ -121,8 +109,7 @@ new ones.
 
   my $tx = $app->build_tx;
 
-Transaction builder, defaults to building a L<Mojo::Transaction::HTTP>
-object.
+Transaction builder, defaults to building a L<Mojo::Transaction::HTTP> object.
 
 =head2 config
 
@@ -135,6 +122,9 @@ Application configuration.
 
   # Remove value
   my $foo = delete $app->config->{foo};
+
+  # Assign multiple values at once
+  $app->config(foo => 'test', bar => 23);
 
 =head2 handler
 
@@ -149,14 +139,6 @@ be overloaded in a subclass.
     my ($self, $tx) = @_;
     ...
   }
-
-=head2 new
-
-  my $app = Mojo->new;
-
-Construct a new L<Mojo> application. Will automatically detect your home
-directory if necessary and set up logging to C<log/mojo.log> if there's a
-C<log> directory.
 
 =head1 SEE ALSO
 

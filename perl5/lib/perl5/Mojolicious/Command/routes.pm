@@ -5,7 +5,7 @@ use re 'regexp_pattern';
 use Getopt::Long qw(GetOptionsFromArray :config no_auto_abbrev no_ignore_case);
 use Mojo::Util qw(encode tablify);
 
-has description => 'Show available routes.';
+has description => 'Show available routes';
 has usage => sub { shift->extract_usage };
 
 sub run {
@@ -24,7 +24,7 @@ sub _walk {
   # Pattern
   my $prefix = '';
   if (my $i = $depth * 2) { $prefix .= ' ' x $i . '+' }
-  push @$rows, my $row = [$prefix . ($route->pattern->pattern || '/')];
+  push @$rows, my $row = [$prefix . ($route->pattern->unparsed || '/')];
 
   # Flags
   my @flags;
@@ -68,7 +68,7 @@ Mojolicious::Command::routes - Routes command
 
   Options:
     -v, --verbose   Print additional details about routes, flags indicate
-                    C=Conditions, D=Detour, U=Under and W=WebSocket.
+                    C=Conditions, D=Detour, U=Under and W=WebSocket
 
 =head1 DESCRIPTION
 
@@ -88,14 +88,14 @@ L<Mojolicious::Command> and implements the following new ones.
 =head2 description
 
   my $description = $routes->description;
-  $routes         = $routes->description('Foo!');
+  $routes         = $routes->description('Foo');
 
 Short description of this command, used for the command list.
 
 =head2 usage
 
   my $usage = $routes->usage;
-  $routes   = $routes->usage('Foo!');
+  $routes   = $routes->usage('Foo');
 
 Usage information for this command, used for the help screen.
 

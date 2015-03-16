@@ -25,18 +25,23 @@ sub register {
   $app->helper(c       => sub { shift; Mojo::Collection->new(@_) });
   $app->helper(config  => sub { shift->app->config(@_) });
 
-  $app->helper($_ => $self->can("_$_"))
-    for qw(content content_for csrf_token current_route delay),
-    qw(inactivity_timeout is_fresh url_with);
+  $app->helper(content      => sub { _content(0, 0, @_) });
+  $app->helper(content_for  => sub { _content(1, 0, @_) });
+  $app->helper(content_with => sub { _content(0, 1, @_) });
 
-  $app->helper(dumper => sub { shift; dumper(@_) });
+  $app->helper($_ => $self->can("_$_"))
+    for
+    qw(csrf_token current_route delay inactivity_timeout is_fresh url_with);
+
+  $app->helper(dumper => sub { shift; dumper @_ });
   $app->helper(include => sub { shift->render_to_string(@_) });
 
   $app->helper("reply.$_" => $self->can("_$_")) for qw(asset static);
 
   $app->helper('reply.exception' => sub { _development('exception', @_) });
   $app->helper('reply.not_found' => sub { _development('not_found', @_) });
-  $app->helper(ua                => sub { shift->app->ua });
+
+  $app->helper(ua => sub { shift->app->ua });
 }
 
 sub _asset {
@@ -45,30 +50,26 @@ sub _asset {
   $c->rendered;
 }
 
+sub _block { ref $_[0] eq 'CODE' ? $_[0]() : $_[0] }
+
 sub _content {
-  my ($c, $name, $content) = @_;
+  my ($append, $replace, $c, $name, $content) = @_;
   $name ||= 'content';
 
-  # Set (first come)
   my $hash = $c->stash->{'mojo.content'} ||= {};
-  $hash->{$name} //= ref $content eq 'CODE' ? $content->() : $content
-    if defined $content;
+  if (defined $content) {
+    if ($append) { $hash->{$name} .= _block($content) }
+    if ($replace) { $hash->{$name} = _block($content) }
+    else          { $hash->{$name} //= _block($content) }
+  }
 
-  # Get
   return Mojo::ByteStream->new($hash->{$name} // '');
-}
-
-sub _content_for {
-  my ($c, $name, $content) = @_;
-  return _content($c, $name) unless defined $content;
-  my $hash = $c->stash->{'mojo.content'} ||= {};
-  return $hash->{$name} .= ref $content eq 'CODE' ? $content->() : $content;
 }
 
 sub _csrf_token {
   my $c = shift;
   $c->session->{csrf_token}
-    ||= sha1_sum($c->app->secrets->[0] . steady_time . rand 999);
+    ||= sha1_sum $c->app->secrets->[0] . steady_time . rand 999;
 }
 
 sub _current_route {
@@ -80,7 +81,8 @@ sub _delay {
   my $c     = shift;
   my $tx    = $c->render_later->tx;
   my $delay = Mojo::IOLoop->delay(@_);
-  $delay->catch(sub { $c->render_exception(pop) and undef $tx })->wait;
+  $delay->catch(sub { $c->helpers->reply->exception(pop) and undef $tx })
+    ->wait;
 }
 
 sub _development {
@@ -140,8 +142,8 @@ sub _is_fresh {
 sub _static {
   my ($c, $file) = @_;
   return !!$c->rendered if $c->app->static->serve($c, $file);
-  $c->app->log->debug(qq{File "$file" not found, public directory missing?});
-  return !$c->render_not_found;
+  $c->app->log->debug(qq{Static file "$file" not found});
+  return !$c->helpers->reply->not_found;
 }
 
 sub _url_with {
@@ -185,8 +187,8 @@ L<Mojolicious::Plugin::DefaultHelpers> implements the following helpers.
   my $formats = $c->accepts;
   my $format  = $c->accepts('html', 'json', 'txt');
 
-Select best possible representation for resource from C<Accept> request
-header, C<format> stash value or C<format> C<GET>/C<POST> parameter with
+Select best possible representation for resource from C<Accept> request header,
+C<format> stash value or C<format> C<GET>/C<POST> parameter with
 L<Mojolicious::Renderer/"accepts">, defaults to returning the first extension
 if no preference could be detected.
 
@@ -237,10 +239,10 @@ Alias for L<Mojo/"config">.
   %= content 'bar'
   %= content
 
-Store partial rendered content in named buffer and retrieve it, defaults to
-retrieving the named buffer C<content>, which is commonly used for the
-renderers C<layout> and C<extends> features. Note that new content will be
-ignored if the named buffer is already in use.
+Store partial rendered content in a named buffer and retrieve it later,
+defaults to retrieving the named buffer C<content>, which is commonly used for
+the renderers C<layout> and C<extends> features. New content will be ignored if
+the named buffer is already in use.
 
 =head2 content_for
 
@@ -249,8 +251,8 @@ ignored if the named buffer is already in use.
   % end
   %= content_for 'foo'
 
-Append partial rendered content to named buffer and retrieve it. Note that
-named buffers are shared with the L</"content"> helper.
+Same as L</"content">, but appends content to named buffers if they are already
+in use.
 
   % content_for message => begin
     Hello
@@ -258,7 +260,25 @@ named buffers are shared with the L</"content"> helper.
   % content_for message => begin
     world!
   % end
-  %= content_for 'message'
+  %= content 'message'
+
+=head2 content_with
+
+  % content_with foo => begin
+    test
+  % end
+  %= content_with 'foo'
+
+Same as L</"content">, but replaces content of named buffers if they are
+already in use.
+
+  % content message => begin
+    world!
+  % end
+  % content_with message => begin
+    Hello <%= content 'message' %>
+  % end
+  %= content 'message'
 
 =head2 csrf_token
 
@@ -279,12 +299,12 @@ Check or get name of current route.
 
   $c->delay(sub {...}, sub {...});
 
-Disable automatic rendering and use L<Mojo::IOLoop/"delay"> to manage
-callbacks and control the flow of events, which can help you avoid deep nested
-closures and memory leaks that often result from continuation-passing style.
-Also keeps a reference to L<Mojolicious::Controller/"tx"> in case the
-underlying connection gets closed early, and calls L</"reply-E<gt>exception">
-if an exception gets thrown in one of the steps, breaking the chain.
+Disable automatic rendering and use L<Mojo::IOLoop/"delay"> to manage callbacks
+and control the flow of events, which can help you avoid deep nested closures
+and memory leaks that often result from continuation-passing style. Also keeps
+a reference to L<Mojolicious::Controller/"tx"> in case the underlying
+connection gets closed early, and calls L</"reply-E<gt>exception"> if an
+exception gets thrown in one of the steps, breaking the chain.
 
   # Longer version
   $c->render_later;
@@ -308,14 +328,15 @@ if an exception gets thrown in one of the steps, breaking the chain.
 
   %= dumper {some => 'data'}
 
-Dump a Perl data structure with L<Mojo::Util/"dumper">.
+Dump a Perl data structure with L<Mojo::Util/"dumper">, very useful for
+debugging.
 
 =head2 extends
 
   % extends 'blue';
   % extends 'blue', title => 'Blue!';
 
-Set C<extends> stash value, all additional pairs get merged into the
+Set C<extends> stash value, all additional key/value pairs get merged into the
 L</"stash">.
 
 =head2 flash
@@ -339,7 +360,7 @@ timeout if possible.
   %= include 'menubar'
   %= include 'menubar', format => 'txt'
 
-Alias for C<Mojolicious::Controller/"render_to_string">.
+Alias for L<Mojolicious::Controller/"render_to_string">.
 
 =head2 is_fresh
 
@@ -351,8 +372,8 @@ Check freshness of request by comparing the C<If-None-Match> and
 C<If-Modified-Since> request headers to the C<ETag> and C<Last-Modified>
 response headers with L<Mojolicious::Static/"is_fresh">.
 
-  # Add ETag header and check freshness before rendering
-  $c->is_fresh(etag => 'abc')
+  # Add ETag/Last-Modified headers and check freshness before rendering
+  $c->is_fresh(etag => 'abc', last_modified => 1424985708)
     ? $c->rendered(304)
     : $c->render(text => 'I ♥ Mojolicious!');
 
@@ -361,7 +382,7 @@ response headers with L<Mojolicious::Static/"is_fresh">.
   % layout 'green';
   % layout 'green', title => 'Green!';
 
-Set C<layout> stash value, all additional pairs get merged into the
+Set C<layout> stash value, all additional key/value pairs get merged into the
 L</"stash">.
 
 =head2 param
@@ -384,6 +405,12 @@ C<Range>, C<If-Modified-Since> and C<If-None-Match> headers.
   $c->res->headers->content_type('text/plain');
   $c->reply->asset($asset);
 
+  # Serve static file if it exists
+  if (my $asset = $c->app->static->file('images/logo.png')) {
+    $c->res->headers->content_type('image/png');
+    $c->reply->asset($asset);
+  }
+
 =head2 reply->exception
 
   $c = $c->reply->exception('Oops!');
@@ -391,8 +418,8 @@ C<Range>, C<If-Modified-Since> and C<If-None-Match> headers.
 
 Render the exception template C<exception.$mode.$format.*> or
 C<exception.$format.*> and set the response status code to C<500>. Also sets
-the stash values C<exception> to a L<Mojo::Exception> object and C<snapshot>
-to a copy of the L</"stash"> for use in the templates.
+the stash values C<exception> to a L<Mojo::Exception> object and C<snapshot> to
+a copy of the L</"stash"> for use in the templates.
 
 =head2 reply->not_found
 
@@ -408,9 +435,9 @@ templates.
   my $bool = $c->reply->static('images/logo.png');
   my $bool = $c->reply->static('../lib/MyApp.pm');
 
-Reply with a static file using L<Mojolicious::Static/"serve">, usually from
-the C<public> directories or C<DATA> sections of your application. Note that
-this helper does not protect from traversing to parent directories.
+Reply with a static file using L<Mojolicious/"static">, usually from the
+C<public> directories or C<DATA> sections of your application. Note that this
+helper does not protect from traversing to parent directories.
 
   # Serve file with a custom content type
   $c->res->headers->content_type('application/myapp');
@@ -437,8 +464,8 @@ Alias for L<Mojolicious::Controller/"stash">.
   % title 'Welcome!';
   % title 'Welcome!', foo => 'bar';
 
-Get of set C<title> stash value, all additional pairs get merged into the
-L</"stash">.
+Get or set C<title> stash value, all additional key/value pairs get merged into
+the L</"stash">.
 
 =head2 ua
 

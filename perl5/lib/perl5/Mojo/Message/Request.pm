@@ -10,12 +10,6 @@ has method => 'GET';
 has url => sub { Mojo::URL->new };
 has 'reverse_proxy';
 
-my $START_LINE_RE = qr/
-  ^([a-zA-Z]+)                                              # Method
-  \s+([0-9a-zA-Z!#\$\%&'()*+,\-.\/:;=?\@[\\\]^_`\{|\}~]+)   # URL
-  \s+HTTP\/(\d\.\d)$                                        # Version
-/x;
-
 sub clone {
   my $self = shift;
 
@@ -59,9 +53,9 @@ sub extract_start_line {
   # Ignore any leading empty lines
   return undef unless $$bufref =~ s/^\s*(.*?)\x0d?\x0a//;
 
-  # We have a (hopefully) full request line
-  return !$self->error({message => 'Bad request start line', advice => 400})
-    unless $1 =~ $START_LINE_RE;
+  # We have a (hopefully) full request-line
+  return !$self->error({message => 'Bad request start-line'})
+    unless $1 =~ /^(\S+)\s+(\S+)\s+HTTP\/(\d\.\d)$/;
   my $url = $self->method($1)->version($3)->url;
   return !!($1 eq 'CONNECT' ? $url->authority($2) : $url->parse($2));
 }
@@ -133,7 +127,7 @@ sub param { shift->params->param(@_) }
 sub params {
   my $self = shift;
   return $self->{params}
-    ||= $self->body_params->clone->merge($self->query_params);
+    ||= $self->body_params->clone->append($self->query_params);
 }
 
 sub parse {
@@ -186,7 +180,7 @@ sub query_params { shift->url->query }
 
 sub _parse_basic_auth {
   return undef unless my $header = shift;
-  return $header =~ /Basic (.+)$/ ? b64_decode($1) : undef;
+  return $header =~ /Basic (.+)$/ ? b64_decode $1 : undef;
 }
 
 sub _parse_env {
@@ -282,8 +276,8 @@ Mojo::Message::Request - HTTP request
 
 L<Mojo::Message::Request> is a container for HTTP requests based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230>,
-L<RFC 7231|http://tools.ietf.org/html/rfc7235>,
-L<RFC 7231|http://tools.ietf.org/html/rfc7235> and
+L<RFC 7231|http://tools.ietf.org/html/rfc7231>,
+L<RFC 7235|http://tools.ietf.org/html/rfc7235> and
 L<RFC 2817|http://tools.ietf.org/html/rfc2817>.
 
 =head1 EVENTS
@@ -323,9 +317,9 @@ HTTP request method, defaults to C<GET>.
 HTTP request URL, defaults to a L<Mojo::URL> object.
 
   # Get request information
-  say $req->url->to_abs->userinfo;
-  say $req->url->to_abs->host;
-  say $req->url->to_abs->path;
+  my $info = $req->url->to_abs->userinfo;
+  my $host = $req->url->to_abs->host;
+  my $path = $req->url->to_abs->path;
 
 =head2 reverse_proxy
 
@@ -353,6 +347,9 @@ Clone request if possible, otherwise return C<undef>.
 
 Access request cookies, usually L<Mojo::Cookie::Request> objects.
 
+  # Names of all cookies
+  say $_->name for @{$req->cookies};
+
 =head2 every_param
 
   my $values = $req->every_param('foo');
@@ -367,7 +364,7 @@ array reference.
 
   my $bool = $req->extract_start_line(\$str);
 
-Extract request line from string.
+Extract request-line from string.
 
 =head2 fix_headers
 
@@ -379,7 +376,7 @@ Make sure request has all required headers.
 
   my $bytes = $req->get_start_line_chunk($offset);
 
-Get a chunk of request line data starting from a specific position.
+Get a chunk of request-line data starting from a specific position.
 
 =head2 is_handshake
 
@@ -401,18 +398,16 @@ Check C<X-Requested-With> header for C<XMLHttpRequest> value.
 
 =head2 param
 
-  my @names       = $req->param;
-  my $value       = $req->param('foo');
-  my ($foo, $bar) = $req->param(['foo', 'bar']);
+  my $value = $req->param('foo');
 
 Access C<GET> and C<POST> parameters extracted from the query string and
-C<application/x-www-form-urlencoded> or C<multipart/form-data> message body.
-If there are multiple values sharing the same name, and you want to access
-more than just the last one, you can use L</"every_param">. Note that this
-method caches all data, so it should not be called before the entire request
-body has been received. Parts of the request body need to be loaded into
-memory to parse C<POST> parameters, so you have to make sure it is not
-excessively large, there's a 10MB limit by default.
+C<application/x-www-form-urlencoded> or C<multipart/form-data> message body. If
+there are multiple values sharing the same name, and you want to access more
+than just the last one, you can use L</"every_param">. Note that this method
+caches all data, so it should not be called before the entire request body has
+been received. Parts of the request body need to be loaded into memory to parse
+C<POST> parameters, so you have to make sure it is not excessively large,
+there's a 16MB limit by default.
 
 =head2 params
 
@@ -420,14 +415,14 @@ excessively large, there's a 10MB limit by default.
 
 All C<GET> and C<POST> parameters extracted from the query string and
 C<application/x-www-form-urlencoded> or C<multipart/form-data> message body,
-usually a L<Mojo::Parameters> object. Note that this method caches all data,
-so it should not be called before the entire request body has been received.
-Parts of the request body need to be loaded into memory to parse C<POST>
-parameters, so you have to make sure it is not excessively large, there's a
-10MB limit by default.
+usually a L<Mojo::Parameters> object. Note that this method caches all data, so
+it should not be called before the entire request body has been received. Parts
+of the request body need to be loaded into memory to parse C<POST> parameters,
+so you have to make sure it is not excessively large, there's a 16MB limit by
+default.
 
-  # Get parameter value
-  say $req->params->param('foo');
+  # Get parameter names and values
+  my $hash = $req->params->to_hash;
 
 =head2 parse
 

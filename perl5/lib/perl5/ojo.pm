@@ -17,7 +17,7 @@ sub import {
   my $caller = caller;
   eval "package $caller; use Mojolicious::Lite; 1" or die $@;
   my $ua = $caller->app->ua;
-  $ua->server->app->hook(around_action => sub { local $_ = $_[1]; $_[0]->() });
+  $ua->server->app->hook(around_action => sub { local $_ = $_[1]; $_[0]() });
 
   $ua->max_redirects(10) unless defined $ENV{MOJO_MAX_REDIRECTS};
   $ua->proxy->detect unless defined $ENV{MOJO_PROXY};
@@ -80,6 +80,9 @@ Every L<ojo> one-liner is also a L<Mojolicious::Lite> application.
 
   $ perl -Mojo -E 'get "/" => {inline => "%= time"}; app->start' get /
 
+If it is not already defined, the C<MOJO_LOG_LEVEL> environment variable will
+be set to C<fatal>.
+
 =head1 FUNCTIONS
 
 L<ojo> implements the following functions, which are automatically exported.
@@ -89,9 +92,9 @@ L<ojo> implements the following functions, which are automatically exported.
   my $app = a('/hello' => sub { $_->render(json => {hello => 'world'}) });
 
 Create a route with L<Mojolicious::Lite/"any"> and return the current
-L<Mojolicious::Lite> object. The current controller object is also available
-to actions as C<$_>. See also the L<Mojolicious::Lite> tutorial for more
-argument variations.
+L<Mojolicious::Lite> object. The current controller object is also available to
+actions as C<$_>. See also L<Mojolicious::Guides::Tutorial> for more argument
+variations.
 
   $ perl -Mojo -E 'a("/hello" => {text => "Hello Mojo!"})->start' daemon
 
@@ -113,24 +116,30 @@ Turn list into a L<Mojo::Collection> object.
 
   my $res = d('example.com');
   my $res = d('http://example.com' => {Accept => '*/*'} => 'Hi!');
+  my $res = d('http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+  my $res = d('http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
-Perform C<DELETE> request with L<Mojo::UserAgent/"delete"> and return
-resulting L<Mojo::Message::Response> object.
+Perform C<DELETE> request with L<Mojo::UserAgent/"delete"> and return resulting
+L<Mojo::Message::Response> object.
 
 =head2 g
 
   my $res = g('example.com');
   my $res = g('http://example.com' => {Accept => '*/*'} => 'Hi!');
+  my $res = g('http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+  my $res = g('http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Perform C<GET> request with L<Mojo::UserAgent/"get"> and return resulting
 L<Mojo::Message::Response> object.
 
-  $ perl -Mojo -E 'say g("mojolicio.us")->dom("h1, h2, h3")->text'
+  $ perl -Mojo -E 'say g("mojolicio.us")->dom("h1")->map("text")->join("\n")'
 
 =head2 h
 
   my $res = h('example.com');
   my $res = h('http://example.com' => {Accept => '*/*'} => 'Hi!');
+  my $res = h('http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+  my $res = h('http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Perform C<HEAD> request with L<Mojo::UserAgent/"head"> and return resulting
 L<Mojo::Message::Response> object.
@@ -159,6 +168,8 @@ iterations, which defaults to C<1>.
 
   my $res = o('example.com');
   my $res = o('http://example.com' => {Accept => '*/*'} => 'Hi!');
+  my $res = o('http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+  my $res = o('http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Perform C<OPTIONS> request with L<Mojo::UserAgent/"options"> and return
 resulting L<Mojo::Message::Response> object.
@@ -167,6 +178,8 @@ resulting L<Mojo::Message::Response> object.
 
   my $res = p('example.com');
   my $res = p('http://example.com' => {Accept => '*/*'} => 'Hi!');
+  my $res = p('http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+  my $res = p('http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Perform C<POST> request with L<Mojo::UserAgent/"post"> and return resulting
 L<Mojo::Message::Response> object.
@@ -183,6 +196,8 @@ Dump a Perl data structure with L<Mojo::Util/"dumper">.
 
   my $res = t('example.com');
   my $res = t('http://example.com' => {Accept => '*/*'} => 'Hi!');
+  my $res = t('http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+  my $res = t('http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Perform C<PATCH> request with L<Mojo::UserAgent/"patch"> and return resulting
 L<Mojo::Message::Response> object.
@@ -191,6 +206,8 @@ L<Mojo::Message::Response> object.
 
   my $res = u('example.com');
   my $res = u('http://example.com' => {Accept => '*/*'} => 'Hi!');
+  my $res = u('http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+  my $res = u('http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Perform C<PUT> request with L<Mojo::UserAgent/"put"> and return resulting
 L<Mojo::Message::Response> object.

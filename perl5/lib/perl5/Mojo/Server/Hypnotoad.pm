@@ -7,7 +7,7 @@ use Cwd 'abs_path';
 use File::Basename 'dirname';
 use File::Spec::Functions 'catfile';
 use Mojo::Server::Prefork;
-use Mojo::Util 'steady_time';
+use Mojo::Util qw(steady_time);
 use Scalar::Util 'weaken';
 
 has prefork => sub { Mojo::Server::Prefork->new };
@@ -23,21 +23,20 @@ sub configure {
   $self->upgrade_timeout($c->{upgrade_timeout}) if $c->{upgrade_timeout};
 
   # Prefork settings
-  $prefork->reverse_proxy($c->{proxy}) if defined $c->{proxy};
-  $prefork->max_clients($c->{clients}) if $c->{clients};
-  $prefork->max_requests($c->{keep_alive_requests})
-    if $c->{keep_alive_requests};
+  $prefork->reverse_proxy($c->{proxy})   if defined $c->{proxy};
+  $prefork->max_clients($c->{clients})   if $c->{clients};
+  $prefork->max_requests($c->{requests}) if $c->{requests};
   defined $c->{$_} and $prefork->$_($c->{$_})
-    for qw(accept_interval accepts backlog graceful_timeout group),
-    qw(heartbeat_interval heartbeat_timeout inactivity_timeout listen),
-    qw(lock_file lock_timeout multi_accept pid_file user workers);
+    for qw(accepts backlog graceful_timeout group heartbeat_interval),
+    qw(heartbeat_timeout inactivity_timeout listen multi_accept pid_file),
+    qw(user workers);
 }
 
 sub run {
   my ($self, $app) = @_;
 
   # No Windows support
-  _exit('Hypnotoad not available for Windows.') if $^O eq 'MSWin32';
+  _exit('Hypnotoad is not available for Windows.') if $^O eq 'MSWin32';
 
   # Remember executable and application for later
   $ENV{HYPNOTOAD_EXE} ||= $0;
@@ -47,7 +46,8 @@ sub run {
   $ENV{MOJO_MODE} ||= 'production';
 
   # Clean start (to make sure everything works)
-  die "Can't exec: $!" if !$ENV{HYPNOTOAD_REV}++ && !exec $ENV{HYPNOTOAD_EXE};
+  die "Can't exec: $!"
+    if !$ENV{HYPNOTOAD_REV}++ && !exec $^X, $ENV{HYPNOTOAD_EXE};
 
   # Preload application and configure server
   my $prefork = $self->prefork->cleanup(0);
@@ -56,7 +56,7 @@ sub run {
   $self->configure('hypnotoad');
   weaken $self;
   $prefork->on(wait   => sub { $self->_manage });
-  $prefork->on(reap   => sub { $self->_reap(pop) });
+  $prefork->on(reap   => sub { $self->_cleanup(pop) });
   $prefork->on(finish => sub { $self->{finished} = 1 });
 
   # Testing
@@ -77,6 +77,15 @@ sub run {
   $prefork->cleanup(1)->run;
 }
 
+sub _cleanup {
+  my ($self, $pid) = @_;
+
+  # Clean up failed upgrade
+  return unless ($self->{new} || '') eq $pid;
+  $self->prefork->app->log->error('Zero downtime software upgrade failed');
+  delete @$self{qw(new upgrade)};
+}
+
 sub _exit { say shift and exit 0 }
 
 sub _hot_deploy {
@@ -92,10 +101,12 @@ sub _hot_deploy {
 sub _manage {
   my $self = shift;
 
-  # Upgraded
-  my $log = $self->prefork->app->log;
+  # Upgraded (wait for all workers to send a heartbeat)
+  my $prefork = $self->prefork;
+  my $log     = $prefork->app->log;
   if ($ENV{HYPNOTOAD_PID} && $ENV{HYPNOTOAD_PID} ne $$) {
-    $log->info("Upgrade successful, stopping $ENV{HYPNOTOAD_PID}.");
+    return unless $prefork->healthy == $prefork->workers;
+    $log->info("Upgrade successful, stopping $ENV{HYPNOTOAD_PID}");
     kill 'QUIT', $ENV{HYPNOTOAD_PID};
   }
   $ENV{HYPNOTOAD_PID} = $$ unless ($ENV{HYPNOTOAD_PID} // '') eq $$;
@@ -105,24 +116,15 @@ sub _manage {
 
     # Fresh start
     unless ($self->{new}) {
-      $log->info('Starting zero downtime software upgrade.');
+      $log->info('Starting zero downtime software upgrade');
       die "Can't fork: $!" unless defined(my $pid = $self->{new} = fork);
-      exec($ENV{HYPNOTOAD_EXE}) or die("Can't exec: $!") unless $pid;
+      exec $^X, $ENV{HYPNOTOAD_EXE} or die "Can't exec: $!" unless $pid;
     }
 
     # Timeout
     kill 'KILL', $self->{new}
       if $self->{upgrade} + $self->upgrade_timeout <= steady_time;
   }
-}
-
-sub _reap {
-  my ($self, $pid) = @_;
-
-  # Clean up failed upgrade
-  return unless ($self->{new} || '') eq $pid;
-  $self->prefork->app->log->error('Zero downtime software upgrade failed.');
-  delete @$self{qw(new upgrade)};
 }
 
 sub _stop {
@@ -156,12 +158,12 @@ keep-alive, multiple event loop and hot deployment support that just works.
 Note that the server uses signals for process management, so you should avoid
 modifying signal handlers in your applications.
 
-To start applications with it you can use the L<hypnotoad> script, for
-L<Mojolicious> and L<Mojolicious::Lite> applications it will default to
-C<production> mode.
+To start applications with it you can use the L<hypnotoad> script, which
+listens on port C<8080>, automatically daemonizes the server process and
+defaults to C<production> mode for L<Mojolicious> and L<Mojolicious::Lite>
+applications.
 
   $ hypnotoad ./myapp.pl
-  Server available at http://127.0.0.1:8080.
 
 You can run the same command again for automatic hot deployment.
 
@@ -171,12 +173,12 @@ You can run the same command again for automatic hot deployment.
 This second invocation will load the application again, detect the process id
 file with it, and send a L</"USR2"> signal to the already running server.
 
-For better scalability (epoll, kqueue) and to provide IPv6, SOCKS5 as well as
-TLS support, the optional modules L<EV> (4.0+), L<IO::Socket::IP> (0.20+),
-L<IO::Socket::Socks> (0.64+) and L<IO::Socket::SSL> (1.84+) will be used
-automatically if they are installed. Individual features can also be disabled
-with the C<MOJO_NO_IPV6>, C<MOJO_NO_SOCKS> and C<MOJO_NO_TLS> environment
-variables.
+For better scalability (epoll, kqueue) and to provide non-blocking name
+resolution, SOCKS5 as well as TLS support, the optional modules L<EV> (4.0+),
+L<Net::DNS::Native> (0.15+), L<IO::Socket::Socks> (0.64+) and
+L<IO::Socket::SSL> (1.94+) will be used automatically if possible. Individual
+features can also be disabled with the C<MOJO_NO_NDN>, C<MOJO_NO_SOCKS> and
+C<MOJO_NO_TLS> environment variables.
 
 See L<Mojolicious::Guides::Cookbook/"DEPLOYMENT"> for more.
 
@@ -187,11 +189,11 @@ with the following signals.
 
 =head2 INT, TERM
 
-Shutdown server immediately.
+Shut down server immediately.
 
 =head2 QUIT
 
-Shutdown server gracefully.
+Shut down server gracefully.
 
 =head2 TTIN
 
@@ -225,10 +227,6 @@ and take over serving requests after starting up successfully.
 L<Mojo::Server::Hypnotoad> worker processes can be controlled at runtime with
 the following signals.
 
-=head2 INT, TERM
-
-Stop worker immediately.
-
 =head2 QUIT
 
 Stop worker gracefully.
@@ -238,23 +236,15 @@ Stop worker gracefully.
 L<Mojo::Server::Hypnotoad> can be configured with the following settings, see
 L<Mojolicious::Guides::Cookbook/"Hypnotoad"> for examples.
 
-=head2 accept_interval
-
-  accept_interval => 0.5
-
-Interval in seconds for trying to reacquire the accept mutex, defaults to the
-value of L<Mojo::IOLoop/"accept_interval">. Note that changing this value can
-affect performance and idle CPU usage.
-
 =head2 accepts
 
   accepts => 100
 
 Maximum number of connections a worker is allowed to accept before stopping
-gracefully, defaults to the value of L<Mojo::Server::Prefork/"accepts">.
-Setting the value to C<0> will allow workers to accept new connections
-indefinitely. Note that up to half of this value can be subtracted randomly to
-improve load balancing.
+gracefully and then getting replaced with a newly started worker, defaults to
+the value of L<Mojo::Server::Prefork/"accepts">. Setting the value to C<0> will
+allow workers to accept new connections indefinitely. Note that up to half of
+this value can be subtracted randomly to improve load balancing.
 
 =head2 backlog
 
@@ -267,11 +257,12 @@ L<Mojo::Server::Daemon/"backlog">.
 
   clients => 100
 
-Maximum number of concurrent client connections per worker process, defaults
-to the value of L<Mojo::IOLoop/"max_connections">. Note that high concurrency
-works best with applications that perform mostly non-blocking operations, to
-optimize for blocking operations you can decrease this value and increase
-L</"workers"> instead for better performance.
+Maximum number of concurrent connections each worker process is allowed to
+handle before stopping to accept new incoming connections, defaults to the
+value of L<Mojo::IOLoop/"max_connections">. Note that high concurrency works
+best with applications that perform mostly non-blocking operations, to optimize
+for blocking operations you can decrease this value and increase L</"workers">
+instead for better performance.
 
 =head2 graceful_timeout
 
@@ -311,35 +302,12 @@ Maximum amount of time in seconds a connection can be inactive before getting
 closed, defaults to the value of L<Mojo::Server::Daemon/"inactivity_timeout">.
 Setting the value to C<0> will allow connections to be inactive indefinitely.
 
-=head2 keep_alive_requests
-
-  keep_alive_requests => 50
-
-Number of keep-alive requests per connection, defaults to the value of
-L<Mojo::Server::Daemon/"max_requests">.
-
 =head2 listen
 
   listen => ['http://*:80']
 
 List of one or more locations to listen on, defaults to C<http://*:8080>. See
 also L<Mojo::Server::Daemon/"listen"> for more examples.
-
-=head2 lock_file
-
-  lock_file => '/tmp/hypnotoad.lock'
-
-Full path of accept mutex lock file prefix, to which the process id will be
-appended, defaults to the value of L<Mojo::Server::Prefork/"lock_file">.
-
-=head2 lock_timeout
-
-  lock_timeout => 0.5
-
-Maximum amount of time in seconds a worker may block when waiting for the
-accept mutex, defaults to the value of
-L<Mojo::Server::Prefork/"lock_timeout">. Note that changing this value can
-affect performance and idle CPU usage.
 
 =head2 multi_accept
 
@@ -364,19 +332,25 @@ Activate reverse proxy support, which allows for the C<X-Forwarded-For> and
 C<X-Forwarded-Proto> headers to be picked up automatically, defaults to the
 value of L<Mojo::Server/"reverse_proxy">.
 
+=head2 requests
+
+  requests => 50
+
+Number of keep-alive requests per connection, defaults to the value of
+L<Mojo::Server::Daemon/"max_requests">.
+
 =head2 upgrade_timeout
 
   upgrade_timeout => 45
 
 Maximum amount of time in seconds a zero downtime software upgrade may take
-before getting canceled, defaults to the value of L</"upgrade_timeout">.
+before getting canceled, defaults to C<60>.
 
 =head2 user
 
   user => 'sri'
 
-Username for worker processes, defaults to the value of
-L<Mojo::Server/"user">.
+Username for worker processes, defaults to the value of L<Mojo::Server/"user">.
 
 =head2 workers
 
@@ -386,7 +360,9 @@ Number of worker processes, defaults to the value of
 L<Mojo::Server::Prefork/"workers">. A good rule of thumb is two worker
 processes per CPU core for applications that perform mostly non-blocking
 operations, blocking operations often require more and benefit from decreasing
-the number of concurrent L</"clients"> (often as low as C<1>).
+concurrency with L</"clients"> (often as low as C<1>). Note that during zero
+downtime software upgrades there will be twice as many workers active for a
+short amount of time.
 
 =head1 ATTRIBUTES
 
@@ -420,7 +396,7 @@ Configure server from application settings.
 
 =head2 run
 
-  $hypnotoad->run('script/myapp');
+  $hypnotoad->run('script/my_app');
 
 Run server for application.
 

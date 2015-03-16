@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Routes::Match 3"
-.TH Mojolicious::Routes::Match 3 "2014-10-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Routes::Match 3 "2015-03-04" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -155,7 +155,7 @@ Mojolicious::Routes::Match \- Find routes
 \&  # Match
 \&  my $c = Mojolicious::Controller\->new;
 \&  my $match = Mojolicious::Routes::Match\->new(root => $r);
-\&  $match\->match($c => {method => \*(AqPUT\*(Aq, path => \*(Aq/foo/bar\*(Aq});
+\&  $match\->find($c => {method => \*(AqPUT\*(Aq, path => \*(Aq/foo/bar\*(Aq});
 \&  say $match\->stack\->[0]{controller};
 \&  say $match\->stack\->[0]{action};
 \&
@@ -170,14 +170,6 @@ structures.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojolicious::Routes::Match implements the following attributes.
-.SS "current"
-.IX Subsection "current"
-.Vb 2
-\&  my $current = $match\->current;
-\&  $match      = $match\->current(2);
-.Ve
-.PP
-Current position on the \*(L"stack\*(R", defaults to \f(CW0\fR.
 .SS "endpoint"
 .IX Subsection "endpoint"
 .Vb 2
@@ -187,6 +179,14 @@ Current position on the \*(L"stack\*(R", defaults to \f(CW0\fR.
 .PP
 The route endpoint that matched, usually a Mojolicious::Routes::Route
 object.
+.SS "position"
+.IX Subsection "position"
+.Vb 2
+\&  my $position = $match\->position;
+\&  $match       = $match\->position(2);
+.Ve
+.PP
+Current position on the \*(L"stack\*(R", defaults to \f(CW0\fR.
 .SS "root"
 .IX Subsection "root"
 .Vb 2
@@ -207,13 +207,13 @@ Captured parameters with nesting history.
 .IX Header "METHODS"
 Mojolicious::Routes::Match inherits all methods from Mojo::Base and
 implements the following new ones.
-.SS "match"
-.IX Subsection "match"
+.SS "find"
+.IX Subsection "find"
 .Vb 1
-\&  $match\->match(Mojolicious::Controller\->new, {method => \*(AqGET\*(Aq, path => \*(Aq/\*(Aq});
+\&  $match\->find(Mojolicious::Controller\->new, {method => \*(AqGET\*(Aq, path => \*(Aq/\*(Aq});
 .Ve
 .PP
-Match controller and options against \*(L"root\*(R" to find appropriate
+Match controller and options against \*(L"root\*(R" to find an appropriate
 \&\*(L"endpoint\*(R".
 .SS "path_for"
 .IX Subsection "path_for"

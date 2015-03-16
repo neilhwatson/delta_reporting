@@ -1,7 +1,6 @@
 package Mojo::EventEmitter;
 use Mojo::Base -base;
 
-use Mojo::Util 'deprecated';
 use Scalar::Util qw(blessed weaken);
 
 use constant DEBUG => $ENV{MOJO_EVENTEMITTER_DEBUG} || 0;
@@ -23,29 +22,9 @@ sub emit {
   return $self;
 }
 
-# DEPRECATED in Tiger Face!
-sub emit_safe {
-  deprecated 'Mojo::EventEmitter::emit_safe is DEPRECATED';
-  my ($self, $name) = (shift, shift);
+sub has_subscribers { !!shift->{events}{shift()} }
 
-  if (my $s = $self->{events}{$name}) {
-    for my $cb (@$s) {
-      $self->emit(error => qq{Event "$name" failed: $@})
-        unless eval { $self->$cb(@_); 1 };
-    }
-  }
-  else { die "@{[blessed $self]}: $_[0]" if $name eq 'error' }
-
-  return $self;
-}
-
-sub has_subscribers { !!@{shift->{events}{shift()} || []} }
-
-sub on {
-  my ($self, $name, $cb) = @_;
-  push @{$self->{events}{$name} ||= []}, $cb;
-  return $cb;
-}
+sub on { push @{$_[0]{events}{$_[1]}}, $_[2] and return $_[2] }
 
 sub once {
   my ($self, $name, $cb) = @_;
@@ -133,8 +112,8 @@ class but is fatal if unhandled.
 
 =head1 METHODS
 
-L<Mojo::EventEmitter> inherits all methods from L<Mojo::Base> and
-implements the following new ones.
+L<Mojo::EventEmitter> inherits all methods from L<Mojo::Base> and implements
+the following new ones.
 
 =head2 catch
 

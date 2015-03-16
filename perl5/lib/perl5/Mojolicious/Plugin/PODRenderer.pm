@@ -5,8 +5,8 @@ use Mojo::Asset::File;
 use Mojo::ByteStream 'b';
 use Mojo::DOM;
 use Mojo::URL;
-use Mojo::Util qw(slurp unindent url_escape);
-use Pod::Simple::XHTML 3.09;
+use Mojo::Util qw(slurp unindent);
+use Pod::Simple::XHTML;
 use Pod::Simple::Search;
 
 sub register {
@@ -42,7 +42,7 @@ sub _html {
   my $perldoc = $c->url_for('/perldoc/');
   $_->{href} =~ s!^https://metacpan\.org/pod/!$perldoc!
     and $_->{href} =~ s!::!/!gi
-    for $dom->find('a[href]')->attr->each;
+    for $dom->find('a[href]')->map('attr')->each;
 
   # Rewrite code blocks for syntax highlighting and correct indentation
   for my $e ($dom->find('pre > code')->each) {
@@ -58,7 +58,7 @@ sub _html {
   my @parts;
   for my $e ($dom->find('h1, h2, h3')->each) {
 
-    push @parts, [] if $e->type eq 'h1' || !@parts;
+    push @parts, [] if $e->tag eq 'h1' || !@parts;
     my $anchor = $e->{id};
     my $link   = Mojo::URL->new->fragment($anchor);
     push @{$parts[-1]}, my $text = $e->all_text, $link;
@@ -80,7 +80,7 @@ sub _perldoc {
   my $c = shift;
 
   # Find module or redirect to CPAN
-  my $module = join '::', split '/', scalar $c->param('module');
+  my $module = join '::', split('/', $c->param('module'));
   my $path
     = Pod::Simple::Search->new->find($module, map { $_, "$_/pods" } @INC);
   return $c->redirect_to("https://metacpan.org/pod/$module")
@@ -112,18 +112,24 @@ Mojolicious::Plugin::PODRenderer - POD renderer plugin
 
 =head1 SYNOPSIS
 
-  # Mojolicious
+  # Mojolicious (with documentation browser under "/perldoc")
   my $route = $self->plugin('PODRenderer');
   my $route = $self->plugin(PODRenderer => {name => 'foo'});
   my $route = $self->plugin(PODRenderer => {preprocess => 'epl'});
 
-  # Mojolicious::Lite
+  # Mojolicious::Lite (with documentation browser under "/perldoc")
   my $route = plugin 'PODRenderer';
   my $route = plugin PODRenderer => {name => 'foo'};
   my $route = plugin PODRenderer => {preprocess => 'epl'};
 
+  # Without documentation browser
+  plugin PODRenderer => {no_perldoc => 1};
+
   # foo.html.ep
   %= pod_to_html "=head1 TEST\n\nC<123>"
+
+  # foo.html.pod
+  =head1 <%= uc 'test' %>
 
 =head1 DESCRIPTION
 

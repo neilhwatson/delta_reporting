@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Command::daemon 3"
-.TH Mojolicious::Command::daemon 3 "2014-09-03" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Command::daemon 3 "2015-03-09" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -145,25 +145,28 @@ Mojolicious::Command::daemon \- Daemon command
 .Vb 1
 \&  Usage: APPLICATION daemon [OPTIONS]
 \&
+\&    ./myapp.pl daemon
 \&    ./myapp.pl daemon \-m production \-l http://*:8080
 \&    ./myapp.pl daemon \-l http://127.0.0.1:8080 \-l https://[::]:8081
 \&    ./myapp.pl daemon \-l \*(Aqhttps://*:443?cert=./server.crt&key=./server.key\*(Aq
 \&
 \&  Options:
-\&    \-b, \-\-backlog <size>         Listen backlog size, defaults to SOMAXCONN.
-\&    \-c, \-\-clients <number>       Maximum number of concurrent clients,
-\&                                 defaults to 1000.
-\&    \-g, \-\-group <name>           Group name for process.
-\&    \-i, \-\-inactivity <seconds>   Inactivity timeout, defaults to the value of
-\&                                 MOJO_INACTIVITY_TIMEOUT or 15.
-\&    \-l, \-\-listen <location>      One or more locations you want to listen on,
-\&                                 defaults to the value of MOJO_LISTEN or
-\&                                 "http://*:3000".
-\&    \-p, \-\-proxy                  Activate reverse proxy support, defaults to
-\&                                 the value of MOJO_REVERSE_PROXY.
-\&    \-r, \-\-requests <number>      Maximum number of requests per keep\-alive
-\&                                 connection, defaults to 25.
-\&    \-u, \-\-user <name>            Username for process.
+\&    \-b, \-\-backlog <size>                 Listen backlog size, defaults to
+\&                                         SOMAXCONN
+\&    \-c, \-\-clients <number>               Maximum number of concurrent
+\&                                         connections, defaults to 1000
+\&    \-g, \-\-group <name>                   Group name for process
+\&    \-i, \-\-inactivity\-timeout <seconds>   Inactivity timeout, defaults to the
+\&                                         value of MOJO_INACTIVITY_TIMEOUT or 15
+\&    \-l, \-\-listen <location>              One or more locations you want to
+\&                                         listen on, defaults to the value of
+\&                                         MOJO_LISTEN or "http://*:3000"
+\&    \-p, \-\-proxy                          Activate reverse proxy support,
+\&                                         defaults to the value of
+\&                                         MOJO_REVERSE_PROXY
+\&    \-r, \-\-requests <number>              Maximum number of requests per
+\&                                         keep\-alive connection, defaults to 25
+\&    \-u, \-\-user <name>                    Username for process
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -183,7 +186,7 @@ Mojolicious::Command and implements the following new ones.
 .IX Subsection "description"
 .Vb 2
 \&  my $description = $daemon\->description;
-\&  $daemon         = $daemon\->description(\*(AqFoo!\*(Aq);
+\&  $daemon         = $daemon\->description(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short description of this command, used for the command list.
@@ -191,7 +194,7 @@ Short description of this command, used for the command list.
 .IX Subsection "usage"
 .Vb 2
 \&  my $usage = $daemon\->usage;
-\&  $daemon   = $daemon\->usage(\*(AqFoo!\*(Aq);
+\&  $daemon   = $daemon\->usage(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Usage information for this command, used for the help screen.

@@ -3,27 +3,12 @@ use Mojo::Base 'Mojolicious::Command';
 
 use Mojolicious;
 
-has description => 'Generate "Makefile.PL".';
+has description => 'Generate "Makefile.PL"';
 has usage => sub { shift->extract_usage };
 
 sub run { shift->render_to_rel_file('makefile', 'Makefile.PL') }
 
 1;
-__DATA__
-
-@@ makefile
-use strict;
-use warnings;
-
-use ExtUtils::MakeMaker;
-
-WriteMakefile(
-  VERSION   => '0.01',
-  PREREQ_PM => {'Mojolicious' => '<%= $Mojolicious::VERSION %>'},
-  test      => {TESTS => 't/*.t'}
-);
-
-__END__
 
 =encoding utf8
 
@@ -54,14 +39,14 @@ L<Mojolicious::Command> and implements the following new ones.
 =head2 description
 
   my $description = $makefile->description;
-  $makefile       = $makefile->description('Foo!');
+  $makefile       = $makefile->description('Foo');
 
 Short description of this command, used for the command list.
 
 =head2 usage
 
   my $usage = $makefile->usage;
-  $makefile = $makefile->usage('Foo!');
+  $makefile = $makefile->usage('Foo');
 
 Usage information for this command, used for the help screen.
 
@@ -81,3 +66,17 @@ Run this command.
 L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
 
 =cut
+
+__DATA__
+
+@@ makefile
+use strict;
+use warnings;
+
+use ExtUtils::MakeMaker;
+
+WriteMakefile(
+  VERSION   => '0.01',
+  PREREQ_PM => {'Mojolicious' => '<%= $Mojolicious::VERSION %>'},
+  test      => {TESTS => 't/*.t'}
+);

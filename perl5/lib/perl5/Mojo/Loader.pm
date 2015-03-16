@@ -1,35 +1,22 @@
 package Mojo::Loader;
-use Mojo::Base -base;
+use Mojo::Base -strict;
 
+use Exporter 'import';
 use File::Basename 'fileparse';
 use File::Spec::Functions qw(catdir catfile splitdir);
 use Mojo::Exception;
 use Mojo::Util qw(b64_decode class_to_path);
 
+our @EXPORT_OK = qw(data_section file_is_binary find_modules load_class);
+
 my (%BIN, %CACHE);
 
-sub data { $_[1] ? $_[2] ? _all($_[1])->{$_[2]} : _all($_[1]) : undef }
+sub data_section { $_[0] ? $_[1] ? _all($_[0])->{$_[1]} : _all($_[0]) : undef }
 
-sub is_binary { keys %{_all($_[1])} ? !!$BIN{$_[1]}{$_[2]} : undef }
+sub file_is_binary { keys %{_all($_[0])} ? !!$BIN{$_[0]}{$_[1]} : undef }
 
-sub load {
-  my ($self, $module) = @_;
-
-  # Check module name
-  return 1 if !$module || $module !~ /^\w(?:[\w:']*\w)?$/;
-
-  # Load
-  return undef if $module->can('new') || eval "require $module; 1";
-
-  # Exists
-  return 1 if $@ =~ /^Can't locate \Q@{[class_to_path $module]}\E in \@INC/;
-
-  # Real error
-  return Mojo::Exception->new($@);
-}
-
-sub search {
-  my ($self, $ns) = @_;
+sub find_modules {
+  my $ns = shift;
 
   my %modules;
   for my $directory (@INC) {
@@ -43,7 +30,23 @@ sub search {
     }
   }
 
-  return [keys %modules];
+  return sort keys %modules;
+}
+
+sub load_class {
+  my $class = shift;
+
+  # Check class name
+  return 1 if !$class || $class !~ /^\w(?:[\w:']*\w)?$/;
+
+  # Load
+  return undef if $class->can('new') || eval "require $class; 1";
+
+  # Exists
+  return 1 if $@ =~ /^Can't locate \Q@{[class_to_path $class]}\E in \@INC/;
+
+  # Real error
+  return Mojo::Exception->new($@);
 }
 
 sub _all {
@@ -69,7 +72,7 @@ sub _all {
   while (@files) {
     my ($name, $data) = splice @files, 0, 2;
     $all->{$name} = $name =~ s/\s*\(\s*base64\s*\)$//
-      && ++$BIN{$class}{$name} ? b64_decode($data) : $data;
+      && ++$BIN{$class}{$name} ? b64_decode $data : $data;
   }
 
   return $all;
@@ -85,61 +88,82 @@ Mojo::Loader - Loader
 
 =head1 SYNOPSIS
 
-  use Mojo::Loader;
+  use Mojo::Loader qw(data_section find_modules load_class);
 
   # Find modules in a namespace
-  my $loader = Mojo::Loader->new;
-  for my $module (@{$loader->search('Some::Namespace')}) {
+  for my $module (find_modules 'Some::Namespace') {
 
     # Load them safely
-    my $e = $loader->load($module);
+    my $e = load_class $module;
     warn qq{Loading "$module" failed: $e} and next if ref $e;
 
     # And extract files from the DATA section
-    say $loader->data($module, 'some_file.txt');
+    say data_section($module, 'some_file.txt');
   }
 
 =head1 DESCRIPTION
 
-L<Mojo::Loader> is a class loader and plugin framework.
+L<Mojo::Loader> is a class loader and plugin framework. Aside from finding
+modules and loading classes, it allows multiple files to be stored in the
+C<DATA> section of a class, which can then be accessed individually.
 
-=head1 METHODS
+  package Foo;
 
-L<Mojo::Loader> inherits all methods from L<Mojo::Base> and implements the
-following new ones.
+  1;
+  __DATA__
 
-=head2 data
+  @@ test.txt
+  This is the first file.
 
-  my $all   = $loader->data('Foo::Bar');
-  my $index = $loader->data('Foo::Bar', 'index.html');
+  @@ test2.html (base64)
+  VGhpcyBpcyB0aGUgc2Vjb25kIGZpbGUu
+
+  @@ test
+  This is the
+  third file.
+
+Each file has a header starting with C<@@>, followed by the file name and
+optional instructions for decoding its content. Currently only the Base64
+encoding is supported, which can be quite convenient for the storage of binary
+data.
+
+=head1 FUNCTIONS
+
+L<Mojo::Loader> implements the following functions, which can be imported
+individually.
+
+=head2 data_section
+
+  my $all   = data_section 'Foo::Bar';
+  my $index = data_section 'Foo::Bar', 'index.html';
 
 Extract embedded file from the C<DATA> section of a class, all files will be
 cached once they have been accessed for the first time.
 
-  say for keys %{$loader->data('Foo::Bar')};
+  say for keys %{data_section 'Foo::Bar'};
 
-=head2 is_binary
+=head2 file_is_binary
 
-  my $bool = $loader->is_binary('Foo::Bar', 'test.png');
+  my $bool = file_is_binary 'Foo::Bar', 'test.png';
 
 Check if embedded file from the C<DATA> section of a class was Base64 encoded.
 
-=head2 load
+=head2 find_modules
 
-  my $e = $loader->load('Foo::Bar');
+  my @modules = find_modules 'MyApp::Namespace';
+
+Search for modules in a namespace non-recursively.
+
+=head2 load_class
+
+  my $e = load_class 'Foo::Bar';
 
 Load a class and catch exceptions. Note that classes are checked for a C<new>
 method to see if they are already loaded.
 
-  if (my $e = $loader->load('Foo::Bar')) {
+  if (my $e = load_class 'Foo::Bar') {
     die ref $e ? "Exception: $e" : 'Not found!';
   }
-
-=head2 search
-
-  my $modules = $loader->search('MyApp::Namespace');
-
-Search for modules in a namespace non-recursively.
 
 =head1 SEE ALSO
 

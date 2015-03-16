@@ -1,4 +1,7 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
+
+eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
 
 use strict;
 use warnings;
@@ -30,15 +33,15 @@ hypnotoad - Hypnotoad HTTP and WebSocket server
 
   Usage: hypnotoad [OPTIONS] [APPLICATION]
 
-    hypnotoad ./script/myapp
+    hypnotoad ./script/my_app
     hypnotoad ./myapp.pl
     hypnotoad -f ./myapp.pl
 
   Options:
-    -f, --foreground   Keep manager process in foreground.
-    -h, --help         Show this message.
-    -s, --stop         Stop server gracefully.
-    -t, --test         Test application and exit.
+    -f, --foreground   Keep manager process in foreground
+    -h, --help         Show this message
+    -s, --stop         Stop server gracefully
+    -t, --test         Test application and exit
 
 =head1 DESCRIPTION
 

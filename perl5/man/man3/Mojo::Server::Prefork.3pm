@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Server::Prefork 3"
-.TH Mojo::Server::Prefork 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Server::Prefork 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -173,12 +173,12 @@ keep-alive and multiple event loop support. Note that the server uses signals
 for process management, so you should avoid modifying signal handlers in your
 applications.
 .PP
-For better scalability (epoll, kqueue) and to provide IPv6, \s-1SOCKS5\s0 as well as
-\&\s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+),
-IO::Socket::Socks (0.64+) and IO::Socket::SSL (1.84+) will be used
-automatically if they are installed. Individual features can also be disabled
-with the \f(CW\*(C`MOJO_NO_IPV6\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and \f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment
-variables.
+For better scalability (epoll, kqueue) and to provide non-blocking name
+resolution, \s-1SOCKS5\s0 as well as \s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+),
+Net::DNS::Native (0.15+), IO::Socket::Socks (0.64+) and
+IO::Socket::SSL (1.84+) will be used automatically if possible. Individual
+features can also be disabled with the \f(CW\*(C`MOJO_NO_NDN\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and
+\&\f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment variables.
 .PP
 See \*(L"\s-1DEPLOYMENT\*(R"\s0 in Mojolicious::Guides::Cookbook for more.
 .SH "MANAGER SIGNALS"
@@ -187,10 +187,10 @@ The Mojo::Server::Prefork manager process can be controlled at runtime with
 the following signals.
 .SS "\s-1INT, TERM\s0"
 .IX Subsection "INT, TERM"
-Shutdown server immediately.
+Shut down server immediately.
 .SS "\s-1QUIT\s0"
 .IX Subsection "QUIT"
-Shutdown server gracefully.
+Shut down server gracefully.
 .SS "\s-1TTIN\s0"
 .IX Subsection "TTIN"
 Increase worker pool by one.
@@ -199,11 +199,8 @@ Increase worker pool by one.
 Decrease worker pool by one.
 .SH "WORKER SIGNALS"
 .IX Header "WORKER SIGNALS"
-Mojo::Server::Prefork worker processes can be controlled at runtime with
-the following signals.
-.SS "\s-1INT, TERM\s0"
-.IX Subsection "INT, TERM"
-Stop worker immediately.
+Mojo::Server::Prefork worker processes can be controlled at runtime with the
+following signals.
 .SS "\s-1QUIT\s0"
 .IX Subsection "QUIT"
 Stop worker gracefully.
@@ -301,16 +298,6 @@ Emitted when the manager starts waiting for new heartbeat messages.
 .IX Header "ATTRIBUTES"
 Mojo::Server::Prefork inherits all attributes from Mojo::Server::Daemon
 and implements the following new ones.
-.SS "accept_interval"
-.IX Subsection "accept_interval"
-.Vb 2
-\&  my $interval = $prefork\->accept_interval;
-\&  $prefork     = $prefork\->accept_interval(0.5);
-.Ve
-.PP
-Interval in seconds for trying to reacquire the accept mutex, passed along to
-\&\*(L"accept_interval\*(R" in Mojo::IOLoop. Note that changing this value can affect
-performance and idle \s-1CPU\s0 usage.
 .SS "accepts"
 .IX Subsection "accepts"
 .Vb 2
@@ -319,11 +306,10 @@ performance and idle \s-1CPU\s0 usage.
 .Ve
 .PP
 Maximum number of connections a worker is allowed to accept before stopping
-gracefully, passed along to \*(L"max_accepts\*(R" in Mojo::IOLoop, defaults to
-\&\f(CW1000\fR. Setting the value to \f(CW0\fR will allow workers to accept new
-connections indefinitely. Note that up to half of this value can be subtracted
-randomly to improve load balancing, and that worker processes will stop
-sending heartbeat messages once the limit has been reached.
+gracefully and then getting replaced with a newly started worker, passed along
+to \*(L"max_accepts\*(R" in Mojo::IOLoop, defaults to \f(CW1000\fR. Setting the value to
+\&\f(CW0\fR will allow workers to accept new connections indefinitely. Note that up to
+half of this value can be subtracted randomly to improve load balancing.
 .SS "cleanup"
 .IX Subsection "cleanup"
 .Vb 2
@@ -331,8 +317,8 @@ sending heartbeat messages once the limit has been reached.
 \&  $prefork = $prefork\->cleanup($bool);
 .Ve
 .PP
-Delete \*(L"lock_file\*(R" and \*(L"pid_file\*(R" automatically once they are not
-needed anymore, defaults to a true value.
+Delete \*(L"pid_file\*(R" automatically once it is not needed anymore, defaults to
+a true value.
 .SS "graceful_timeout"
 .IX Subsection "graceful_timeout"
 .Vb 2
@@ -359,25 +345,6 @@ Heartbeat interval in seconds, defaults to \f(CW5\fR.
 .PP
 Maximum amount of time in seconds before a worker without a heartbeat will be
 stopped gracefully, defaults to \f(CW20\fR.
-.SS "lock_file"
-.IX Subsection "lock_file"
-.Vb 2
-\&  my $file = $prefork\->lock_file;
-\&  $prefork = $prefork\->lock_file(\*(Aq/tmp/prefork.lock\*(Aq);
-.Ve
-.PP
-Full path of accept mutex lock file prefix, to which the process id will be
-appended, defaults to a random temporary path.
-.SS "lock_timeout"
-.IX Subsection "lock_timeout"
-.Vb 2
-\&  my $timeout = $prefork\->lock_timeout;
-\&  $prefork    = $prefork\->lock_timeout(0.5);
-.Ve
-.PP
-Maximum amount of time in seconds a worker may block when waiting for the
-accept mutex, defaults to \f(CW1\fR. Note that changing this value can affect
-performance and idle \s-1CPU\s0 usage.
 .SS "multi_accept"
 .IX Subsection "multi_accept"
 .Vb 2
@@ -403,10 +370,9 @@ Full path of process id file, defaults to a random temporary path.
 .Ve
 .PP
 Number of worker processes, defaults to \f(CW4\fR. A good rule of thumb is two
-worker processes per \s-1CPU\s0 core for applications that perform mostly
-non-blocking operations, blocking operations often require more and benefit
-from decreasing the number of concurrent \*(L"clients\*(R" in Mojo::Server::Daemon
-(often as low as \f(CW1\fR).
+worker processes per \s-1CPU\s0 core for applications that perform mostly non-blocking
+operations, blocking operations often require more and benefit from decreasing
+concurrency with \*(L"clients\*(R" in Mojo::Server::Daemon (often as low as \f(CW1\fR).
 .SH "METHODS"
 .IX Header "METHODS"
 Mojo::Server::Prefork inherits all methods from Mojo::Server::Daemon and
@@ -417,8 +383,8 @@ implements the following new ones.
 \&  my $pid = $prefork\->check_pid;
 .Ve
 .PP
-Get process id for running server from \*(L"pid_file\*(R" or delete it if server
-is not running.
+Get process id for running server from \*(L"pid_file\*(R" or delete it if server is
+not running.
 .PP
 .Vb 1
 \&  say \*(AqServer is not running\*(Aq unless $prefork\->check_pid;
@@ -430,6 +396,13 @@ is not running.
 .Ve
 .PP
 Ensure \*(L"pid_file\*(R" exists.
+.SS "healthy"
+.IX Subsection "healthy"
+.Vb 1
+\&  my $healthy = $prefork\->healthy;
+.Ve
+.PP
+Number of currently active worker processes with a heartbeat.
 .SS "run"
 .IX Subsection "run"
 .Vb 1

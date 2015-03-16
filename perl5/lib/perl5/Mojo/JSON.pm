@@ -1,20 +1,16 @@
 package Mojo::JSON;
-use Mojo::Base -base;
+use Mojo::Base -strict;
 
 use B;
 use Carp 'croak';
 use Exporter 'import';
-use Mojo::Util 'deprecated';
+use Mojo::Util;
 use Scalar::Util 'blessed';
-
-# DEPRECATED in Tiger Face!
-has 'error';
 
 our @EXPORT_OK = qw(decode_json encode_json false from_json j to_json true);
 
-# Literal names
-my $FALSE = bless \(my $false = 0), 'Mojo::JSON::_Bool';
-my $TRUE  = bless \(my $true  = 1), 'Mojo::JSON::_Bool';
+# Booleans
+my ($FALSE, $TRUE) = map { bless \(my $dummy = $_), 'Mojo::JSON::_Bool' } 0, 1;
 
 # Escaped special character map (with u2028 and u2029)
 my %ESCAPE = (
@@ -32,66 +28,49 @@ my %ESCAPE = (
 my %REVERSE = map { $ESCAPE{$_} => "\\$_" } keys %ESCAPE;
 for (0x00 .. 0x1f) { $REVERSE{pack 'C', $_} //= sprintf '\u%.4X', $_ }
 
-# DEPRECATED in Tiger Face!
-sub decode {
-  shift->error(my $err = _catch(\my $value, pop));
-  return defined $err ? undef : $value;
-}
-
 sub decode_json {
-  my $err = _catch(\my $value, shift);
+  my $err = _decode(\my $value, shift);
   return defined $err ? croak $err : $value;
 }
 
-# DEPRECATED in Tiger Face!
-sub encode { encode_json($_[1]) }
-
 sub encode_json { Mojo::Util::encode 'UTF-8', _encode_value(shift) }
 
-sub false {$FALSE}
+sub false () {$FALSE}
 
 sub from_json {
-  my $err = _catch(\my $value, shift, 1);
+  my $err = _decode(\my $value, shift, 1);
   return defined $err ? croak $err : $value;
 }
 
 sub j {
   return encode_json($_[0]) if ref $_[0] eq 'ARRAY' || ref $_[0] eq 'HASH';
-  return eval { _decode($_[0]) };
-}
-
-# DEPRECATED in Tiger Face!
-sub new {
-  deprecated 'Object-oriented Mojo::JSON API is DEPRECATED';
-  return shift->SUPER::new(@_);
+  return eval { decode_json($_[0]) };
 }
 
 sub to_json { _encode_value(shift) }
 
-sub true {$TRUE}
-
-sub _catch {
-  my $valueref = shift;
-  eval { $$valueref = _decode(@_); 1 } ? return undef : chomp $@;
-  return $@;
-}
+sub true () {$TRUE}
 
 sub _decode {
+  my $valueref = shift;
 
-  # Missing input
-  die "Missing or empty input\n" unless length(local $_ = shift);
+  eval {
 
-  # UTF-8
-  $_ = Mojo::Util::decode 'UTF-8', $_ unless shift;
-  die "Input is not UTF-8 encoded\n" unless defined;
+    # Missing input
+    die "Missing or empty input\n" unless length(local $_ = shift);
 
-  # Value
-  my $value = _decode_value();
+    # UTF-8
+    $_ = Mojo::Util::decode 'UTF-8', $_ unless shift;
+    die "Input is not UTF-8 encoded\n" unless defined;
 
-  # Leftover data
-  _throw('Unexpected data') unless m/\G[\x20\x09\x0a\x0d]*\z/gc;
+    # Value
+    $$valueref = _decode_value();
 
-  return $value;
+    # Leftover data
+    /\G[\x20\x09\x0a\x0d]*\z/gc or _throw('Unexpected data');
+  } ? return undef : chomp $@;
+
+  return $@;
 }
 
 sub _decode_array {
@@ -102,10 +81,10 @@ sub _decode_array {
     push @array, _decode_value();
 
     # Separator
-    redo if m/\G[\x20\x09\x0a\x0d]*,/gc;
+    redo if /\G[\x20\x09\x0a\x0d]*,/gc;
 
     # End
-    last if m/\G[\x20\x09\x0a\x0d]*\]/gc;
+    last if /\G[\x20\x09\x0a\x0d]*\]/gc;
 
     # Invalid character
     _throw('Expected comma or right square bracket while parsing array');
@@ -119,24 +98,24 @@ sub _decode_object {
   until (m/\G[\x20\x09\x0a\x0d]*\}/gc) {
 
     # Quote
-    m/\G[\x20\x09\x0a\x0d]*"/gc
+    /\G[\x20\x09\x0a\x0d]*"/gc
       or _throw('Expected string while parsing object');
 
     # Key
     my $key = _decode_string();
 
     # Colon
-    m/\G[\x20\x09\x0a\x0d]*:/gc
+    /\G[\x20\x09\x0a\x0d]*:/gc
       or _throw('Expected colon while parsing object');
 
     # Value
     $hash{$key} = _decode_value();
 
     # Separator
-    redo if m/\G[\x20\x09\x0a\x0d]*,/gc;
+    redo if /\G[\x20\x09\x0a\x0d]*,/gc;
 
     # End
-    last if m/\G[\x20\x09\x0a\x0d]*\}/gc;
+    last if /\G[\x20\x09\x0a\x0d]*\}/gc;
 
     # Invalid character
     _throw('Expected comma or right curly bracket while parsing object');
@@ -155,7 +134,7 @@ sub _decode_string {
   # Invalid character
   unless (m/\G"/gc) {
     _throw('Unexpected character or invalid escape while parsing string')
-      if m/\G[\x00-\x1f\\]/;
+      if /\G[\x00-\x1f\\]/;
     _throw('Unterminated string');
   }
 
@@ -167,7 +146,7 @@ sub _decode_string {
 
   # Unescape everything else
   my $buffer = '';
-  while ($str =~ m/\G([^\\]*)\\(?:([^u])|u(.{4}))/gc) {
+  while ($str =~ /\G([^\\]*)\\(?:([^u])|u(.{4}))/gc) {
     $buffer .= $1;
 
     # Popular character
@@ -185,7 +164,7 @@ sub _decode_string {
           or pos($_) = $pos + pos($str), _throw('Missing high-surrogate');
 
         # Low surrogate
-        $str =~ m/\G\\u([Dd][C-Fc-f]..)/gc
+        $str =~ /\G\\u([Dd][C-Fc-f]..)/gc
           or pos($_) = $pos + pos($str), _throw('Missing low-surrogate');
 
         $ord = 0x10000 + ($ord - 0xd800) * 0x400 + (hex($1) - 0xdc00);
@@ -203,29 +182,29 @@ sub _decode_string {
 sub _decode_value {
 
   # Leading whitespace
-  m/\G[\x20\x09\x0a\x0d]*/gc;
+  /\G[\x20\x09\x0a\x0d]*/gc;
 
   # String
-  return _decode_string() if m/\G"/gc;
+  return _decode_string() if /\G"/gc;
 
   # Object
-  return _decode_object() if m/\G\{/gc;
+  return _decode_object() if /\G\{/gc;
 
   # Array
-  return _decode_array() if m/\G\[/gc;
+  return _decode_array() if /\G\[/gc;
 
   # Number
   return 0 + $1
-    if m/\G([-]?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?)/gc;
+    if /\G([-]?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?)/gc;
 
   # True
-  return $TRUE if m/\Gtrue/gc;
+  return $TRUE if /\Gtrue/gc;
 
   # False
-  return $FALSE if m/\Gfalse/gc;
+  return $FALSE if /\Gfalse/gc;
 
   # Null
-  return undef if m/\Gnull/gc;
+  return undef if /\Gnull/gc;
 
   # Invalid character
   _throw('Expected string, array, object, number, boolean or null');
@@ -244,7 +223,7 @@ sub _encode_object {
 
 sub _encode_string {
   my $str = shift;
-  $str =~ s!([\x00-\x1f\x{2028}\x{2029}\\"])!$REVERSE{$1}!gs;
+  $str =~ s!([\x00-\x1f\x{2028}\x{2029}\\"/])!$REVERSE{$1}!gs;
   return "\"$str\"";
 }
 
@@ -286,7 +265,7 @@ sub _encode_value {
 sub _throw {
 
   # Leading whitespace
-  m/\G[\x20\x09\x0a\x0d]*/gc;
+  /\G[\x20\x09\x0a\x0d]*/gc;
 
   # Context
   my $context = 'Malformed JSON: ' . shift;
@@ -301,7 +280,7 @@ sub _throw {
 
 # Emulate boolean type
 package Mojo::JSON::_Bool;
-use overload '0+' => sub { ${$_[0]} }, '""' => sub { ${$_[0]} }, fallback => 1;
+use overload '""' => sub { ${$_[0]} }, fallback => 1;
 
 1;
 
@@ -323,12 +302,12 @@ Mojo::JSON - Minimalistic JSON
 L<Mojo::JSON> is a minimalistic and possibly the fastest pure-Perl
 implementation of L<RFC 7159|http://tools.ietf.org/html/rfc7159>.
 
-It supports normal Perl data types like scalar, array reference, hash
-reference and will try to call the C<TO_JSON> method on blessed references, or
-stringify them if it doesn't exist. Differentiating between strings and
-numbers in Perl is hard, depending on how it has been used, a scalar can be
-both at the same time. The string value has a higher precedence unless both
-representations are equivalent.
+It supports normal Perl data types like scalar, array reference, hash reference
+and will try to call the C<TO_JSON> method on blessed references, or stringify
+them if it doesn't exist. Differentiating between strings and numbers in Perl
+is hard, depending on how it has been used, a scalar can be both at the same
+time. The string value has a higher precedence unless both representations are
+equivalent.
 
   [1, -2, 3]     -> [1, -2, 3]
   {"foo": "bar"} -> {foo => 'bar'}
@@ -347,7 +326,9 @@ their values are true or false.
   \0 -> false
 
 The two Unicode whitespace characters C<u2028> and C<u2029> will always be
-escaped to make JSONP easier.
+escaped to make JSONP easier, and the character C</> to prevent XSS attacks.
+
+  "\x{2028}\x{2029}</script>" -> "\u2028\u2029<\/script>"
 
 =head1 FUNCTIONS
 
@@ -376,8 +357,8 @@ False value, used because Perl has no native equivalent.
 
   my $value = from_json $chars;
 
-Decode JSON text that is not C<UTF-8> encoded to Perl value and die if
-decoding fails.
+Decode JSON text that is not C<UTF-8> encoded to Perl value and die if decoding
+fails.
 
 =head2 j
 
@@ -386,8 +367,8 @@ decoding fails.
   my $value = j $bytes;
 
 Encode Perl data structure (which may only be an array reference or hash
-reference) or decode JSON, an C<undef> return value indicates a bare C<null>
-or that decoding failed.
+reference) or decode JSON, an C<undef> return value indicates a bare C<null> or
+that decoding failed.
 
 =head2 to_json
 

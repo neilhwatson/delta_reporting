@@ -3,9 +3,8 @@ use Mojo::Base 'Mojolicious::Command';
 
 use File::Basename 'basename';
 use Getopt::Long qw(GetOptionsFromArray :config no_auto_abbrev no_ignore_case);
-use Mojo::UserAgent;
 
-has description => 'Upload distribution to CPAN.';
+has description => 'Upload distribution to CPAN';
 has usage => sub { shift->extract_usage };
 
 sub run {
@@ -16,7 +15,7 @@ sub run {
     'u|user=s'     => \(my $user     = '');
   die $self->usage unless my $file = shift @args;
 
-  my $tx = Mojo::UserAgent->new->tap(sub { $_->proxy->detect })->post(
+  my $tx = $self->app->ua->tap(sub { $_->proxy->detect })->post(
     "https://$user:$password\@pause.perl.org/pause/authenquery" => form => {
       HIDDENNAME                        => $user,
       CAN_MULTIPART                     => 1,
@@ -53,8 +52,8 @@ Mojolicious::Command::cpanify - Cpanify command
     mojo cpanify -u sri -p secr3t Mojolicious-Plugin-MyPlugin-0.01.tar.gz
 
   Options:
-    -p, --password <password>   PAUSE password.
-    -u, --user <name>           PAUSE username.
+    -p, --password <password>   PAUSE password
+    -u, --user <name>           PAUSE username
 
 =head1 DESCRIPTION
 
@@ -74,14 +73,14 @@ L<Mojolicious::Command> and implements the following new ones.
 =head2 description
 
   my $description = $cpanify->description;
-  $cpanify        = $cpanify->description('Foo!');
+  $cpanify        = $cpanify->description('Foo');
 
 Short description of this command, used for the command list.
 
 =head2 usage
 
   my $usage = $cpanify->usage;
-  $cpanify  = $cpanify->usage('Foo!');
+  $cpanify  = $cpanify->usage('Foo');
 
 Usage information for this command, used for the help screen.
 

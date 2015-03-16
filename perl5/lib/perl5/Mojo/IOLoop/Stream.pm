@@ -1,36 +1,31 @@
 package Mojo::IOLoop::Stream;
 use Mojo::Base 'Mojo::EventEmitter';
 
-use Errno qw(EAGAIN ECONNRESET EINTR EPIPE EWOULDBLOCK);
+use Errno qw(EAGAIN ECONNRESET EINTR EWOULDBLOCK);
 use Mojo::IOLoop;
+use Mojo::Util;
 use Scalar::Util 'weaken';
 
 has reactor => sub { Mojo::IOLoop->singleton->reactor };
 
-sub DESTROY { shift->close }
+sub DESTROY { Mojo::Util::_global_destruction() or shift->close }
 
 sub close {
   my $self = shift;
-
   return unless my $reactor = $self->reactor;
   return unless my $handle  = delete $self->timeout(0)->{handle};
   $reactor->remove($handle);
-  close $handle;
   $self->emit('close');
 }
 
-sub close_gracefully {
-  my $self = shift;
-  return $self->{graceful} = 1 if $self->is_writing;
-  $self->close;
-}
+sub close_gracefully { $_[0]->is_writing ? $_[0]{graceful}++ : $_[0]->close }
 
 sub handle { shift->{handle} }
 
 sub is_readable {
   my $self = shift;
   $self->_again;
-  return $self->{handle} && $self->reactor->is_readable($self->{handle});
+  return $self->{handle} && Mojo::Util::_readable(0, fileno $self->{handle});
 }
 
 sub is_writing {
@@ -95,34 +90,27 @@ sub write {
 
 sub _again { $_[0]->reactor->again($_[0]{timer}) if $_[0]{timer} }
 
-sub _error {
+sub _read {
   my $self = shift;
+
+  my $read = $self->{handle}->sysread(my $buffer, 131072, 0);
+  return $read == 0 ? $self->close : $self->emit(read => $buffer)->_again
+    if defined $read;
 
   # Retry
   return if $! == EAGAIN || $! == EINTR || $! == EWOULDBLOCK;
 
-  # Closed
-  return $self->close if $! == ECONNRESET || $! == EPIPE;
-
-  # Error
-  $self->emit(error => $!)->close;
-}
-
-sub _read {
-  my $self = shift;
-  my $read = $self->{handle}->sysread(my $buffer, 131072, 0);
-  return $self->_error unless defined $read;
-  return $self->close if $read == 0;
-  $self->emit(read => $buffer)->_again;
+  # Closed (maybe real error)
+  $! == ECONNRESET ? $self->close : $self->emit(error => $!)->close;
 }
 
 sub _write {
   my $self = shift;
 
+  # Handle errors only when reading (to avoid timing problems)
   my $handle = $self->{handle};
   if (length $self->{buffer}) {
-    my $written = $handle->syswrite($self->{buffer});
-    return $self->_error unless defined $written;
+    return unless defined(my $written = $handle->syswrite($self->{buffer}));
     $self->emit(write => substr($self->{buffer}, 0, $written, ''))->_again;
   }
 
@@ -168,8 +156,7 @@ Mojo::IOLoop::Stream - Non-blocking I/O stream
 
 =head1 DESCRIPTION
 
-L<Mojo::IOLoop::Stream> is a container for I/O streams used by
-L<Mojo::IOLoop>.
+L<Mojo::IOLoop::Stream> is a container for I/O streams used by L<Mojo::IOLoop>.
 
 =head1 EVENTS
 
@@ -317,8 +304,8 @@ stream to be inactive indefinitely.
   $stream = $stream->write($bytes);
   $stream = $stream->write($bytes => sub {...});
 
-Write data to stream, the optional drain callback will be invoked once all
-data has been written.
+Write data to stream, the optional drain callback will be invoked once all data
+has been written.
 
 =head1 SEE ALSO
 

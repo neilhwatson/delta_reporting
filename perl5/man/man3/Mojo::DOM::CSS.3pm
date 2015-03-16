@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::DOM::CSS 3"
-.TH Mojo::DOM::CSS 3 "2014-08-19" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::DOM::CSS 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -182,17 +182,35 @@ An \f(CW\*(C`E\*(C'\fR element with a \f(CW\*(C`foo\*(C'\fR attribute.
 .IX Subsection "E[foo=bar]"
 An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value is exactly equal to \f(CW\*(C`bar\*(C'\fR.
 .PP
-.Vb 1
-\&  my $fields = $css\->select(\*(Aqinput[name="foo"]\*(Aq);
+.Vb 2
+\&  my $case_sensitive = $css\->select(\*(Aqinput[type="hidden"]\*(Aq);
+\&  my $case_sensitive = $css\->select(\*(Aqinput[type=hidden]\*(Aq);
 .Ve
+.ie n .SS "E[foo=""bar"" i]"
+.el .SS "E[foo=``bar'' i]"
+.IX Subsection "E[foo=bar i]"
+An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value is exactly equal to any
+(ASCII-range) case-permutation of \f(CW\*(C`bar\*(C'\fR. Note that this selector is
+\&\s-1EXPERIMENTAL\s0 and might change without warning!
+.PP
+.Vb 3
+\&  my $case_insensitive = $css\->select(\*(Aqinput[type="hidden" i]\*(Aq);
+\&  my $case_insensitive = $css\->select(\*(Aqinput[type=hidden i]\*(Aq);
+\&  my $case_insensitive = $css\->select(\*(Aqinput[class~="foo" i]\*(Aq);
+.Ve
+.PP
+This selector is part of
+Selectors Level 4 <http://dev.w3.org/csswg/selectors-4>, which is still a work
+in progress.
 .ie n .SS "E[foo~=""bar""]"
 .el .SS "E[foo~=``bar'']"
 .IX Subsection "E[foo~=bar]"
-An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value is a list of
-whitespace-separated values, one of which is exactly equal to \f(CW\*(C`bar\*(C'\fR.
+An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value is a list of whitespace-separated
+values, one of which is exactly equal to \f(CW\*(C`bar\*(C'\fR.
 .PP
-.Vb 1
-\&  my $fields = $css\->select(\*(Aqinput[name~="foo"]\*(Aq);
+.Vb 2
+\&  my $foo = $css\->select(\*(Aqinput[class~="foo"]\*(Aq);
+\&  my $foo = $css\->select(\*(Aqinput[class~=foo]\*(Aq);
 .Ve
 .ie n .SS "E[foo^=""bar""]"
 .el .SS "E[foo^=``bar'']"
@@ -200,8 +218,9 @@ whitespace-separated values, one of which is exactly equal to \f(CW\*(C`bar\*(C'
 An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value begins exactly with the string
 \&\f(CW\*(C`bar\*(C'\fR.
 .PP
-.Vb 1
-\&  my $fields = $css\->select(\*(Aqinput[name^="f"]\*(Aq);
+.Vb 2
+\&  my $begins_with = $css\->select(\*(Aqinput[name^="f"]\*(Aq);
+\&  my $begins_with = $css\->select(\*(Aqinput[name^=f]\*(Aq);
 .Ve
 .ie n .SS "E[foo$=""bar""]"
 .el .SS "E[foo$=``bar'']"
@@ -209,16 +228,18 @@ An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value begin
 An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value ends exactly with the string
 \&\f(CW\*(C`bar\*(C'\fR.
 .PP
-.Vb 1
-\&  my $fields = $css\->select(\*(Aqinput[name$="o"]\*(Aq);
+.Vb 2
+\&  my $ends_with = $css\->select(\*(Aqinput[name$="o"]\*(Aq);
+\&  my $ends_with = $css\->select(\*(Aqinput[name$=o]\*(Aq);
 .Ve
 .ie n .SS "E[foo*=""bar""]"
 .el .SS "E[foo*=``bar'']"
 .IX Subsection "E[foo*=bar]"
 An \f(CW\*(C`E\*(C'\fR element whose \f(CW\*(C`foo\*(C'\fR attribute value contains the substring \f(CW\*(C`bar\*(C'\fR.
 .PP
-.Vb 1
-\&  my $fields = $css\->select(\*(Aqinput[name*="fo"]\*(Aq);
+.Vb 2
+\&  my $contains = $css\->select(\*(Aqinput[name*="fo"]\*(Aq);
+\&  my $contains = $css\->select(\*(Aqinput[name*=fo]\*(Aq);
 .Ve
 .SS "E:root"
 .IX Subsection "E:root"
@@ -403,13 +424,13 @@ carefully since it is very dynamic.
 .IX Header "METHODS"
 Mojo::DOM::CSS inherits all methods from Mojo::Base and implements the
 following new ones.
-.SS "match"
-.IX Subsection "match"
+.SS "matches"
+.IX Subsection "matches"
 .Vb 1
-\&  my $bool = $css\->match(\*(Aqhead > title\*(Aq);
+\&  my $bool = $css\->matches(\*(Aqhead > title\*(Aq);
 .Ve
 .PP
-Match \s-1CSS\s0 selector against first node in \*(L"tree\*(R".
+Check if first node in \*(L"tree\*(R" matches the \s-1CSS\s0 selector.
 .SS "select"
 .IX Subsection "select"
 .Vb 1
@@ -423,8 +444,7 @@ Run \s-1CSS\s0 selector against \*(L"tree\*(R".
 \&  my $result = $css\->select_one(\*(Aqhead > title\*(Aq);
 .Ve
 .PP
-Run \s-1CSS\s0 selector against \*(L"tree\*(R" and stop as soon as the first node
-matched.
+Run \s-1CSS\s0 selector against \*(L"tree\*(R" and stop as soon as the first node matched.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

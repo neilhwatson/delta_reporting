@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Reactor::Poll 3"
-.TH Mojo::Reactor::Poll 3 "2014-09-12" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Reactor::Poll 3 "2015-02-27" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -147,18 +147,26 @@ Mojo::Reactor::Poll \- Low\-level event reactor with poll support
 \&
 \&  # Watch if handle becomes readable or writable
 \&  my $reactor = Mojo::Reactor::Poll\->new;
-\&  $reactor\->io($handle => sub {
+\&  $reactor\->io($first => sub {
 \&    my ($reactor, $writable) = @_;
-\&    say $writable ? \*(AqHandle is writable\*(Aq : \*(AqHandle is readable\*(Aq;
+\&    say $writable ? \*(AqFirst handle is writable\*(Aq : \*(AqFirst handle is readable\*(Aq;
 \&  });
 \&
 \&  # Change to watching only if handle becomes writable
-\&  $reactor\->watch($handle, 0, 1);
+\&  $reactor\->watch($first, 0, 1);
+\&
+\&  # Turn file descriptor into handle and watch if it becomes readable
+\&  my $second = IO::Handle\->new_from_fd($fd, \*(Aqr\*(Aq);
+\&  $reactor\->io($second => sub {
+\&    my ($reactor, $writable) = @_;
+\&    say $writable ? \*(AqSecond handle is writable\*(Aq : \*(AqSecond handle is readable\*(Aq;
+\&  })\->watch($second, 1, 0);
 \&
 \&  # Add a timer
 \&  $reactor\->timer(15 => sub {
 \&    my $reactor = shift;
-\&    $reactor\->remove($handle);
+\&    $reactor\->remove($first);
+\&    $reactor\->remove($second);
 \&    say \*(AqTimeout!\*(Aq;
 \&  });
 \&

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::UserAgent::Transactor 3"
-.TH Mojo::UserAgent::Transactor 3 "2014-10-22" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::UserAgent::Transactor 3 "2015-03-09" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -145,12 +145,9 @@ Mojo::UserAgent::Transactor \- User agent transactor
 .Vb 1
 \&  use Mojo::UserAgent::Transactor;
 \&
-\&  # Simple GET request
+\&  # GET request with Accept header
 \&  my $t = Mojo::UserAgent::Transactor\->new;
-\&  say $t\->tx(GET => \*(Aqhttp://example.com\*(Aq)\->req\->to_string;
-\&
-\&  # PATCH request with "Do Not Track" header and content
-\&  say $t\->tx(PATCH => \*(Aqexample.com\*(Aq => {DNT => 1} => \*(AqHi!\*(Aq)\->req\->to_string;
+\&  say $t\->tx(GET => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq})\->req\->to_string;
 \&
 \&  # POST request with form\-data
 \&  say $t\->tx(POST => \*(Aqexample.com\*(Aq => form => {a => \*(Aqb\*(Aq})\->req\->to_string;
@@ -240,7 +237,7 @@ possible.
 \&  my $tx = $t\->redirect(Mojo::Transaction::HTTP\->new);
 .Ve
 .PP
-Build Mojo::Transaction::HTTP followup request for \f(CW301\fR, \f(CW302\fR, \f(CW303\fR,
+Build Mojo::Transaction::HTTP follow-up request for \f(CW301\fR, \f(CW302\fR, \f(CW303\fR,
 \&\f(CW307\fR or \f(CW308\fR redirect response if possible.
 .SS "tx"
 .IX Subsection "tx"
@@ -253,9 +250,9 @@ Build Mojo::Transaction::HTTP followup request for \f(CW301\fR, \f(CW302\fR, \f(
 \&  my $tx = $t\->tx(PUT  => \*(Aqhttp://example.com\*(Aq => json => {a => \*(Aqb\*(Aq});
 \&  my $tx = $t\->tx(POST => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => \*(AqHi!\*(Aq);
 \&  my $tx = $t\->tx(
-\&    PUT  => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
+\&    PUT => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => form => {a => \*(Aqb\*(Aq});
 \&  my $tx = $t\->tx(
-\&    PUT  => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
+\&    PUT => \*(Aqhttp://example.com\*(Aq => {Accept => \*(Aq*/*\*(Aq} => json => {a => \*(Aqb\*(Aq});
 .Ve
 .PP
 Versatile general purpose Mojo::Transaction::HTTP transaction builder for
@@ -264,10 +261,6 @@ requests, with support for \*(L"\s-1GENERATORS\*(R"\s0.
 .Vb 2
 \&  # Generate and inspect custom GET request with DNT header and content
 \&  say $t\->tx(GET => \*(Aqexample.com\*(Aq => {DNT => 1} => \*(AqBye!\*(Aq)\->req\->to_string;
-\&
-\&  # Use a custom socket for processing this transaction
-\&  my $tx = $t\->tx(GET => \*(Aqhttp://example.com\*(Aq);
-\&  $tx\->connection($sock);
 \&
 \&  # Stream response content to STDOUT
 \&  my $tx = $t\->tx(GET => \*(Aqhttp://example.com\*(Aq);
@@ -347,7 +340,7 @@ asset object, like Mojo::Asset::File or Mojo::Asset::Memory.
 .Ve
 .PP
 A \f(CW\*(C`filename\*(C'\fR value will be generated automatically, but can also be set
-manually if necessary. All remainging values in the hash reference get merged
+manually if necessary. All remaining values in the hash reference get merged
 into the \f(CW\*(C`multipart/form\-data\*(C'\fR content as headers.
 .PP
 .Vb 10
@@ -377,7 +370,7 @@ The \f(CW\*(C`multipart/form\-data\*(C'\fR content type can also be enforced by 
 \&  my $tx = $t\->upgrade(Mojo::Transaction::HTTP\->new);
 .Ve
 .PP
-Build Mojo::Transaction::WebSocket followup transaction for WebSocket
+Build Mojo::Transaction::WebSocket follow-up transaction for WebSocket
 handshake if possible.
 .SS "websocket"
 .IX Subsection "websocket"

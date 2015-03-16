@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::IOLoop::Stream 3"
-.TH Mojo::IOLoop::Stream 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::IOLoop::Stream 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -169,8 +169,7 @@ Mojo::IOLoop::Stream \- Non\-blocking I/O stream
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::IOLoop::Stream is a container for I/O streams used by
-Mojo::IOLoop.
+Mojo::IOLoop::Stream is a container for I/O streams used by Mojo::IOLoop.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::IOLoop::Stream inherits all events from Mojo::EventEmitter and can
@@ -333,8 +332,8 @@ stream to be inactive indefinitely.
 \&  $stream = $stream\->write($bytes => sub {...});
 .Ve
 .PP
-Write data to stream, the optional drain callback will be invoked once all
-data has been written.
+Write data to stream, the optional drain callback will be invoked once all data
+has been written.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

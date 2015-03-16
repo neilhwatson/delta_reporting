@@ -12,8 +12,8 @@ our @EXPORT_OK = ('b');
 my @UTILS = (
   qw(b64_decode b64_encode camelize decamelize hmac_sha1_sum html_unescape),
   qw(md5_bytes md5_sum punycode_decode punycode_encode quote sha1_bytes),
-  qw(sha1_sum slurp spurt squish trim unindent unquote url_escape),
-  qw(url_unescape xml_escape xor_encode)
+  qw(sha1_sum slurp spurt squish term_escape trim unindent unquote),
+  qw(url_escape url_unescape xml_escape xor_encode)
 );
 for my $name (@UTILS) {
   my $sub = Mojo::Util->can($name);
@@ -89,8 +89,8 @@ Mojo::ByteStream - ByteStream
 
 =head1 DESCRIPTION
 
-L<Mojo::ByteStream> is a scalar-based container for bytestreams that provides
-a more friendly API for many of the functions in L<Mojo::Util>.
+L<Mojo::ByteStream> is a scalar-based container for bytestreams that provides a
+more friendly API for many of the functions in L<Mojo::Util>.
 
   # Access scalar directly to manipulate bytestream
   my $stream = Mojo::ByteStream->new('foo');
@@ -124,7 +124,8 @@ Base64 decode bytestream with L<Mojo::Util/"b64_decode">.
 
 Base64 encode bytestream with L<Mojo::Util/"b64_encode">.
 
-  b('foo bar baz')->b64_encode('')->say;
+  # "Zm9vIGJhciBiYXo="
+  b('foo bar baz')->b64_encode('');
 
 =head2 camelize
 
@@ -149,18 +150,20 @@ Decamelize bytestream with L<Mojo::Util/"decamelize">.
   $stream = $stream->decode;
   $stream = $stream->decode('iso-8859-1');
 
-Decode bytestream with L<Mojo::Util/"decode">, defaults to C<UTF-8>.
+Decode bytestream with L<Mojo::Util/"decode">, defaults to using C<UTF-8>.
 
-  $stream->decode('UTF-16LE')->unquote->trim->say;
+  # "♥"
+  b('%E2%99%A5')->url_unescape->decode;
 
 =head2 encode
 
   $stream = $stream->encode;
   $stream = $stream->encode('iso-8859-1');
 
-Encode bytestream with L<Mojo::Util/"encode">, defaults to C<UTF-8>.
+Encode bytestream with L<Mojo::Util/"encode">, defaults to using C<UTF-8>.
 
-  $stream->trim->quote->encode->say;
+  # "%E2%99%A5"
+  b('♥')->encode->url_escape;
 
 =head2 hmac_sha1_sum
 
@@ -168,7 +171,8 @@ Encode bytestream with L<Mojo::Util/"encode">, defaults to C<UTF-8>.
 
 Generate HMAC-SHA1 checksum for bytestream with L<Mojo::Util/"hmac_sha1_sum">.
 
-  b('foo bar baz')->hmac_sha1_sum('secr3t')->quote->say;
+  # "7fbdc89263974a89210ea71f171c77d3f8c21471"
+  b('foo bar baz')->hmac_sha1_sum('secr3t');
 
 =head2 html_unescape
 
@@ -176,7 +180,8 @@ Generate HMAC-SHA1 checksum for bytestream with L<Mojo::Util/"hmac_sha1_sum">.
 
 Unescape all HTML entities in bytestream with L<Mojo::Util/"html_unescape">.
 
-  b('&lt;html&gt;')->html_unescape->url_escape->say;
+  # "%3Chtml%3E"
+  b('&lt;html&gt;')->html_unescape->url_escape;
 
 =head2 md5_bytes
 
@@ -219,15 +224,13 @@ Quote bytestream with L<Mojo::Util/"quote">.
   $stream = $stream->say;
   $stream = $stream->say(*STDERR);
 
-Print bytestream to handle and append a newline, defaults to C<STDOUT>.
+Print bytestream to handle and append a newline, defaults to using C<STDOUT>.
 
 =head2 secure_compare
 
   my $bool = $stream->secure_compare($str);
 
 Compare bytestream with L<Mojo::Util/"secure_compare">.
-
-  say 'Match!' if b('foo')->secure_compare('foo');
 
 =head2 sha1_bytes
 
@@ -253,6 +256,7 @@ Size of bytestream.
 
 Read all data at once from file into bytestream with L<Mojo::Util/"slurp">.
 
+  # Read file and print lines in random order
   b('/home/sri/myapp.pl')->slurp->split("\n")->shuffle->join("\n")->say;
 
 =head2 spurt
@@ -261,6 +265,7 @@ Read all data at once from file into bytestream with L<Mojo::Util/"slurp">.
 
 Write all data from bytestream at once to file with L<Mojo::Util/"spurt">.
 
+  # Remove unnecessary whitespace from file
   b('/home/sri/foo.txt')->slurp->squish->spurt('/home/sri/bar.txt');
 
 =head2 split
@@ -270,7 +275,8 @@ Write all data from bytestream at once to file with L<Mojo::Util/"spurt">.
 Turn bytestream into L<Mojo::Collection> object containing L<Mojo::ByteStream>
 objects.
 
-  b('a,b,c')->split(',')->quote->join(',')->say;
+  # "One,Two,Three"
+  b("one,two,three")->split(',')->map('camelize')->join(',');
 
 =head2 squish
 
@@ -285,6 +291,15 @@ L<Mojo::Util/"squish">.
   $stream = $stream->tap(sub {...});
 
 Alias for L<Mojo::Base/"tap">.
+
+=head2 term_escape
+
+  $stream = $stream->term_escape;
+
+Escape POSIX control characters in bytestream with L<Mojo::Util/"term_escape">.
+
+  # Print binary checksum to terminal
+  b('foo')->sha1_bytes->term_escape->say;
 
 =head2 to_string
 
@@ -319,7 +334,8 @@ Unquote bytestream with L<Mojo::Util/"unquote">.
 Percent encode all unsafe characters in bytestream with
 L<Mojo::Util/"url_escape">.
 
-  b('foo bar baz')->url_escape->say;
+  # "%E2%98%83"
+  b('☃')->encode->url_escape;
 
 =head2 url_unescape
 
@@ -328,7 +344,8 @@ L<Mojo::Util/"url_escape">.
 Decode percent encoded characters in bytestream with
 L<Mojo::Util/"url_unescape">.
 
-  b('%3Chtml%3E')->url_unescape->xml_escape->say;
+  # "&lt;html&gt;"
+  b('%3Chtml%3E')->url_unescape->xml_escape;
 
 =head2 xml_escape
 
@@ -342,6 +359,9 @@ bytestream with L<Mojo::Util/"xml_escape">.
   $stream = $stream->xor_encode($key);
 
 XOR encode bytestream with L<Mojo::Util/"xor_encode">.
+
+  # "%04%0E%15B%03%1B%10"
+  b('foo bar')->xor_encode('baz')->url_escape;
 
 =head1 OPERATORS
 

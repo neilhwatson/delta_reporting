@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Transaction 3"
-.TH Mojo::Transaction 3 "2014-10-23" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Transaction 3 "2015-02-28" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -153,7 +153,8 @@ Mojo::Transaction \- Transaction base class
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Transaction is an abstract base class for transactions.
+Mojo::Transaction is an abstract base class for transactions, like
+Mojo::Transaction::HTTP and Mojo::Transaction::WebSocket.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::Transaction inherits all events from Mojo::EventEmitter and can
@@ -266,8 +267,8 @@ default, used to implement user agents.
 \&  $tx\->client_read($bytes);
 .Ve
 .PP
-Read data client-side, used to implement user agents. Meant to be overloaded
-in a subclass.
+Read data client-side, used to implement user agents. Meant to be overloaded in
+a subclass.
 .SS "client_write"
 .IX Subsection "client_write"
 .Vb 1
@@ -279,19 +280,30 @@ in a subclass.
 .SS "connection"
 .IX Subsection "connection"
 .Vb 2
-\&  my $connection = $tx\->connection;
-\&  $tx            = $tx\->connection($connection);
+\&  my $id = $tx\->connection;
+\&  $tx    = $tx\->connection($id);
 .Ve
 .PP
-Connection identifier or socket.
+Connection identifier.
 .SS "error"
 .IX Subsection "error"
 .Vb 1
 \&  my $err = $tx\->error;
 .Ve
 .PP
-Return transaction error or \f(CW\*(C`undef\*(C'\fR if there is no error, commonly used
-together with \*(L"success\*(R".
+Get request or response error and return \f(CW\*(C`undef\*(C'\fR if there is no error,
+commonly used together with \*(L"success\*(R".
+.PP
+.Vb 2
+\&  # Longer version
+\&  my $err = $tx\->req\->error || $tx\->res\->error;
+\&
+\&  # Check for different kinds of errors
+\&  if (my $err = $tx\->error) {
+\&    die "$err\->{code} response: $err\->{message}" if $err\->{code};
+\&    die "Connection error: $err\->{message}";
+\&  }
+.Ve
 .SS "is_finished"
 .IX Subsection "is_finished"
 .Vb 1
@@ -343,8 +355,8 @@ Transaction closed server-side, used to implement web servers.
 \&  $tx\->server_read($bytes);
 .Ve
 .PP
-Read data server-side, used to implement web servers. Meant to be overloaded
-in a subclass.
+Read data server-side, used to implement web servers. Meant to be overloaded in
+a subclass.
 .SS "server_write"
 .IX Subsection "server_write"
 .Vb 1
@@ -359,8 +371,8 @@ in a subclass.
 \&  my $res = $tx\->success;
 .Ve
 .PP
-Returns the Mojo::Message::Response object from \*(L"res\*(R" if transaction
-was successful or \f(CW\*(C`undef\*(C'\fR otherwise. Connection and parser errors have only a
+Returns the Mojo::Message::Response object from \*(L"res\*(R" if transaction was
+successful or \f(CW\*(C`undef\*(C'\fR otherwise. Connection and parser errors have only a
 message in \*(L"error\*(R", 400 and 500 responses also a code.
 .PP
 .Vb 7

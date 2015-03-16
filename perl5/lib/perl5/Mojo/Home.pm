@@ -7,7 +7,7 @@ use File::Basename 'dirname';
 use File::Find 'find';
 use File::Spec::Functions qw(abs2rel catdir catfile splitdir);
 use FindBin;
-use Mojo::Util qw(class_to_path slurp);
+use Mojo::Util 'class_to_path';
 
 has parts => sub { [] };
 
@@ -15,7 +15,7 @@ sub detect {
   my $self = shift;
 
   # Environment variable
-  return $self->parts([splitdir(abs_path $ENV{MOJO_HOME})]) if $ENV{MOJO_HOME};
+  return $self->parts([splitdir abs_path $ENV{MOJO_HOME}]) if $ENV{MOJO_HOME};
 
   # Try to find home from lib directory
   if (my $class = @_ ? shift : 'Mojo::HelloWorld') {
@@ -28,7 +28,7 @@ sub detect {
       pop @home while @home && ($home[-1] =~ /^b?lib$/ || $home[-1] eq '');
 
       # Turn into absolute path
-      return $self->parts([splitdir(abs_path(catdir(@home) || '.'))]);
+      return $self->parts([splitdir abs_path catdir(@home) || '.']);
     }
   }
 
@@ -44,12 +44,12 @@ sub lib_dir {
 sub list_files {
   my ($self, $dir) = @_;
 
-  $dir = catdir @{$self->parts}, split '/', ($dir // '');
+  $dir = catdir @{$self->parts}, split('/', $dir // '');
   return [] unless -d $dir;
   my @files;
   find {
     wanted => sub {
-      my @parts = splitdir(abs2rel($File::Find::name, $dir));
+      my @parts = splitdir abs2rel($File::Find::name, $dir);
       push @files, join '/', @parts unless grep {/^\./} @parts;
     },
     no_chdir => 1
@@ -58,16 +58,16 @@ sub list_files {
   return [sort @files];
 }
 
-sub mojo_lib_dir { catdir(dirname(__FILE__), '..') }
+sub mojo_lib_dir { catdir dirname(__FILE__), '..' }
 
 sub new { @_ > 1 ? shift->SUPER::new->parse(@_) : shift->SUPER::new }
 
 sub parse { shift->parts([splitdir shift]) }
 
-sub rel_dir { catdir(@{shift->parts}, split '/', shift) }
-sub rel_file { catfile(@{shift->parts}, split '/', shift) }
+sub rel_dir  { catdir @{shift->parts},  split('/', shift) }
+sub rel_file { catfile @{shift->parts}, split('/', shift) }
 
-sub to_string { catdir(@{shift->parts}) }
+sub to_string { catdir @{shift->parts} }
 
 1;
 
@@ -141,14 +141,14 @@ Path to C<lib> directory in which L<Mojolicious> is installed.
 =head2 new
 
   my $home = Mojo::Home->new;
-  my $home = Mojo::Home->new('/home/sri/myapp');
+  my $home = Mojo::Home->new('/home/sri/my_app');
 
 Construct a new L<Mojo::Home> object and L</"parse"> home directory if
 necessary.
 
 =head2 parse
 
-  $home = $home->parse('/home/sri/myapp');
+  $home = $home->parse('/home/sri/my_app');
 
 Parse home directory.
 

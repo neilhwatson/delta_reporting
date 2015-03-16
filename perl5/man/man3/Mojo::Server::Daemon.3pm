@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Server::Daemon 3"
-.TH Mojo::Server::Daemon 3 "2014-09-11" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Server::Daemon 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -167,17 +167,24 @@ Mojo::Server::Daemon \- Non\-blocking I/O HTTP and WebSocket server
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Mojo::Server::Daemon is a full featured, highly portable non-blocking I/O
-\&\s-1HTTP\s0 and WebSocket server, with IPv6, \s-1TLS,\s0 Comet (long polling), keep-alive
-and multiple event loop support.
+\&\s-1HTTP\s0 and WebSocket server, with IPv6, \s-1TLS,\s0 Comet (long polling), keep-alive and
+multiple event loop support.
 .PP
-For better scalability (epoll, kqueue) and to provide IPv6, \s-1SOCKS5\s0 as well as
-\&\s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+), IO::Socket::IP (0.20+),
-IO::Socket::Socks (0.64+) and IO::Socket::SSL (1.84+) will be used
-automatically if they are installed. Individual features can also be disabled
-with the \f(CW\*(C`MOJO_NO_IPV6\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and \f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment
-variables.
+For better scalability (epoll, kqueue) and to provide non-blocking name
+resolution, \s-1SOCKS5\s0 as well as \s-1TLS\s0 support, the optional modules \s-1EV\s0 (4.0+),
+Net::DNS::Native (0.15+), IO::Socket::Socks (0.64+) and
+IO::Socket::SSL (1.94+) will be used automatically if possible. Individual
+features can also be disabled with the \f(CW\*(C`MOJO_NO_NDN\*(C'\fR, \f(CW\*(C`MOJO_NO_SOCKS\*(C'\fR and
+\&\f(CW\*(C`MOJO_NO_TLS\*(C'\fR environment variables.
 .PP
 See \*(L"\s-1DEPLOYMENT\*(R"\s0 in Mojolicious::Guides::Cookbook for more.
+.SH "SIGNALS"
+.IX Header "SIGNALS"
+The Mojo::Server::Daemon process can be controlled at runtime with the
+following signals.
+.SS "\s-1INT, TERM\s0"
+.IX Subsection "INT, TERM"
+Shut down server immediately.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::Server::Daemon inherits all events from Mojo::Server.
@@ -225,11 +232,12 @@ Mojo::IOLoop singleton.
 .IX Subsection "listen"
 .Vb 2
 \&  my $listen = $daemon\->listen;
-\&  $daemon    = $daemon\->listen([\*(Aqhttps://localhost:3000\*(Aq]);
+\&  $daemon    = $daemon\->listen([\*(Aqhttps://127.0.0.1:8080\*(Aq]);
 .Ve
 .PP
 List of one or more locations to listen on, defaults to the value of the
-\&\f(CW\*(C`MOJO_LISTEN\*(C'\fR environment variable or \f(CW\*(C`http://*:3000\*(C'\fR.
+\&\f(CW\*(C`MOJO_LISTEN\*(C'\fR environment variable or \f(CW\*(C`http://*:3000\*(C'\fR (shortcut for
+\&\f(CW\*(C`http://0.0.0.0:3000\*(C'\fR).
 .PP
 .Vb 2
 \&  # Listen on all IPv4 interfaces
@@ -309,7 +317,8 @@ option.
 \&  $daemon = $daemon\->max_clients(1000);
 .Ve
 .PP
-Maximum number of concurrent client connections, passed along to
+Maximum number of concurrent connections this server is allowed to handle
+before stopping to accept new incoming connections, passed along to
 \&\*(L"max_connections\*(R" in Mojo::IOLoop.
 .SS "max_requests"
 .IX Subsection "max_requests"
@@ -349,7 +358,7 @@ Start accepting connections.
 .Vb 3
 \&  # Listen on random port
 \&  my $id   = $daemon\->listen([\*(Aqhttp://127.0.0.1\*(Aq])\->start\->acceptors\->[0];
-\&  my $port = $daemon\->ioloop\->acceptor($id)\->handle\->sockport;
+\&  my $port = $daemon\->ioloop\->acceptor($id)\->port;
 .Ve
 .SS "stop"
 .IX Subsection "stop"

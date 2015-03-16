@@ -6,7 +6,7 @@ use Mojo::Util qw(decode slurp);
 
 sub load {
   my ($self, $file, $conf, $app) = @_;
-  $app->log->debug(qq{Reading configuration file "$file".});
+  $app->log->debug(qq{Reading configuration file "$file"});
   return $self->parse(decode('UTF-8', slurp $file), $file, $conf, $app);
 }
 
@@ -133,8 +133,8 @@ environment variable or C<$moniker.conf> in the application home directory.
 
 =head1 METHODS
 
-L<Mojolicious::Plugin::Config> inherits all methods from
-L<Mojolicious::Plugin> and implements the following new ones.
+L<Mojolicious::Plugin::Config> inherits all methods from L<Mojolicious::Plugin>
+and implements the following new ones.
 
 =head2 load
 

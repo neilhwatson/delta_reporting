@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Transaction::WebSocket 3"
-.TH Mojo::Transaction::WebSocket 3 "2014-09-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Transaction::WebSocket 3 "2015-02-28" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -159,9 +159,9 @@ Mojo::Transaction::WebSocket \- WebSocket transaction
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Transaction::WebSocket is a container for WebSocket transactions
-based on \s-1RFC 6455\s0 <http://tools.ietf.org/html/rfc6455>. Note that 64\-bit
-frames require a Perl with support for quads or they are limited to 32\-bit.
+Mojo::Transaction::WebSocket is a container for WebSocket transactions based
+on \s-1RFC 6455\s0 <http://tools.ietf.org/html/rfc6455>. Note that 64\-bit frames
+require a Perl with support for quads or they are limited to 32\-bit.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::Transaction::WebSocket inherits all events from Mojo::Transaction
@@ -209,7 +209,7 @@ Emitted once all data has been sent.
 \&  });
 .Ve
 .PP
-Emitted when transaction is finished.
+Emitted when the WebSocket connection has been closed.
 .SS "frame"
 .IX Subsection "frame"
 .Vb 4
@@ -261,9 +261,9 @@ gets emitted when it has at least one subscriber.
 \&  });
 .Ve
 .PP
-Emitted when a complete WebSocket message has been received, text messages
-will be automatically decoded. Note that this event only gets emitted when it
-has at least one subscriber.
+Emitted when a complete WebSocket message has been received, text messages will
+be automatically decoded. Note that this event only gets emitted when it has at
+least one subscriber.
 .PP
 .Vb 4
 \&  $ws\->on(message => sub {
@@ -328,8 +328,8 @@ Maximum WebSocket message size in bytes, defaults to the value of the
 \&\f(CW\*(C`MOJO_MAX_WEBSOCKET_SIZE\*(C'\fR environment variable or \f(CW262144\fR (256KB).
 .SH "METHODS"
 .IX Header "METHODS"
-Mojo::Transaction::WebSocket inherits all methods from
-Mojo::Transaction and implements the following new ones.
+Mojo::Transaction::WebSocket inherits all methods from Mojo::Transaction
+and implements the following new ones.
 .SS "build_frame"
 .IX Subsection "build_frame"
 .Vb 1
@@ -373,8 +373,7 @@ Build WebSocket message.
 \&  my $bool = $ws\->client_challenge;
 .Ve
 .PP
-Check WebSocket handshake challenge client-side, used to implement user
-agents.
+Check WebSocket handshake challenge client-side, used to implement user agents.
 .SS "client_handshake"
 .IX Subsection "client_handshake"
 .Vb 1
@@ -399,10 +398,10 @@ Write data client-side, used to implement user agents.
 .SS "connection"
 .IX Subsection "connection"
 .Vb 1
-\&  my $connection = $ws\->connection;
+\&  my $id = $ws\->connection;
 .Ve
 .PP
-Connection identifier or socket.
+Connection identifier.
 .SS "finish"
 .IX Subsection "finish"
 .Vb 3
@@ -442,8 +441,10 @@ Local interface address.
 Local interface port.
 .SS "new"
 .IX Subsection "new"
-.Vb 1
+.Vb 3
 \&  my $ws = Mojo::Transaction::WebSocket\->new;
+\&  my $ws = Mojo::Transaction::WebSocket\->new(compressed => 1);
+\&  my $ws = Mojo::Transaction::WebSocket\->new({compressed => 1});
 .Ve
 .PP
 Construct a new Mojo::Transaction::WebSocket object and subscribe to

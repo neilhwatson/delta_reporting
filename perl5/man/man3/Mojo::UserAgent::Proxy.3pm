@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::UserAgent::Proxy 3"
-.TH Mojo::UserAgent::Proxy 3 "2014-08-19" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::UserAgent::Proxy 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -192,13 +192,6 @@ implements the following new ones.
 Check environment variables \f(CW\*(C`HTTP_PROXY\*(C'\fR, \f(CW\*(C`http_proxy\*(C'\fR, \f(CW\*(C`HTTPS_PROXY\*(C'\fR,
 \&\f(CW\*(C`https_proxy\*(C'\fR, \f(CW\*(C`NO_PROXY\*(C'\fR and \f(CW\*(C`no_proxy\*(C'\fR for proxy information. Automatic
 proxy detection can be enabled with the \f(CW\*(C`MOJO_PROXY\*(C'\fR environment variable.
-.SS "inject"
-.IX Subsection "inject"
-.Vb 1
-\&  $proxy\->inject(Mojo::Transaction::HTTP\->new);
-.Ve
-.PP
-Inject proxy server information into transaction.
 .SS "is_needed"
 .IX Subsection "is_needed"
 .Vb 1
@@ -206,6 +199,13 @@ Inject proxy server information into transaction.
 .Ve
 .PP
 Check if request for domain would use a proxy server.
+.SS "prepare"
+.IX Subsection "prepare"
+.Vb 1
+\&  $proxy\->prepare(Mojo::Transaction::HTTP\->new);
+.Ve
+.PP
+Prepare proxy server information for transaction.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

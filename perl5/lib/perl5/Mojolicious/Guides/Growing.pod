@@ -7,9 +7,8 @@ Mojolicious::Guides::Growing - Growing
 
 =head1 OVERVIEW
 
-This document explains the process of starting a L<Mojolicious::Lite>
-prototype from scratch and growing it into a well-structured L<Mojolicious>
-application.
+This document explains the process of starting a L<Mojolicious::Lite> prototype
+from scratch and growing it into a well-structured L<Mojolicious> application.
 
 =head1 CONCEPTS
 
@@ -59,9 +58,9 @@ I<resource>.
   +--------+                                +--------+
 
 The fundamental idea here is that all resources are uniquely addressable with
-URLs and every resource can have different representations such as HTML, RSS
-or JSON. User interface concerns are separated from data storage concerns and
-all session state is kept client-side.
+URLs and every resource can have different representations such as HTML, RSS or
+JSON. User interface concerns are separated from data storage concerns and all
+session state is kept client-side.
 
   +---------+                        +------------+
   |         | ->    PUT /foo      -> |            |
@@ -90,13 +89,13 @@ about previous requests, which makes user-friendly login systems very tricky.
 Sessions solve this problem by allowing web applications to keep stateful
 information across several HTTP requests.
 
-  GET /login?user=sri&pass=s3cret HTTP/1.1
+  GET /login?user=sebastian&pass=s3cret HTTP/1.1
   Host: mojolicio.us
 
   HTTP/1.1 200 OK
   Set-Cookie: sessionid=987654321
   Content-Length: 10
-  Hello sri.
+  Hello sebastian.
 
   GET /protected HTTP/1.1
   Host: mojolicio.us
@@ -105,7 +104,7 @@ information across several HTTP requests.
   HTTP/1.1 200 OK
   Set-Cookie: sessionid=987654321
   Content-Length: 16
-  Hello again sri.
+  Hello again sebastian.
 
 Traditionally all session data was stored on the server-side and only session
 ids were exchanged between browser and web server in the form of cookies.
@@ -122,15 +121,15 @@ infrastructure requirements.
 TDD is a software development process where the developer starts writing
 failing test cases that define the desired functionality and then moves on to
 producing code that passes these tests. There are many advantages such as
-always having good test coverage and code being designed for testability,
-which will in turn often prevent future changes from breaking old code. Much
-of L<Mojolicious> was developed using TDD.
+always having good test coverage and code being designed for testability, which
+will in turn often prevent future changes from breaking old code. Much of
+L<Mojolicious> was developed using TDD.
 
 =head1 PROTOTYPE
 
 One of the main differences between L<Mojolicious> and other web frameworks is
-that it also includes L<Mojolicious::Lite>, a micro web framework optimized
-for rapid prototyping.
+that it also includes L<Mojolicious::Lite>, a micro web framework optimized for
+rapid prototyping.
 
 =head2 Differences
 
@@ -145,7 +144,7 @@ organized CPAN distribution to maximize maintainability.
 
   myapp                      # Application directory
   |- script                  # Script directory
-  |  +- myapp                # Application script
+  |  +- my_app               # Application script
   |- lib                     # Library directory
   |  |- MyApp.pm             # Application class
   |  +- MyApp                # Application namespace
@@ -198,7 +197,7 @@ The built-in development web server makes working on your application a lot of
 fun thanks to automatic reloading.
 
   $ morbo ./myapp.pl
-  Server available at http://127.0.0.1:3000.
+  Server available at http://127.0.0.1:3000
 
 Just save your changes and they will be automatically in effect the next time
 you refresh your browser.
@@ -210,9 +209,9 @@ It all starts with an HTTP request like this, sent by your browser.
   GET / HTTP/1.1
   Host: localhost:3000
 
-Once the request has been received by the web server through the event loop,
-it will be passed on to L<Mojolicious>, where it will be handled in a few
-simple steps.
+Once the request has been received by the web server through the event loop, it
+will be passed on to L<Mojolicious>, where it will be handled in a few simple
+steps.
 
   1. Check if a static file exists that would meet the requirements.
   2. Try to find a route that would meet the requirements.
@@ -250,9 +249,9 @@ separation of concerns more visible.
   use warnings;
 
   my $USERS = {
-    sri    => 'secr3t',
-    marcus => 'lulz',
-    yko    => 'zeecaptain'
+    joel      => 'las3rs',
+    marcus    => 'lulz',
+    sebastian => 'secr3t'
   };
 
   sub new { bless {}, shift }
@@ -282,7 +281,7 @@ templates.
   # Helper to lazy initialize and store our model object
   helper users => sub { state $users = MyApp::Model::Users->new };
 
-  # /?user=sri&pass=secr3t
+  # /?user=sebastian&pass=secr3t
   any '/' => sub {
     my $c = shift;
 
@@ -314,8 +313,8 @@ experience.
   $ chmod 644 t/login.t
 
 L<Test::Mojo> is a scriptable HTTP user agent designed specifically for
-testing, with many fun state of the art features such as CSS selectors based
-on L<Mojo::DOM>.
+testing, with many fun state of the art features such as CSS selectors based on
+L<Mojo::DOM>.
 
   use Test::More;
   use Test::Mojo;
@@ -336,8 +335,8 @@ on L<Mojo::DOM>.
     ->element_exists('form input[type="submit"]');
 
   # Test login with valid credentials
-  $t->post_ok('/' => form => {user => 'sri', pass => 'secr3t'})
-    ->status_is(200)->text_like('html body' => qr/Welcome sri/);
+  $t->post_ok('/' => form => {user => 'sebastian', pass => 'secr3t'})
+    ->status_is(200)->text_like('html body' => qr/Welcome sebastian/);
 
   # Test accessing a protected page
   $t->get_ok('/protected')->status_is(200)->text_like('a' => qr/Logout/);
@@ -363,8 +362,8 @@ L<Mojolicious::Command::get>.
   $ ./myapp.pl get /
   Wrong username or password.
 
-  $ ./myapp.pl get -v '/?user=sri&pass=secr3t'
-  GET /?user=sri&pass=secr3t HTTP/1.1
+  $ ./myapp.pl get -v '/?user=sebastian&pass=secr3t'
+  GET /?user=sebastian&pass=secr3t HTTP/1.1
   User-Agent: Mojolicious (Perl)
   Connection: keep-alive
   Accept-Encoding: gzip
@@ -378,7 +377,7 @@ L<Mojolicious::Command::get>.
   Content-Length: 12
   Content-Type: text/plain
 
-  Welcome sri.
+  Welcome sebastian.
 
 =head2 State keeping
 
@@ -392,11 +391,11 @@ L<Mojolicious/"secrets">.
 This passphrase is used by the HMAC-SHA1 algorithm to make signed cookies
 secure and can be changed at any time to invalidate all existing sessions.
 
-  $c->session(user => 'sri');
+  $c->session(user => 'sebastian');
   my $user = $c->session('user');
 
-By default all sessions expire after one hour, for more control you can use
-the C<expiration> session value to set an expiration date in seconds from now.
+By default all sessions expire after one hour, for more control you can use the
+C<expiration> session value to set an expiration date in seconds from now.
 
   $c->session(expiration => 3600);
 
@@ -598,8 +597,8 @@ actual action code needs to be changed.
   1;
 
 The C<startup> method gets called right after instantiation and is the place
-where the whole application gets set up. Since full L<Mojolicious>
-applications can use nested routes they have no need for C<group> blocks.
+where the whole application gets set up. Since full L<Mojolicious> applications
+can use nested routes they have no need for C<group> blocks.
 
 =head2 Simplified application script
 
@@ -612,9 +611,9 @@ allow running tests again.
   use warnings;
 
   use lib 'lib';
-  use Mojolicious::Commands;
 
   # Start command line interface for application
+  require Mojolicious::Commands;
   Mojolicious::Commands->start_app('MyApp');
 
 And the directory structure of our hybrid application should be looking like
@@ -644,8 +643,8 @@ makes sense to split our action code from its routing information.
   $ touch lib/MyApp/Controller/Login.pm
   $ chmod 644 lib/MyApp/Controller/Login.pm
 
-Once again the actual action code does not need to change, we just rename
-C<$c> to C<$self> since the controller is now the invocant.
+Once again the actual action code does not need to change, we just rename C<$c>
+to C<$self> since the controller is now the invocant.
 
   package MyApp::Controller::Login;
   use Mojo::Base 'Mojolicious::Controller';
@@ -721,27 +720,11 @@ moved into the appropriate directories.
 
 =head2 Script
 
-Finally C<myapp.pl> can be replaced with a proper L<Mojolicious> script.
+Finally C<myapp.pl> can be moved into a C<script> directory and renamed to
+C<my_app> to follow the CPAN standard.
 
-  $ rm myapp.pl
   $ mkdir script
-  $ touch script/myapp
-  $ chmod 744 script/myapp
-
-Only a few small details change, since installable scripts can't use L<lib>
-without breaking updated dual-life modules.
-
-  #!/usr/bin/env perl
-
-  use strict;
-  use warnings;
-
-  use FindBin;
-  BEGIN { unshift @INC, "$FindBin::Bin/../lib" }
-
-  # Start command line interface for application
-  require Mojolicious::Commands;
-  Mojolicious::Commands->start_app('MyApp');
+  $ mv myapp.pl script/my_app
 
 =head2 Simplified tests
 
@@ -761,8 +744,8 @@ can be simplified.
     ->element_exists('form input[name="pass"]')
     ->element_exists('form input[type="submit"]');
 
-  $t->post_ok('/' => form => {user => 'sri', pass => 'secr3t'})
-    ->status_is(200)->text_like('html body' => qr/Welcome sri/);
+  $t->post_ok('/' => form => {user => 'sebastian', pass => 'secr3t'})
+    ->status_is(200)->text_like('html body' => qr/Welcome sebastian/);
 
   $t->get_ok('/protected')->status_is(200)->text_like('a' => qr/Logout/);
 
@@ -777,7 +760,7 @@ And our final directory structure should be looking like this.
 
   myapp
   |- script
-  |  +- myapp
+  |  +- my_app
   |- lib
   |  |- MyApp.pm
   |  +- MyApp

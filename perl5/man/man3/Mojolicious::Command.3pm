@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Command 3"
-.TH Mojolicious::Command 3 "2014-09-26" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Command 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -148,14 +148,14 @@ Mojolicious::Command \- Command base class
 \&  use Mojo::Base \*(AqMojolicious::Command\*(Aq;
 \&
 \&  # Short description
-\&  has description => \*(AqMy first Mojo command.\*(Aq;
+\&  has description => \*(AqMy first Mojo command\*(Aq;
 \&
 \&  # Short usage message
 \&  has usage => <<EOF;
 \&  Usage: APPLICATION mycommand [OPTIONS]
 \&
 \&  Options:
-\&    \-s, \-\-something   Does something.
+\&    \-s, \-\-something   Does something
 \&  EOF
 \&
 \&  sub run {
@@ -177,7 +177,7 @@ Mojolicious::Command implements the following attributes.
 .IX Subsection "app"
 .Vb 2
 \&  my $app  = $command\->app;
-\&  $command = $command\->app(MyApp\->new);
+\&  $command = $command\->app(Mojolicious\->new);
 .Ve
 .PP
 Application for command, defaults to a Mojo::HelloWorld object.
@@ -190,7 +190,7 @@ Application for command, defaults to a Mojo::HelloWorld object.
 .IX Subsection "description"
 .Vb 2
 \&  my $description = $command\->description;
-\&  $command        = $command\->description(\*(AqFoo!\*(Aq);
+\&  $command        = $command\->description(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short description of command, used for the command list.
@@ -206,7 +206,7 @@ Limited command output.
 .IX Subsection "usage"
 .Vb 2
 \&  my $usage = $command\->usage;
-\&  $command  = $command\->usage(\*(AqFoo!\*(Aq);
+\&  $command  = $command\->usage(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Usage information for command, used for the help screen.
@@ -281,7 +281,7 @@ directory.
 .Ve
 .PP
 Render a template from the \f(CW\*(C`DATA\*(C'\fR section of the command class with
-Mojo::Template.
+Mojo::Loader and Mojo::Template.
 .SS "render_to_file"
 .IX Subsection "render_to_file"
 .Vb 2

@@ -14,7 +14,6 @@ has serialize          => sub { \&Mojo::JSON::encode_json };
 sub load {
   my ($self, $c) = @_;
 
-  return unless $c->req->headers->cookie;
   return unless my $value = $c->signed_cookie($self->cookie_name);
   $value =~ y/-/=/;
   return unless my $session = $self->deserialize->(b64_decode $value);
@@ -49,7 +48,7 @@ sub store {
   $session->{expires} = $default || time + $expiration
     if $expiration || $default;
 
-  my $value = b64_encode($self->serialize->($session), '');
+  my $value = b64_encode $self->serialize->($session), '';
   $value =~ y/=/-/;
   my $options = {
     domain   => $self->cookie_domain,
@@ -154,8 +153,7 @@ over HTTPS connections.
   my $cb    = $sessions->serialize;
   $sessions = $sessions->serialize(sub {...});
 
-A callback used to serialize sessions, defaults to
-L<Mojo::JSON/"encode_json">.
+A callback used to serialize sessions, defaults to L<Mojo::JSON/"encode_json">.
 
   $sessions->serialize(sub {
     my $hash = shift;
@@ -164,8 +162,8 @@ L<Mojo::JSON/"encode_json">.
 
 =head1 METHODS
 
-L<Mojolicious::Sessions> inherits all methods from L<Mojo::Base> and
-implements the following new ones.
+L<Mojolicious::Sessions> inherits all methods from L<Mojo::Base> and implements
+the following new ones.
 
 =head2 load
 

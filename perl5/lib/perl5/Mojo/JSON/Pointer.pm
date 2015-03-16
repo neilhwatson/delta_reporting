@@ -1,8 +1,6 @@
 package Mojo::JSON::Pointer;
 use Mojo::Base -base;
 
-use Mojo::Util 'deprecated';
-
 has 'data';
 
 sub contains { shift->_pointer(1, @_) }
@@ -12,17 +10,12 @@ sub new { @_ > 1 ? shift->SUPER::new(data => shift) : shift->SUPER::new }
 
 sub _pointer {
   my ($self, $contains, $pointer) = @_;
+
   my $data = $self->data;
-
-  # DEPRECATED in Tiger Face!
-  deprecated 'Support for data arguments in Mojo::JSON::Pointer is DEPRECATED'
-    and (($pointer, $data) = ($_[3], $pointer))
-    if defined $_[3];
-
   return $data unless $pointer =~ s!^/!!;
   for my $p ($pointer eq '' ? ($pointer) : (split '/', $pointer)) {
-    $p =~ s/~0/~/g;
     $p =~ s!~1!/!g;
+    $p =~ s/~0/~/g;
 
     # Hash
     if (ref $data eq 'HASH' && exists $data->{$p}) { $data = $data->{$p} }
@@ -80,8 +73,8 @@ the following new ones.
 
   my $bool = $pointer->contains('/foo/1');
 
-Check if L</"data"> contains a value that can be identified with the given
-JSON Pointer.
+Check if L</"data"> contains a value that can be identified with the given JSON
+Pointer.
 
   # True
   Mojo::JSON::Pointer->new({'♥' => 'mojolicious'})->contains('/♥');

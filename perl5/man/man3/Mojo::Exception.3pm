@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Exception 3"
-.TH Mojo::Exception 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Exception 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -211,7 +211,8 @@ Mojo::Exception inherits all methods from Mojo::Base and implements the
 following new ones.
 .SS "new"
 .IX Subsection "new"
-.Vb 2
+.Vb 3
+\&  my $e = Mojo::Exception\->new;
 \&  my $e = Mojo::Exception\->new(\*(AqOops!\*(Aq);
 \&  my $e = Mojo::Exception\->new(\*(AqOops!\*(Aq, $files);
 .Ve

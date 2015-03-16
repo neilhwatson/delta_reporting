@@ -3,7 +3,7 @@ use Mojo::Base 'Mojolicious::Routes::Route';
 
 use List::Util 'first';
 use Mojo::Cache;
-use Mojo::Loader;
+use Mojo::Loader 'load_class';
 use Mojo::Util 'camelize';
 use Mojolicious::Routes::Match;
 use Scalar::Util 'weaken';
@@ -14,23 +14,16 @@ has [qw(conditions shortcuts)] => sub { {} };
 has hidden     => sub { [qw(attr has new tap)] };
 has namespaces => sub { [] };
 
-sub add_condition { shift->_add(conditions => @_) }
-sub add_shortcut  { shift->_add(shortcuts  => @_) }
-
-sub auto_render {
-  my ($self, $c) = @_;
-  my $stash = $c->stash;
-  return if $stash->{'mojo.rendered'};
-  $c->render_maybe or $stash->{'mojo.routed'} or $c->render_not_found;
-}
+sub add_condition { $_[0]->conditions->{$_[1]} = $_[2] and return $_[0] }
+sub add_shortcut  { $_[0]->shortcuts->{$_[1]}  = $_[2] and return $_[0] }
 
 sub continue {
   my ($self, $c) = @_;
 
-  my $match   = $c->match;
-  my $stack   = $match->stack;
-  my $current = $match->current;
-  return $self->auto_render($c) unless my $field = $stack->[$current];
+  my $match    = $c->match;
+  my $stack    = $match->stack;
+  my $position = $match->position;
+  return _render($c) unless my $field = $stack->[$position];
 
   # Merge captures into stash
   my $stash = $c->stash;
@@ -38,10 +31,10 @@ sub continue {
   @$stash{keys %$field} = values %$field;
 
   my $continue;
-  my $last = !$stack->[++$current];
+  my $last = !$stack->[++$position];
   if (my $cb = $field->{cb}) { $continue = $self->_callback($c, $cb, $last) }
   else { $continue = $self->_controller($c, $field, $last) }
-  $match->current($current);
+  $match->position($position);
   $self->continue($c) if $last || $continue;
 }
 
@@ -91,29 +84,19 @@ sub match {
   }
 
   # Check routes
-  $match->match($c => {method => $method, path => $path, websocket => $ws});
+  $match->find($c => {method => $method, path => $path, websocket => $ws});
   return unless my $route = $match->endpoint;
   $cache->set(
     "$method:$path:$ws" => {endpoint => $route, stack => $match->stack});
 }
 
-sub route {
-  shift->add_child(Mojolicious::Routes::Route->new(@_))->children->[-1];
-}
-
 sub _action { shift->plugins->emit_chain(around_action => @_) }
-
-sub _add {
-  my ($self, $attr, $name, $cb) = @_;
-  $self->$attr->{$name} = $cb;
-  return $self;
-}
 
 sub _callback {
   my ($self, $c, $cb, $last) = @_;
-  $c->stash->{'mojo.routed'}++ if $last;
+  $c->stash->{'mojo.routed'} = 1 if $last;
   my $app = $c->app;
-  $app->log->debug('Routing to a callback.');
+  $app->log->debug('Routing to a callback');
   return _action($app, $c, $cb, $last);
 }
 
@@ -125,7 +108,7 @@ sub _class {
 
   # Application class
   my @classes;
-  my $class = $field->{controller} ? camelize($field->{controller}) : '';
+  my $class = $field->{controller} ? camelize $field->{controller} : '';
   if ($field->{app}) { push @classes, $field->{app} }
 
   # Specific namespace
@@ -143,7 +126,7 @@ sub _class {
 
     # Failed
     next unless defined(my $found = $self->_load($class));
-    return !$log->debug(qq{Class "$class" is not a controller.}) unless $found;
+    return !$log->debug(qq{Class "$class" is not a controller}) unless $found;
 
     # Success
     my $new = $class->new(%$c);
@@ -152,7 +135,7 @@ sub _class {
   }
 
   # Nothing found
-  $log->debug(qq{Controller "$classes[-1]" does not exist.}) if @classes;
+  $log->debug(qq{Controller "$classes[-1]" does not exist}) if @classes;
   return @classes ? undef : 0;
 }
 
@@ -167,31 +150,31 @@ sub _controller {
   my $class = ref $new;
   my $app   = $old->app;
   my $log   = $app->log;
-  if (my $sub = $new->can('handler')) {
-    $log->debug(qq{Routing to application "$class".});
+  if ($new->isa('Mojo')) {
+    $log->debug(qq{Routing to application "$class"});
 
     # Try to connect routes
     if (my $sub = $new->can('routes')) {
       my $r = $new->$sub;
       weaken $r->parent($old->match->endpoint)->{parent} unless $r->parent;
     }
-    $new->$sub($old);
-    $old->stash->{'mojo.routed'}++;
+    $new->handler($old);
+    $old->stash->{'mojo.routed'} = 1;
   }
 
   # Action
   elsif (my $method = $field->{action}) {
     if (!$self->is_hidden($method)) {
-      $log->debug(qq{Routing to controller "$class" and action "$method".});
+      $log->debug(qq{Routing to controller "$class" and action "$method"});
 
       if (my $sub = $new->can($method)) {
-        $old->stash->{'mojo.routed'}++ if $last;
+        $old->stash->{'mojo.routed'} = 1 if $last;
         return 1 if _action($app, $new, $sub, $last);
       }
 
-      else { $log->debug('Action not found in controller.') }
+      else { $log->debug('Action not found in controller') }
     }
-    else { $log->debug(qq{Action "$method" is not allowed.}) }
+    else { $log->debug(qq{Action "$method" is not allowed}) }
   }
 
   return undef;
@@ -202,11 +185,18 @@ sub _load {
 
   # Load unless already loaded
   return 1 if $self->{loaded}{$app};
-  if (my $e = Mojo::Loader->new->load($app)) { ref $e ? die $e : return undef }
+  if (my $e = load_class $app) { ref $e ? die $e : return undef }
 
   # Check base classes
   return 0 unless first { $app->isa($_) } @{$self->base_classes};
-  return ++$self->{loaded}{$app};
+  return $self->{loaded}{$app} = 1;
+}
+
+sub _render {
+  my $c     = shift;
+  my $stash = $c->stash;
+  return if $stash->{'mojo.rendered'};
+  $c->render_maybe or $stash->{'mojo.routed'} or $c->helpers->reply->not_found;
 }
 
 1;
@@ -291,8 +281,8 @@ Contains all available shortcuts.
 
 =head1 METHODS
 
-L<Mojolicious::Routes> inherits all methods from
-L<Mojolicious::Routes::Route> and implements the following new ones.
+L<Mojolicious::Routes> inherits all methods from L<Mojolicious::Routes::Route>
+and implements the following new ones.
 
 =head2 add_condition
 
@@ -305,12 +295,6 @@ Add a new condition.
   $r = $r->add_shortcut(foo => sub {...});
 
 Add a new shortcut.
-
-=head2 auto_render
-
-  $r->auto_render(Mojolicious::Controller->new);
-
-Automatic rendering.
 
 =head2 continue
 
@@ -349,16 +333,6 @@ results for future lookups.
   $r->match(Mojolicious::Controller->new);
 
 Match routes with L<Mojolicious::Routes::Match>.
-
-=head2 route
-
-  my $route = $r->route;
-  my $route = $r->route('/:action');
-  my $route = $r->route('/:action', action => qr/\w+/);
-  my $route = $r->route(format => 0);
-
-Low-level generator for routes matching all HTTP request methods, returns a
-L<Mojolicious::Routes::Route> object.
 
 =head1 SEE ALSO
 

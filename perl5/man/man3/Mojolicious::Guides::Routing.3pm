@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides::Routing 3"
-.TH Mojolicious::Guides::Routing 3 "2014-09-16" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides::Routing 3 "2015-03-02" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -158,7 +158,8 @@ requests with code generating the appropriate response.
 .PP
 This black box is usually called a dispatcher. There are many implementations
 using different strategies to establish these connections, but pretty much all
-are based around mapping the requests path to some kind of response generator.
+are based around mapping the path part of the request \s-1URL\s0 to some kind of
+response generator.
 .PP
 .Vb 4
 \&  /user/show/2 \-> $c\->render(text => \*(AqDaniel\*(Aq);
@@ -167,9 +168,9 @@ are based around mapping the requests path to some kind of response generator.
 \&  /user/show/5 \-> $c\->render(text => \*(AqWolfgang\*(Aq);
 .Ve
 .PP
-While it is very well possible to make all these connections static, it is
-also rather inefficient. That's why regular expressions are commonly used to
-make the dispatch process more dynamic.
+While it is very well possible to make all these connections static, it is also
+rather inefficient. That's why regular expressions are commonly used to make
+the dispatch process more dynamic.
 .PP
 .Vb 1
 \&  qr!/user/show/(\ed+)! \-> $c\->render(text => $users{$1});
@@ -182,20 +183,20 @@ request method and headers like \f(CW\*(C`Host\*(C'\fR, \f(CW\*(C`User\-Agent\*(
 .Vb 4
 \&  GET /user/show/23 HTTP/1.1
 \&  Host: mojolicio.us
-\&  User\-Agent: Mozilla/5.0 (compatible; Mojolicious; Perl)
+\&  User\-Agent: Mojolicious (Perl)
 \&  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
 .Ve
 .SS "Routes"
 .IX Subsection "Routes"
-While regular expressions are quite powerful they also tend to be unpleasant
-to look at and are generally overkill for ordinary path matching.
+While regular expressions are quite powerful they also tend to be unpleasant to
+look at and are generally overkill for ordinary path matching.
 .PP
 .Vb 1
 \&  qr!/user/show/(\ed+)! \-> $c\->render(text => $users{$1});
 .Ve
 .PP
-This is where routes come into play, they have been designed from the ground
-up to represent paths with placeholders.
+This is where routes come into play, they have been designed from the ground up
+to represent paths with placeholders.
 .PP
 .Vb 1
 \&  /user/show/:id \-> $c\->render(text => $users{$id});
@@ -215,13 +216,13 @@ placeholder values are turned into a hash.
 \&  /user/show/23 \-> /user/:action/:id \-> {action => \*(Aqshow\*(Aq, id => 23}
 .Ve
 .PP
-This hash is basically the center of every Mojolicious application, you
-will learn more about this later on. Internally routes get compiled to regular
+This hash is basically the center of every Mojolicious application, you will
+learn more about this later on. Internally routes get compiled to regular
 expressions, so you can get the best of both worlds with a little bit of
 experience.
 .PP
 .Vb 1
-\&  /user/show/:id \-> qr/(?\-xism:^\e/user\e/show/([^\e/\e.]+))/
+\&  /user/show/:id \-> qr/(?\-xism:^\e/user\e/show/([^\e/.]+))/
 .Ve
 .PP
 A trailing slash in the path is always optional.
@@ -232,8 +233,8 @@ A trailing slash in the path is always optional.
 .SS "Reversibility"
 .IX Subsection "Reversibility"
 One more huge advantage routes have over regular expressions is that they are
-easily reversible, extracted placeholders can be turned back into a path at
-any time.
+easily reversible, extracted placeholders can be turned back into a path at any
+time.
 .PP
 .Vb 2
 \&  /sebastian \-> /:name \-> {name => \*(Aqsebastian\*(Aq}
@@ -241,9 +242,9 @@ any time.
 .Ve
 .PP
 Every placeholder has a name, even if it's just an empty string.
-.SS "Generic placeholders"
-.IX Subsection "Generic placeholders"
-Generic placeholders are the simplest form of placeholders, they use a colon
+.SS "Standard placeholders"
+.IX Subsection "Standard placeholders"
+Standard placeholders are the simplest form of placeholders, they use a colon
 prefix and match all characters except \f(CW\*(C`/\*(C'\fR and \f(CW\*(C`.\*(C'\fR, similar to the regular
 expression \f(CW\*(C`([^/.]+)\*(C'\fR.
 .PP
@@ -268,7 +269,7 @@ surrounding text.
 \&  /sebastian 23hello \-> /(:name)hello \-> {name => \*(Aqsebastian 23\*(Aq}
 .Ve
 .PP
-The colon prefix is optional for generic placeholders that are surrounded by
+The colon prefix is optional for standard placeholders that are surrounded by
 parentheses.
 .PP
 .Vb 1
@@ -276,7 +277,7 @@ parentheses.
 .Ve
 .SS "Relaxed placeholders"
 .IX Subsection "Relaxed placeholders"
-Relaxed placeholders are just like generic placeholders, but use a hash prefix
+Relaxed placeholders are just like standard placeholders, but use a hash prefix
 and match all characters except \f(CW\*(C`/\*(C'\fR, similar to the regular expression
 \&\f(CW\*(C`([^/]+)\*(C'\fR.
 .PP
@@ -288,11 +289,18 @@ and match all characters except \f(CW\*(C`/\*(C'\fR, similar to the regular expr
 \&  /sebastian23/hello  \-> /#name/hello \-> {name => \*(Aqsebastian23\*(Aq}
 \&  /sebastian 23/hello \-> /#name/hello \-> {name => \*(Aqsebastian 23\*(Aq}
 .Ve
+.PP
+They can be especially useful for manually matching file names with extensions,
+rather than using format detection.
+.PP
+.Vb 1
+\&  /music/song.mp3 \-> /music/#filename \-> {filename => \*(Aqsong.mp3\*(Aq}
+.Ve
 .SS "Wildcard placeholders"
 .IX Subsection "Wildcard placeholders"
-Wildcard placeholders are just like the two placeholders above, but use an
-asterisk prefix and match absolutely everything, including \f(CW\*(C`/\*(C'\fR and \f(CW\*(C`.\*(C'\fR,
-similar to the regular expression \f(CW\*(C`(.+)\*(C'\fR.
+Wildcard placeholders are just like the two types of placeholders above, but
+use an asterisk prefix and match absolutely everything, including \f(CW\*(C`/\*(C'\fR and
+\&\f(CW\*(C`.\*(C'\fR, similar to the regular expression \f(CW\*(C`(.+)\*(C'\fR.
 .PP
 .Vb 6
 \&  /hello              \-> /*name/hello \-> undef
@@ -307,9 +315,8 @@ similar to the regular expression \f(CW\*(C`(.+)\*(C'\fR.
 Most commonly used features every Mojolicious developer should know about.
 .SS "Minimal route"
 .IX Subsection "Minimal route"
-The attribute \*(L"routes\*(R" in Mojolicious contains a router you can use to
-generate route structures, they match in the same order in which they were
-defined.
+The attribute \*(L"routes\*(R" in Mojolicious contains a router you can use to generate
+route structures, they match in the same order in which they were defined.
 .PP
 .Vb 3
 \&  # Application
@@ -398,11 +405,11 @@ but content will not be sent with the response even if it is present.
 .Ve
 .SS "IRIs"
 .IX Subsection "IRIs"
-IRIs are handled transparently, that means paths are guaranteed to be
-unescaped and decoded from bytes to characters.
+IRIs are handled transparently, that means paths are guaranteed to be unescaped
+and decoded from bytes to characters.
 .PP
 .Vb 2
-\&  # GET /X (unicode snowman) \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqsnowman\*(Aq}
+\&  # GET /X (Unicode snowman) \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqsnowman\*(Aq}
 \&  $r\->get(\*(Aq/X\*(Aq)\->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqsnowman\*(Aq);
 .Ve
 .SS "Stash"
@@ -449,27 +456,28 @@ endpoints of these nested routes can.
 \&  $foo\->get(\*(Aq/bar\*(Aq)\->to(action => \*(Aqbar\*(Aq);
 .Ve
 .PP
-The stash is simply inherited from route to route and newer values override
-old ones.
+The stash is simply inherited from route to route and newer values override old
+ones.
 .PP
 .Vb 7
-\&  # /foo/bar \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq}
-\&  # /foo/baz \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbaz\*(Aq}
-\&  # /foo/cde \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqabc\*(Aq}
-\&  my $foo = $r\->any(\*(Aq/foo\*(Aq)\->to(controller => \*(Aqfoo\*(Aq, action => \*(Aqabc\*(Aq);
-\&  $foo\->get(\*(Aq/bar\*(Aq)\->to(action => \*(Aqbar\*(Aq);
-\&  $foo\->get(\*(Aq/baz\*(Aq)\->to(action => \*(Aqbaz\*(Aq);
-\&  $foo\->get(\*(Aq/cde\*(Aq);
+\&  # /cats      \-> {controller => \*(Aqcats\*(Aq, action => \*(Aqindex\*(Aq}
+\&  # /cats/nyan \-> {controller => \*(Aqcats\*(Aq, action => \*(Aqnyan\*(Aq}
+\&  # /cats/lol  \-> {controller => \*(Aqcats\*(Aq, action => \*(Aqdefault\*(Aq}
+\&  my $cats = $r\->any(\*(Aq/cats\*(Aq)\->to(controller => \*(Aqcats\*(Aq, action => \*(Aqdefault\*(Aq);
+\&  $cats\->get(\*(Aq/\*(Aq)\->to(action => \*(Aqindex\*(Aq);
+\&  $cats\->get(\*(Aq/nyan\*(Aq)\->to(action => \*(Aqnyan\*(Aq);
+\&  $cats\->get(\*(Aq/lol\*(Aq);
 .Ve
 .SS "Special stash values"
 .IX Subsection "Special stash values"
 When the dispatcher sees \f(CW\*(C`controller\*(C'\fR and \f(CW\*(C`action\*(C'\fR values in the stash it
 will always try to turn them into a class and method to dispatch to. The
-\&\f(CW\*(C`controller\*(C'\fR value gets camelized using \*(L"camelize\*(R" in Mojo::Util and
-appended to one or more namespaces, defaulting to a controller namespace based
-on the application class (\f(CW\*(C`MyApp::Controller\*(C'\fR), as well as the bare
-application class (\f(CW\*(C`MyApp\*(C'\fR), and these namespaces are searched in that order.
-The action value is not changed at all, so both values are case sensitive.
+\&\f(CW\*(C`controller\*(C'\fR value gets converted from \f(CW\*(C`snake_case\*(C'\fR to \f(CW\*(C`CamelCase\*(C'\fR using
+\&\*(L"camelize\*(R" in Mojo::Util and appended to one or more namespaces, defaulting to
+a controller namespace based on the application class (\f(CW\*(C`MyApp::Controller\*(C'\fR),
+as well as the bare application class (\f(CW\*(C`MyApp\*(C'\fR), and these namespaces are
+searched in that order. The action value is not changed at all, so both values
+are case-sensitive.
 .PP
 .Vb 3
 \&  # Application
@@ -502,8 +510,7 @@ The action value is not changed at all, so both values are case sensitive.
 .PP
 Controller classes are perfect for organizing code in larger projects. There
 are more dispatch strategies, but because controllers are the most commonly
-used ones they also got a special shortcut in the form of
-\&\f(CW\*(C`controller#action\*(C'\fR.
+used ones they also got a special shortcut in the form of \f(CW\*(C`controller#action\*(C'\fR.
 .PP
 .Vb 2
 \&  # /bye \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbye\*(Aq, mymessage => \*(AqBye\*(Aq}
@@ -527,8 +534,8 @@ snake_case.
 .Ve
 .PP
 For security reasons the dispatcher will always check if the \f(CW\*(C`controller\*(C'\fR is
-actually a subclass of Mojolicious::Controller or Mojo before
-dispatching to it.
+actually a subclass of Mojolicious::Controller or Mojo before dispatching
+to it.
 .SS "Namespaces"
 .IX Subsection "Namespaces"
 You can use the \f(CW\*(C`namespace\*(C'\fR stash value to change the namespace of a whole
@@ -652,8 +659,8 @@ the regular expression \f(CW\*(C`([^/.]+)?\*(C'\fR.
 \&  $r\->get(\*(Aq/test/:mymessage/123\*(Aq)\->to(\*(Aqfoo#bar\*(Aq, mymessage => \*(Aqhi\*(Aq);
 .Ve
 .PP
-This is also the case if multiple placeholders are right after another and not
-separated by other characters than \f(CW\*(C`/\*(C'\fR.
+And if two optional placeholders are only separated by a slash, that slash can
+become optional as well.
 .PP
 .Vb 4
 \&  # /           \-> {controller => \*(Aqfoo\*(Aq,   action => \*(Aqbar\*(Aq}
@@ -662,11 +669,11 @@ separated by other characters than \f(CW\*(C`/\*(C'\fR.
 \&  $r\->get(\*(Aq/:controller/:action\*(Aq)\->to(\*(Aqfoo#bar\*(Aq);
 .Ve
 .PP
-Special stash values like \f(CW\*(C`controller\*(C'\fR and \f(CW\*(C`action\*(C'\fR can also be
-placeholders, which is very convenient especially during development, but
-should only be used very carefully, because every controller method becomes a
-potential route. All uppercase methods as well as those starting with an
-underscore are automatically hidden from the router and you can use
+Special stash values like \f(CW\*(C`controller\*(C'\fR and \f(CW\*(C`action\*(C'\fR can also be placeholders,
+which is very convenient especially during development, but should only be used
+very carefully, because every controller method becomes a potential route. All
+uppercase methods as well as those starting with an underscore are
+automatically hidden from the router and you can use
 \&\*(L"hide\*(R" in Mojolicious::Routes to add additional ones.
 .PP
 .Vb 2
@@ -709,9 +716,9 @@ expressions.
 .SS "Under"
 .IX Subsection "Under"
 To share code with multiple nested routes you can use
-\&\*(L"under\*(R" in Mojolicious::Routes::Route, because unlike normal nested routes,
-the routes generated with it have their own intermediate destination and
-result in additional dispatch cycles when they match.
+\&\*(L"under\*(R" in Mojolicious::Routes::Route, because unlike normal nested routes, the
+routes generated with it have their own intermediate destination and result in
+additional dispatch cycles when they match.
 .PP
 .Vb 5
 \&  # /foo     \-> undef
@@ -721,14 +728,14 @@ result in additional dispatch cycles when they match.
 \&  $foo\->get(\*(Aq/bar\*(Aq)\->to(\*(Aq#bar\*(Aq);
 .Ve
 .PP
-The actual action code for this destination needs to return a true value or
-the dispatch chain will be broken, this can be a very powerful tool for
+The actual action code for this destination needs to return a true value or the
+dispatch chain will be broken, this can be a very powerful tool for
 authentication.
 .PP
 .Vb 4
-\&  # /foo/bar \-> {cb => sub {...}}
-\&  #             {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq}
-\&  my $foo = $r\->under(\*(Aq/foo\*(Aq => sub {
+\&  # /blackjack \-> {cb => sub {...}}
+\&  #               {controller => \*(Aqhideout\*(Aq, action => \*(Aqblackjack\*(Aq}
+\&  my $auth = $r\->under(\*(Aq/\*(Aq => sub {
 \&    my $c = shift;
 \&
 \&    # Authenticated
@@ -738,7 +745,7 @@ authentication.
 \&    $c\->render(text => "You\*(Aqre not Bender.");
 \&    return undef;
 \&  });
-\&  $foo\->get(\*(Aq/bar\*(Aq)\->to(\*(Aqfoo#bar\*(Aq);
+\&  $auth\->get(\*(Aq/blackjack\*(Aq)\->to(\*(Aqhideout#blackjack\*(Aq);
 .Ve
 .PP
 Broken dispatch chains can be continued by calling the method
@@ -746,7 +753,7 @@ Broken dispatch chains can be continued by calling the method
 operations to finish before reaching the next dispatch cycle.
 .PP
 .Vb 2
-\&  my $foo = $r\->under(\*(Aq/foo\*(Aq => sub {
+\&  my $maybe = $r\->under(\*(Aq/maybe\*(Aq => sub {
 \&    my $c = shift;
 \&
 \&    # Wait 3 seconds and then give visitors a 50% chance to continue
@@ -761,7 +768,7 @@ operations to finish before reaching the next dispatch cycle.
 \&
 \&    return undef;
 \&  });
-\&  $foo\->get(\*(Aq/bar\*(Aq)\->to(\*(Aqfoo#bar\*(Aq);
+\&  $maybe\->get(\*(Aq/\*(Aq)\->to(\*(Aqmaybe#winner\*(Aq);
 .Ve
 .PP
 Every destination is just a snapshot of the stash at the time the route
@@ -796,8 +803,9 @@ allowed formats.
 \&  $r\->get(\*(Aq/foo\*(Aq => [format => [qw(rss xml)]])\->to(\*(Aqfoo#bar\*(Aq);
 .Ve
 .PP
-Or you can just disable format detection, which gets inherited by nested
-routes and allows selective re-enabling.
+Or you can just disable format detection with a special type of restrictive
+placeholder, which gets inherited by nested routes, and then re-enable it on
+demand.
 .PP
 .Vb 3
 \&  # /foo      \-> {controller => \*(Aqfoo\*(Aq, action => \*(Aqbar\*(Aq}
@@ -844,6 +852,23 @@ The connection gets established when you respond to the WebSocket handshake
 request with a \f(CW101\fR response status, which happens automatically if you
 subscribe to an event with \*(L"on\*(R" in Mojolicious::Controller or send a message
 with \*(L"send\*(R" in Mojolicious::Controller right away.
+.PP
+.Vb 7
+\&  GET /echo HTTP/1.1
+\&  Host: mojolicio.us
+\&  User\-Agent: Mojolicious (Perl)
+\&  Connection: Upgrade
+\&  Upgrade: websocket
+\&  Sec\-WebSocket\-Key: IDM3ODE4NDk2MjA1OTcxOQ==
+\&  Sec\-WebSocket\-Version: 13
+\&
+\&  HTTP/1.1 101 Switching Protocols
+\&  Server: Mojolicious (Perl)
+\&  Date: Tue, 03 Feb 2015 17:08:24 GMT
+\&  Connection: Upgrade
+\&  Upgrade: websocket
+\&  Sec\-WebSocket\-Accept: SWsp5N2iNxPbHlcOTIw8ERvyVPY=
+.Ve
 .SS "Catch-all route"
 .IX Subsection "Catch-all route"
 Since routes match in the order in which they were defined, you can catch all
@@ -860,10 +885,10 @@ placeholder.
 .Ve
 .SS "Hooks"
 .IX Subsection "Hooks"
-Hooks operate outside the routing system and allow you to extend
-the framework itself by sharing code with all requests indiscriminately
-through \*(L"hook\*(R" in Mojolicious, which makes them a very powerful tool
-especially for plugins.
+Hooks operate outside the routing system and allow you to extend the framework
+itself by sharing code with all requests indiscriminately through
+\&\*(L"hook\*(R" in Mojolicious, which makes them a very powerful tool especially for
+plugins.
 .PP
 .Vb 3
 \&  # Application
@@ -889,13 +914,19 @@ especially for plugins.
 \&  1;
 .Ve
 .PP
-Post-processing the response to set additional headers is a very common use.
+Post-processing the response to add or remove headers is a very common use.
 .PP
 .Vb 5
 \&  # Make sure static files are cached
 \&  $app\->hook(after_static => sub {
 \&    my $c = shift;
 \&    $c\->res\->headers\->cache_control(\*(Aqmax\-age=3600, must\-revalidate\*(Aq);
+\&  });
+\&
+\&  # Remove a default header
+\&  $app\->hook(after_dispatch => sub {
+\&    my $c = shift;
+\&    $c\->res\->headers\->remove(\*(AqServer\*(Aq);
 \&  });
 .Ve
 .PP
@@ -999,8 +1030,8 @@ to make route generation more expressive.
 .SS "Rearranging routes"
 .IX Subsection "Rearranging routes"
 Until the first request has been handled, all routes can still be moved around
-or even removed with methods like \*(L"add_child\*(R" in Mojolicious::Routes::Route
-and \*(L"remove\*(R" in Mojolicious::Routes::Route.
+or even removed with methods like \*(L"add_child\*(R" in Mojolicious::Routes::Route and
+\&\*(L"remove\*(R" in Mojolicious::Routes::Route.
 .PP
 .Vb 3
 \&  # GET /example/show \-> {controller => \*(Aqexample\*(Aq, action => \*(Aqshow\*(Aq}
@@ -1018,8 +1049,8 @@ to find routes by their name you can use \*(L"find\*(R" in Mojolicious::Routes::
 .IX Subsection "Conditions"
 Sometimes you might need a little more power, for example to check the
 \&\f(CW\*(C`User\-Agent\*(C'\fR header in multiple routes. This is where conditions come into
-play, they are basically router plugins and need to return a true value for
-the route to match.
+play, they are basically router plugins and need to return a true value for the
+route to match.
 .PP
 .Vb 4
 \&  # Simple "User\-Agent" condition
@@ -1117,10 +1148,10 @@ specific language in normal Mojolicious controllers.
 \&  1;
 .Ve
 .PP
-With the method \*(L"detour\*(R" in Mojolicious::Routes::Route which is very similar
-to \*(L"to\*(R" in Mojolicious::Routes::Route, you can allow the route to partially
-match and use only the remaining path in the embedded application, the base
-path will be passed along in the \f(CW\*(C`path\*(C'\fR stash value.
+With the method \*(L"detour\*(R" in Mojolicious::Routes::Route which is very similar to
+\&\*(L"to\*(R" in Mojolicious::Routes::Route, you can allow the route to partially match
+and use only the remaining path in the embedded application, the base path will
+be passed along in the \f(CW\*(C`path\*(C'\fR stash value.
 .PP
 .Vb 2
 \&  # /foo/*

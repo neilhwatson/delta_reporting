@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Routes 3"
-.TH Mojolicious::Routes 3 "2014-09-26" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Routes 3 "2015-02-25" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -221,8 +221,8 @@ Namespaces to load controllers from.
 Contains all available shortcuts.
 .SH "METHODS"
 .IX Header "METHODS"
-Mojolicious::Routes inherits all methods from
-Mojolicious::Routes::Route and implements the following new ones.
+Mojolicious::Routes inherits all methods from Mojolicious::Routes::Route
+and implements the following new ones.
 .SS "add_condition"
 .IX Subsection "add_condition"
 .Vb 1
@@ -237,13 +237,6 @@ Add a new condition.
 .Ve
 .PP
 Add a new shortcut.
-.SS "auto_render"
-.IX Subsection "auto_render"
-.Vb 1
-\&  $r\->auto_render(Mojolicious::Controller\->new);
-.Ve
-.PP
-Automatic rendering.
 .SS "continue"
 .IX Subsection "continue"
 .Vb 1
@@ -288,17 +281,6 @@ results for future lookups.
 .Ve
 .PP
 Match routes with Mojolicious::Routes::Match.
-.SS "route"
-.IX Subsection "route"
-.Vb 4
-\&  my $route = $r\->route;
-\&  my $route = $r\->route(\*(Aq/:action\*(Aq);
-\&  my $route = $r\->route(\*(Aq/:action\*(Aq, action => qr/\ew+/);
-\&  my $route = $r\->route(format => 0);
-.Ve
-.PP
-Low-level generator for routes matching all \s-1HTTP\s0 request methods, returns a
-Mojolicious::Routes::Route object.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

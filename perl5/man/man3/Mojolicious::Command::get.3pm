@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Command::get 3"
-.TH Mojolicious::Command::get 3 "2014-10-15" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Command::get 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -146,10 +146,12 @@ Mojolicious::Command::get \- Get command
 \&  Usage: APPLICATION get [OPTIONS] URL [SELECTOR|JSON\-POINTER] [COMMANDS]
 \&
 \&    ./myapp.pl get /
+\&    ./myapp.pl get \-H \*(AqAccept: text/html\*(Aq /hello.html \*(Aqhead > title\*(Aq text
+\&    ./myapp.pl get //sri:secr3t@/secrets.json /1/content
 \&    mojo get mojolicio.us
 \&    mojo get \-v \-r google.com
 \&    mojo get \-v \-H \*(AqHost: mojolicious.org\*(Aq \-H \*(AqAccept: */*\*(Aq mojolicio.us
-\&    mojo get \-M POST \-c \*(Aqtrololo\*(Aq mojolicio.us
+\&    mojo get \-M POST \-H \*(AqContent\-Type: text/trololo\*(Aq \-c \*(Aqtrololo\*(Aq mojolicio.us
 \&    mojo get mojolicio.us \*(Aqhead > title\*(Aq text
 \&    mojo get mojolicio.us .footer all
 \&    mojo get mojolicio.us a attr href
@@ -159,12 +161,12 @@ Mojolicious::Command::get \- Get command
 \&
 \&  Options:
 \&    \-C, \-\-charset <charset>     Charset of HTML/XML content, defaults to auto
-\&                                detection.
-\&    \-c, \-\-content <content>     Content to send with request.
-\&    \-H, \-\-header <name:value>   Additional HTTP header.
-\&    \-M, \-\-method <method>       HTTP method to use, defaults to "GET".
-\&    \-r, \-\-redirect              Follow up to 10 redirects.
-\&    \-v, \-\-verbose               Print request and response headers to STDERR.
+\&                                detection
+\&    \-c, \-\-content <content>     Content to send with request
+\&    \-H, \-\-header <name:value>   Additional HTTP header
+\&    \-M, \-\-method <method>       HTTP method to use, defaults to "GET"
+\&    \-r, \-\-redirect              Follow up to 10 redirects
+\&    \-v, \-\-verbose               Print request and response headers to STDERR
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -184,7 +186,7 @@ applications.
 .IX Subsection "description"
 .Vb 2
 \&  my $description = $get\->description;
-\&  $get            = $get\->description(\*(AqFoo!\*(Aq);
+\&  $get            = $get\->description(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short description of this command, used for the command list.
@@ -192,7 +194,7 @@ Short description of this command, used for the command list.
 .IX Subsection "usage"
 .Vb 2
 \&  my $usage = $get\->usage;
-\&  $get      = $get\->usage(\*(AqFoo!\*(Aq);
+\&  $get      = $get\->usage(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Usage information for this command, used for the help screen.

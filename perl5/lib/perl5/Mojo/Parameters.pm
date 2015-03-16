@@ -1,7 +1,7 @@
 package Mojo::Parameters;
 use Mojo::Base -base;
 use overload
-  '@{}'    => sub { shift->params },
+  '@{}'    => sub { shift->pairs },
   bool     => sub {1},
   '""'     => sub { shift->to_string },
   fallback => 1;
@@ -13,14 +13,15 @@ has charset => 'UTF-8';
 sub append {
   my $self = shift;
 
-  my $params = $self->params;
-  while (my ($name, $value) = splice @_, 0, 2) {
-
-    # Single value
-    if (ref $value ne 'ARRAY') { push @$params, $name => $value }
+  my $old = $self->pairs;
+  my @new = @_ == 1 ? @{shift->pairs} : @_;
+  while (my ($name, $value) = splice @new, 0, 2) {
 
     # Multiple values
-    else { push @$params, $name => (defined $_ ? "$_" : '') for @$value }
+    if (ref $value eq 'ARRAY') { push @$old, $name => $_ // '' for @$value }
+
+    # Single value
+    else { push @$old, $name => $value }
   }
 
   return $self;
@@ -32,52 +33,52 @@ sub clone {
   my $clone = $self->new;
   if   (exists $self->{charset}) { $clone->{charset} = $self->{charset} }
   if   (defined $self->{string}) { $clone->{string}  = $self->{string} }
-  else                           { $clone->{params}  = [@{$self->params}] }
+  else                           { $clone->{pairs}   = [@{$self->pairs}] }
 
   return $clone;
 }
 
-sub every_param { shift->_param(@_) }
+sub every_param {
+  my ($self, $name) = @_;
+
+  my @values;
+  my $pairs = $self->pairs;
+  for (my $i = 0; $i < @$pairs; $i += 2) {
+    push @values, $pairs->[$i + 1] if $pairs->[$i] eq $name;
+  }
+
+  return \@values;
+}
 
 sub merge {
   my $self = shift;
-  push @{$self->params}, @{$_->params} for @_;
+
+  my @pairs = @_ == 1 ? @{shift->pairs} : @_;
+  while (my ($name, $value) = splice @pairs, 0, 2) {
+    defined $value ? $self->param($name => $value) : $self->remove($name);
+  }
+
   return $self;
 }
 
+sub names { [sort keys %{shift->to_hash}] }
+
 sub new { @_ > 1 ? shift->SUPER::new->parse(@_) : shift->SUPER::new }
 
-sub param {
-  my ($self, $name) = (shift, shift);
-
-  # List names
-  return sort keys %{$self->to_hash} unless $name;
-
-  # Multiple names
-  return map { $self->param($_) } @$name if ref $name eq 'ARRAY';
-
-  # Last value
-  return $self->_param($name)->[-1] unless @_;
-
-  # Replace values
-  $self->remove($name) if defined $_[0];
-  return $self->append($name => ref $_[0] eq 'ARRAY' ? $_[0] : [@_]);
-}
-
-sub params {
+sub pairs {
   my $self = shift;
 
   # Replace parameters
   if (@_) {
-    $self->{params} = shift;
+    $self->{pairs} = shift;
     delete $self->{string};
     return $self;
   }
 
   # Parse string
   if (defined(my $str = delete $self->{string})) {
-    my $params = $self->{params} = [];
-    return $params unless length $str;
+    my $pairs = $self->{pairs} = [];
+    return $pairs unless length $str;
 
     my $charset = $self->charset;
     for my $pair (split '&', $str) {
@@ -91,11 +92,18 @@ sub params {
       $value = url_unescape $value;
       $value = decode($charset, $value) // $value if $charset;
 
-      push @$params, $name, $value;
+      push @$pairs, $name, $value;
     }
   }
 
-  return $self->{params} ||= [];
+  return $self->{pairs} ||= [];
+}
+
+sub param {
+  my ($self, $name) = (shift, shift);
+  return $self->every_param($name)->[-1] unless @_;
+  $self->remove($name);
+  return $self->append($name => ref $_[0] eq 'ARRAY' ? $_[0] : [@_]);
 }
 
 sub parse {
@@ -112,10 +120,9 @@ sub parse {
 sub remove {
   my ($self, $name) = @_;
 
-  my $params = $self->params;
-  my $i      = 0;
-  $params->[$i] eq $name ? splice @$params, $i, 2 : ($i += 2)
-    while $i < @$params;
+  my $pairs = $self->pairs;
+  my $i     = 0;
+  $pairs->[$i] eq $name ? splice @$pairs, $i, 2 : ($i += 2) while $i < @$pairs;
 
   return $self;
 }
@@ -124,9 +131,9 @@ sub to_hash {
   my $self = shift;
 
   my %hash;
-  my $params = $self->params;
-  for (my $i = 0; $i < @$params; $i += 2) {
-    my ($name, $value) = @{$params}[$i, $i + 1];
+  my $pairs = $self->pairs;
+  for (my $i = 0; $i < @$pairs; $i += 2) {
+    my ($name, $value) = @{$pairs}[$i, $i + 1];
 
     # Array
     if (exists $hash{$name}) {
@@ -152,11 +159,11 @@ sub to_string {
   }
 
   # Build pairs
-  my $params = $self->params;
-  return '' unless @$params;
+  my $pairs = $self->pairs;
+  return '' unless @$pairs;
   my @pairs;
-  for (my $i = 0; $i < @$params; $i += 2) {
-    my ($name, $value) = @{$params}[$i, $i + 1];
+  for (my $i = 0; $i < @$pairs; $i += 2) {
+    my ($name, $value) = @{$pairs}[$i, $i + 1];
 
     # Escape and replace whitespace with "+"
     $name  = encode $charset,   $name if $charset;
@@ -169,18 +176,6 @@ sub to_string {
   }
 
   return join '&', @pairs;
-}
-
-sub _param {
-  my ($self, $name) = @_;
-
-  my @values;
-  my $params = $self->params;
-  for (my $i = 0; $i < @$params; $i += 2) {
-    push @values, $params->[$i + 1] if $params->[$i] eq $name;
-  }
-
-  return \@values;
 }
 
 1;
@@ -206,8 +201,8 @@ Mojo::Parameters - Parameters
 
 =head1 DESCRIPTION
 
-L<Mojo::Parameters> is a container for form parameters used by L<Mojo::URL>
-and based on L<RFC 3986|http://tools.ietf.org/html/rfc3986> as well as the
+L<Mojo::Parameters> is a container for form parameters used by L<Mojo::URL> and
+based on L<RFC 3986|http://tools.ietf.org/html/rfc3986> as well as the
 L<HTML Living Standard|https://html.spec.whatwg.org>.
 
 =head1 ATTRIBUTES
@@ -234,8 +229,12 @@ following new ones.
   $params = $params->append(foo => 'ba&r');
   $params = $params->append(foo => ['ba&r', 'baz']);
   $params = $params->append(foo => ['bar', 'baz'], bar => 23);
+  $params = $params->append(Mojo::Parameters->new);
 
 Append parameters. Note that this method will normalize the parameters.
+
+  # "foo=bar&foo=baz"
+  Mojo::Parameters->new('foo=bar')->append(Mojo::Parameters->new('foo=baz'));
 
   # "foo=bar&foo=baz"
   Mojo::Parameters->new('foo=bar')->append(foo => 'baz');
@@ -264,10 +263,30 @@ array reference. Note that this method will normalize the parameters.
 
 =head2 merge
 
-  $params = $params->merge(Mojo::Parameters->new(foo => 'b&ar', baz => 23));
+  $params = $params->merge(foo => 'ba&r');
+  $params = $params->merge(foo => ['ba&r', 'baz']);
+  $params = $params->merge(foo => ['bar', 'baz'], bar => 23);
+  $params = $params->merge(Mojo::Parameters->new);
 
-Merge L<Mojo::Parameters> objects. Note that this method will normalize the
-parameters.
+Merge parameters. Note that this method will normalize the parameters.
+
+  # "foo=baz"
+  Mojo::Parameters->new('foo=bar')->merge(Mojo::Parameters->new('foo=baz'));
+
+  # "yada=yada&foo=baz"
+  Mojo::Parameters->new('foo=bar&yada=yada')->merge(foo => 'baz');
+
+  # "yada=yada"
+  Mojo::Parameters->new('foo=bar&yada=yada')->merge(foo => undef);
+
+=head2 names
+
+  my $names = $params->names;
+
+Return a list of all parameter names.
+
+  # Names of all parameters
+  say for @{$params->names};
 
 =head2 new
 
@@ -280,25 +299,23 @@ parameters.
 Construct a new L<Mojo::Parameters> object and L</"parse"> parameters if
 necessary.
 
+=head2 pairs
+
+  my $array = $params->pairs;
+  $params   = $params->pairs([foo => 'b&ar', baz => 23]);
+
+Parsed parameter pairs. Note that this method will normalize the parameters.
+
 =head2 param
 
-  my @names       = $params->param;
-  my $value       = $params->param('foo');
-  my ($foo, $bar) = $params->param(['foo', 'bar']);
-  $params         = $params->param(foo => 'ba&r');
-  $params         = $params->param(foo => qw(ba&r baz));
-  $params         = $params->param(foo => ['ba;r', 'baz']);
+  my $value = $params->param('foo');
+  $params   = $params->param(foo => 'ba&r');
+  $params   = $params->param(foo => qw(ba&r baz));
+  $params   = $params->param(foo => ['ba;r', 'baz']);
 
 Access parameter values. If there are multiple values sharing the same name,
 and you want to access more than just the last one, you can use
 L</"every_param">. Note that this method will normalize the parameters.
-
-=head2 params
-
-  my $array = $params->params;
-  $params   = $params->params([foo => 'b&ar', baz => 23]);
-
-Parsed parameters. Note that this method will normalize the parameters.
 
 =head2 parse
 
@@ -319,8 +336,8 @@ Remove parameters. Note that this method will normalize the parameters.
 
   my $hash = $params->to_hash;
 
-Turn parameters into a hash reference. Note that this method will normalize
-the parameters.
+Turn parameters into a hash reference. Note that this method will normalize the
+parameters.
 
   # "baz"
   Mojo::Parameters->new('foo=bar&foo=baz')->to_hash->{foo}[1];
@@ -337,9 +354,9 @@ L<Mojo::Parameters> overloads the following operators.
 
 =head2 array
 
-  my @params = @$params;
+  my @pairs = @$params;
 
-Alias for L</"params">. Note that this will normalize the parameters.
+Alias for L</"pairs">. Note that this will normalize the parameters.
 
   say $params->[0];
   say for @$params;

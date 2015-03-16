@@ -16,11 +16,7 @@ use Mojo::Util qw(encode url_escape);
 has generators => sub { {form => \&_form, json => \&_json} };
 has name => 'Mojolicious (Perl)';
 
-sub add_generator {
-  my ($self, $name, $cb) = @_;
-  $self->generators->{$name} = $cb;
-  return $self;
-}
+sub add_generator { $_[0]->generators->{$_[1]} = $_[2] and return $_[0] }
 
 sub endpoint {
   my ($self, $tx) = @_;
@@ -177,7 +173,7 @@ sub _form {
   my $p = Mojo::Parameters->new(map { $_ => $form->{$_} } sort keys %$form);
   $p->charset($options{charset}) if defined $options{charset};
   my $method = uc $req->method;
-  if ($method eq 'GET' || $method eq 'HEAD') { $req->url->query->merge($p) }
+  if ($method eq 'GET' || $method eq 'HEAD') { $req->url->query($p) }
   else {
     $req->body($p->to_string);
     _type($headers, 'application/x-www-form-urlencoded');
@@ -269,12 +265,9 @@ Mojo::UserAgent::Transactor - User agent transactor
 
   use Mojo::UserAgent::Transactor;
 
-  # Simple GET request
+  # GET request with Accept header
   my $t = Mojo::UserAgent::Transactor->new;
-  say $t->tx(GET => 'http://example.com')->req->to_string;
-
-  # PATCH request with "Do Not Track" header and content
-  say $t->tx(PATCH => 'example.com' => {DNT => 1} => 'Hi!')->req->to_string;
+  say $t->tx(GET => 'http://example.com' => {Accept => '*/*'})->req->to_string;
 
   # POST request with form-data
   say $t->tx(POST => 'example.com' => form => {a => 'b'})->req->to_string;
@@ -358,7 +351,7 @@ possible.
 
   my $tx = $t->redirect(Mojo::Transaction::HTTP->new);
 
-Build L<Mojo::Transaction::HTTP> followup request for C<301>, C<302>, C<303>,
+Build L<Mojo::Transaction::HTTP> follow-up request for C<301>, C<302>, C<303>,
 C<307> or C<308> redirect response if possible.
 
 =head2 tx
@@ -371,19 +364,15 @@ C<307> or C<308> redirect response if possible.
   my $tx = $t->tx(PUT  => 'http://example.com' => json => {a => 'b'});
   my $tx = $t->tx(POST => 'http://example.com' => {Accept => '*/*'} => 'Hi!');
   my $tx = $t->tx(
-    PUT  => 'http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
+    PUT => 'http://example.com' => {Accept => '*/*'} => form => {a => 'b'});
   my $tx = $t->tx(
-    PUT  => 'http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
+    PUT => 'http://example.com' => {Accept => '*/*'} => json => {a => 'b'});
 
 Versatile general purpose L<Mojo::Transaction::HTTP> transaction builder for
 requests, with support for L</"GENERATORS">.
 
   # Generate and inspect custom GET request with DNT header and content
   say $t->tx(GET => 'example.com' => {DNT => 1} => 'Bye!')->req->to_string;
-
-  # Use a custom socket for processing this transaction
-  my $tx = $t->tx(GET => 'http://example.com');
-  $tx->connection($sock);
 
   # Stream response content to STDOUT
   my $tx = $t->tx(GET => 'http://example.com');
@@ -448,7 +437,7 @@ asset object, like L<Mojo::Asset::File> or L<Mojo::Asset::Memory>.
     POST => 'http://example.com' => form => {mytext => {file => $asset}});
 
 A C<filename> value will be generated automatically, but can also be set
-manually if necessary. All remainging values in the hash reference get merged
+manually if necessary. All remaining values in the hash reference get merged
 into the C<multipart/form-data> content as headers.
 
   # POST request with form values and customized upload (filename and header)
@@ -473,7 +462,7 @@ C<Content-Type> header manually.
 
   my $tx = $t->upgrade(Mojo::Transaction::HTTP->new);
 
-Build L<Mojo::Transaction::WebSocket> followup transaction for WebSocket
+Build L<Mojo::Transaction::WebSocket> follow-up transaction for WebSocket
 handshake if possible.
 
 =head2 websocket

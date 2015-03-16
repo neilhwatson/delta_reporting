@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides::Rendering 3"
-.TH Mojolicious::Guides::Rendering 3 "2014-10-24" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides::Rendering 3 "2015-03-05" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -169,8 +169,8 @@ the developer or routes. Template names are expected to follow the
 \&  {template => \*(Aqfoo\*(Aq, handler => \*(Aqepl\*(Aq}     \-> \*(Aqfoo.html.epl\*(Aq
 .Ve
 .PP
-The \f(CW\*(C`controller\*(C'\fR value gets decamelized using \*(L"decamelize\*(R" in Mojo::Util and
-\&\f(CW\*(C`\-\*(C'\fR characters replaced with \f(CW\*(C`/\*(C'\fR.
+The \f(CW\*(C`controller\*(C'\fR value gets converted from \f(CW\*(C`CamelCase\*(C'\fR to \f(CW\*(C`snake_case\*(C'\fR using
+\&\*(L"decamelize\*(R" in Mojo::Util and \f(CW\*(C`\-\*(C'\fR characters replaced with \f(CW\*(C`/\*(C'\fR.
 .PP
 .Vb 2
 \&  {controller => \*(AqMy::Users\*(Aq, action => \*(Aqadd\*(Aq} \-> \*(Aqmy/users/add.html.ep\*(Aq
@@ -197,12 +197,12 @@ the \f(CW\*(C`DATA\*(C'\fR sections from \*(L"classes\*(R" in Mojolicious::Rende
 \&  ...
 .Ve
 .PP
-The renderer can be easily extended to support additional template systems
-with plugins, but more about that later.
+The renderer can be easily extended to support additional template systems with
+plugins, but more about that later.
 .SS "Embedded Perl"
 .IX Subsection "Embedded Perl"
-Mojolicious includes a minimalistic but very powerful template system out
-of the box called Embedded Perl or \f(CW\*(C`ep\*(C'\fR for short. It allows the embedding of
+Mojolicious includes a minimalistic but very powerful template system out of
+the box called Embedded Perl or \f(CW\*(C`ep\*(C'\fR for short. It allows the embedding of
 Perl code right into actual content using a small set of special tags and line
 start characters. For all templates strict, warnings, utf8 and Perl
 5.10 features are automatically enabled.
@@ -253,7 +253,7 @@ Perl code, a naive translation could look like this.
 \&  $output .= \*(Aq<ul>\*(Aq;
 \&  for my $j (1 .. $i) {
 \&    $output .= \*(Aq<li>\*(Aq;
-\&    $output .= xml_escape scalar $j;
+\&    $output .= xml_escape scalar + $j;
 \&    $output .= \*(Aq</li>\*(Aq;
 \&  }
 \&  $output .= \*(Aq</ul>\*(Aq;
@@ -261,8 +261,8 @@ Perl code, a naive translation could look like this.
 .Ve
 .PP
 An additional equal sign can be used to disable escaping of the characters
-\&\f(CW\*(C`<\*(C'\fR, \f(CW\*(C`>\*(C'\fR, \f(CW\*(C`&\*(C'\fR, \f(CW\*(C`\*(Aq\*(C'\fR and \f(CW\*(C`"\*(C'\fR in results from Perl expressions,
-which is the default to prevent \s-1XSS\s0 attacks against your application.
+\&\f(CW\*(C`<\*(C'\fR, \f(CW\*(C`>\*(C'\fR, \f(CW\*(C`&\*(C'\fR, \f(CW\*(C`\*(Aq\*(C'\fR and \f(CW\*(C`"\*(C'\fR in results from Perl expressions, which
+is the default to prevent \s-1XSS\s0 attacks against your application.
 .PP
 .Vb 2
 \&  <%= \*(AqI X Mojolicious!\*(Aq %>
@@ -301,8 +301,8 @@ backslash.
 .Ve
 .PP
 At the beginning of the template, stash values that don't have invalid
-characters in their name get automatically initialized as normal variables,
-and the controller object as both \f(CW$self\fR and \f(CW$c\fR.
+characters in their name get automatically initialized as normal variables, and
+the controller object as both \f(CW$self\fR and \f(CW$c\fR.
 .PP
 .Vb 1
 \&  $c\->stash(name => \*(Aqtester\*(Aq);
@@ -328,10 +328,10 @@ Most commonly used features every Mojolicious developer should know about.
 .SS "Automatic rendering"
 .IX Subsection "Automatic rendering"
 The renderer can be manually started by calling the method
-\&\*(L"render\*(R" in Mojolicious::Controller, but that's usually not necessary,
-because it will get automatically called if nothing has been rendered after
-the router finished its work. This also means you can have routes pointing
-only to templates without actual actions.
+\&\*(L"render\*(R" in Mojolicious::Controller, but that's usually not necessary, because
+it will get automatically called if nothing has been rendered after the router
+finished its work. This also means you can have routes pointing only to
+templates without actual actions.
 .PP
 .Vb 1
 \&  $c\->render;
@@ -350,10 +350,10 @@ You can also disable automatic rendering with the method
 rendering when a non-blocking operation has to be performed first.
 .SS "Rendering templates"
 .IX Subsection "Rendering templates"
-The renderer will always try to detect the right template, but you can also
-use the \f(CW\*(C`template\*(C'\fR stash value to render a specific one. Everything before
-the last slash will be interpreted as the subdirectory path in which to find
-the template.
+The renderer will always try to detect the right template, but you can also use
+the \f(CW\*(C`template\*(C'\fR stash value to render a specific one. Everything before the
+last slash will be interpreted as the subdirectory path in which to find the
+template.
 .PP
 .Vb 2
 \&  # foo/bar/baz.*.*
@@ -403,8 +403,8 @@ All arguments passed will get localized automatically and are only available
 during this render operation.
 .SS "Template variants"
 .IX Subsection "Template variants"
-To make your application look great on many different devices you can also
-use the \f(CW\*(C`variant\*(C'\fR stash value to choose between different variants of your
+To make your application look great on many different devices you can also use
+the \f(CW\*(C`variant\*(C'\fR stash value to choose between different variants of your
 templates.
 .PP
 .Vb 3
@@ -432,8 +432,7 @@ too.
 .SS "Rendering text"
 .IX Subsection "Rendering text"
 Characters can be rendered to bytes with the \f(CW\*(C`text\*(C'\fR stash value, the given
-content will be automatically encoded with
-\&\*(L"encoding\*(R" in Mojolicious::Renderer.
+content will be automatically encoded with \*(L"encoding\*(R" in Mojolicious::Renderer.
 .PP
 .Vb 1
 \&  $c\->render(text => \*(AqI X Mojolicious!\*(Aq);
@@ -448,8 +447,8 @@ performed.
 .Ve
 .SS "Rendering \s-1JSON\s0"
 .IX Subsection "Rendering JSON"
-The \f(CW\*(C`json\*(C'\fR stash value allows you to pass Perl data structures to the
-renderer which get directly encoded to \s-1JSON\s0 with Mojo::JSON.
+The \f(CW\*(C`json\*(C'\fR stash value allows you to pass Perl data structures to the renderer
+which get directly encoded to \s-1JSON\s0 with Mojo::JSON.
 .PP
 .Vb 1
 \&  $c\->render(json => {foo => [1, \*(Aqtest\*(Aq, 3]});
@@ -542,21 +541,18 @@ and controller code.
 \&  my $serialized = $c\->dumper([1, 2, 3]);
 .Ve
 .PP
-The helper \*(L"dumper\*(R" in Mojolicious::Plugin::DefaultHelpers for example will
-use Data::Dumper to serialize whatever data structure you pass it, this can
-be very useful for debugging. We differentiate between default helpers which
-are more general purpose like \f(CW\*(C`dumper\*(C'\fR and tag helpers, which are template
-specific and mostly used to generate \s-1HTML\s0 tags.
+We differentiate between default helpers, which are more general purpose like
+\&\*(L"dumper\*(R" in Mojolicious::Plugin::DefaultHelpers, and tag helpers like
+\&\*(L"link_to\*(R" in Mojolicious::Plugin::TagHelpers, which are template specific and
+mostly used to generate \s-1HTML\s0 tags.
 .PP
-.Vb 3
-\&  %= link_to \*(Aqhttp://mojolicio.us\*(Aq => begin
-\&    Mojolicious
-\&  % end
+.Vb 1
+\&  %= link_to Mojolicious => \*(Aqhttp://mojolicio.us\*(Aq
 .Ve
 .PP
-In controllers you can also use the method
-\&\*(L"helpers\*(R" in Mojolicious::Controller to fully qualify helper calls and ensure
-that they don't conflict with existing methods you may already have.
+In controllers you can also use the method \*(L"helpers\*(R" in Mojolicious::Controller
+to fully qualify helper calls and ensure that they don't conflict with existing
+methods you may already have.
 .PP
 .Vb 1
 \&  my $serialized = $c\->helpers\->dumper([1, 2, 3]);
@@ -566,10 +562,9 @@ A list of all built-in helpers can be found in
 Mojolicious::Plugin::DefaultHelpers and Mojolicious::Plugin::TagHelpers.
 .SS "Content negotiation"
 .IX Subsection "Content negotiation"
-For resources with different representations and that require truly
-RESTful content negotiation you can also use
-\&\*(L"respond_to\*(R" in Mojolicious::Controller instead of
-\&\*(L"render\*(R" in Mojolicious::Controller.
+For resources with different representations and that require truly RESTful
+content negotiation you can also use \*(L"respond_to\*(R" in Mojolicious::Controller
+instead of \*(L"render\*(R" in Mojolicious::Controller.
 .PP
 .Vb 10
 \&  # /hello (Accept: application/json) \-> "json"
@@ -586,9 +581,9 @@ RESTful content negotiation you can also use
 .PP
 The best possible representation will be automatically selected from the
 \&\f(CW\*(C`Accept\*(C'\fR request header, \f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \f(CW\*(C`GET\*(C'\fR/\f(CW\*(C`POST\*(C'\fR
-parameter and stored in the \f(CW\*(C`format\*(C'\fR stash value. To change \s-1MIME\s0 type
-mappings for the \f(CW\*(C`Accept\*(C'\fR request header or the \f(CW\*(C`Content\-Type\*(C'\fR response
-header you can use \*(L"types\*(R" in Mojolicious.
+parameter and stored in the \f(CW\*(C`format\*(C'\fR stash value. To change \s-1MIME\s0 type mappings
+for the \f(CW\*(C`Accept\*(C'\fR request header or the \f(CW\*(C`Content\-Type\*(C'\fR response header you can
+use \*(L"types\*(R" in Mojolicious.
 .PP
 .Vb 7
 \&  $c\->respond_to(
@@ -644,13 +639,12 @@ For even more advanced negotiation logic you can also use the helper
 .ie n .SS "Rendering ""exception"" and ""not_found"" pages"
 .el .SS "Rendering \f(CWexception\fP and \f(CWnot_found\fP pages"
 .IX Subsection "Rendering exception and not_found pages"
-By now you've probably already encountered the built-in 404 (Not Found) and
-500 (Server Error) pages, that get rendered automatically when you make a
-mistake. Those are fallbacks for when your own exception handling fails, but
-especially during development they can also be a great help, you can render
-them manually with the helpers
-\&\*(L"reply\->exception\*(R" in Mojolicious::Plugin::DefaultHelpers and
-\&\*(L"reply\->not_found\*(R" in Mojolicious::Plugin::DefaultHelpers.
+By now you've probably already encountered the built-in 404 (Not Found) and 500
+(Server Error) pages, that get rendered automatically when you make a mistake.
+Those are fallbacks for when your own exception handling fails, but especially
+during development they can also be a great help, you can render them manually
+with the helpers \*(L"reply\->exception\*(R" in Mojolicious::Plugin::DefaultHelpers
+and \*(L"reply\->not_found\*(R" in Mojolicious::Plugin::DefaultHelpers.
 .PP
 .Vb 2
 \&  use Mojolicious::Lite;
@@ -658,7 +652,9 @@ them manually with the helpers
 \&
 \&  get \*(Aq/divide/:dividend/by/:divisor\*(Aq => sub {
 \&    my $c = shift;
-\&    my ($dividend, $divisor) = $c\->param([\*(Aqdividend\*(Aq, \*(Aqdivisor\*(Aq]);
+\&
+\&    my $dividend = $c\->param(\*(Aqdividend\*(Aq);
+\&    my $divisor  = $c\->param(\*(Aqdivisor\*(Aq);
 \&
 \&    # 404
 \&    return $c\->reply\->not_found
@@ -674,13 +670,20 @@ them manually with the helpers
 \&  app\->start;
 .Ve
 .PP
-You can also change the templates of those pages, since you most likely want
-to show your users something more closely related to your application in
+You can also change the templates of those pages, since you most likely want to
+show your users something more closely related to your application in
 production. The renderer will always try to find \f(CW\*(C`exception.$mode.$format.*\*(C'\fR
 or \f(CW\*(C`not_found.$mode.$format.*\*(C'\fR before falling back to the built-in default
 templates.
 .PP
-.Vb 11
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/dies\*(Aq => sub { die \*(AqIntentional error\*(Aq };
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
 \&  @@ exception.production.html.ep
 \&  <!DOCTYPE html>
 \&  <html>
@@ -694,9 +697,9 @@ templates.
 \&  </html>
 .Ve
 .PP
-The hook \*(L"before_render\*(R" in Mojolicious makes even more advanced
-customizations possible by allowing you to intercept and modify the arguments
-passed to the renderer.
+The hook \*(L"before_render\*(R" in Mojolicious makes even more advanced customizations
+possible by allowing you to intercept and modify the arguments passed to the
+renderer.
 .PP
 .Vb 1
 \&  use Mojolicious::Lite;
@@ -709,8 +712,7 @@ passed to the renderer.
 \&    return unless $template eq \*(Aqexception\*(Aq;
 \&
 \&    # Switch to JSON rendering if content negotiation allows it
-\&    $args\->{json} = {exception => $c\->stash(\*(Aqexception\*(Aq)}
-\&      if $c\->accepts(\*(Aqjson\*(Aq);
+\&    $args\->{json} = {exception => $args\->{exception}} if $c\->accepts(\*(Aqjson\*(Aq);
 \&  };
 \&
 \&  get \*(Aq/\*(Aq => sub { die "This sho...ALL GLORY TO THE HYPNOTOAD!\en" };
@@ -723,7 +725,14 @@ Most of the time when using \f(CW\*(C`ep\*(C'\fR templates you will want to wrap
 generated content in an \s-1HTML\s0 skeleton, thanks to layouts that's absolutely
 trivial.
 .PP
-.Vb 3
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => {template => \*(Aqfoo/bar\*(Aq};
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
 \&  @@ foo/bar.html.ep
 \&  % layout \*(Aqmylayout\*(Aq;
 \&  Hello World!
@@ -742,7 +751,14 @@ current template with the helper
 \&\*(L"content\*(R" in Mojolicious::Plugin::DefaultHelpers. You can also pass along
 normal stash values to the \f(CW\*(C`layout\*(C'\fR helper.
 .PP
-.Vb 3
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => {template => \*(Aqfoo/bar\*(Aq};
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
 \&  @@ foo/bar.html.ep
 \&  % layout \*(Aqmylayout\*(Aq, title => \*(AqHi there\*(Aq;
 \&  Hello World!
@@ -756,8 +772,7 @@ normal stash values to the \f(CW\*(C`layout\*(C'\fR helper.
 .Ve
 .PP
 Instead of the \f(CW\*(C`layout\*(C'\fR helper you could also just use the \f(CW\*(C`layout\*(C'\fR stash
-value, or call \*(L"render\*(R" in Mojolicious::Controller with the \f(CW\*(C`layout\*(C'\fR
-argument.
+value, or call \*(L"render\*(R" in Mojolicious::Controller with the \f(CW\*(C`layout\*(C'\fR argument.
 .PP
 .Vb 1
 \&  $c\->render(template => \*(Aqmytemplate\*(Aq, layout => \*(Aqmylayout\*(Aq);
@@ -788,88 +803,102 @@ value).
 .Vb 1
 \&  my $html = $c\->render_to_string(\*(Aqreminder\*(Aq, layout => \*(Aqmail\*(Aq);
 .Ve
-.SS "Including partial templates"
-.IX Subsection "Including partial templates"
+.SS "Including additional templates"
+.IX Subsection "Including additional templates"
 Like most helpers \*(L"include\*(R" in Mojolicious::Plugin::DefaultHelpers is just a
 shortcut to make your life a little easier.
 .PP
-.Vb 6
-\&  @@ foo/bar.html.ep
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => \*(Aqfoo\*(Aq;
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
+\&  @@ foo.html.ep
 \&  <!DOCTYPE html>
 \&  <html>
-\&    %= include \*(Aqheader\*(Aq
+\&    %= include \*(Aqheader\*(Aq, title => \*(AqHowdy\*(Aq
 \&    <body>Bar</body>
 \&  </html>
 \&
 \&  @@ header.html.ep
-\&  <head><title>Howdy</title></head>
+\&  <head><title><%= $title %></title></head>
 .Ve
 .PP
 Instead of \f(CW\*(C`include\*(C'\fR you could also just call
-\&\*(L"render_to_string\*(R" in Mojolicious::Controller.
+\&\*(L"render_to_string\*(R" in Mojolicious::Controller to include one template into
+another.
 .PP
-.Vb 6
-\&  @@ foo/bar.html.ep
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => \*(Aqfoo\*(Aq;
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
+\&  @@ foo.html.ep
 \&  <!DOCTYPE html>
 \&  <html>
-\&    %= $c\->render_to_string(\*(Aqheader\*(Aq)
+\&    %= $c\->render_to_string(\*(Aqheader\*(Aq, title => \*(AqHowdy\*(Aq)
 \&    <body>Bar</body>
 \&  </html>
 \&
 \&  @@ header.html.ep
-\&  <head><title>Howdy</title></head>
+\&  <head><title><%= $title %></title></head>
 .Ve
 .SS "Reusable template blocks"
 .IX Subsection "Reusable template blocks"
 It's never fun to repeat yourself, that's why you can build reusable template
-blocks in \f(CW\*(C`ep\*(C'\fR that work very similar to normal Perl functions.
+blocks in \f(CW\*(C`ep\*(C'\fR that work very similar to normal Perl functions, with the
+\&\f(CW\*(C`begin\*(C'\fR and \f(CW\*(C`end\*(C'\fR keywords. Just be aware that both keywords are part of the
+surrounding tag and not actual Perl code, so there can only be whitespace after
+\&\f(CW\*(C`begin\*(C'\fR and before \f(CW\*(C`end\*(C'\fR.
 .PP
-.Vb 7
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => \*(Aqwelcome\*(Aq;
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
 \&  @@ welcome.html.ep
 \&  <% my $block = begin %>
-\&    <% my $name = shift; %>
+\&    % my $name = shift;
 \&    Hello <%= $name %>.
 \&  <% end %>
 \&  <%= $block\->(\*(AqSebastian\*(Aq) %>
 \&  <%= $block\->(\*(AqSara\*(Aq) %>
 .Ve
 .PP
-Blocks are always delimited by the \f(CW\*(C`begin\*(C'\fR and \f(CW\*(C`end\*(C'\fR keywords.
+A naive translation of the template to Perl code could look like this.
 .PP
-.Vb 8
-\&  @@ welcome.html.ep
-\&  % my $block = begin
-\&    % my $name = shift;
-\&    Hello <%= $name %>.
-\&  % end
-\&  % for (1 .. 10) {
-\&    %== $block\->(\*(AqSebastian\*(Aq)
-\&  % }
-.Ve
-.PP
-A naive translation to Perl code could look like this.
-.PP
-.Vb 10
-\&  @@ welcome.html.pl
+.Vb 12
 \&  my $output = \*(Aq\*(Aq;
 \&  my $block  = sub {
 \&    my $name   = shift;
 \&    my $output = \*(Aq\*(Aq;
 \&    $output .= \*(AqHello \*(Aq;
-\&    $output .= xml_escape scalar $name;
+\&    $output .= xml_escape scalar + $name;
 \&    $output .= \*(Aq.\*(Aq;
 \&    return Mojo::ByteStream\->new($output);
-\&  }
-\&  for (1 .. 10) {
-\&    $output .= scalar $block\->(\*(AqSebastian\*(Aq);
-\&  }
+\&  };
+\&  $output .= xml_escape scalar + $block\->(\*(AqSebastian\*(Aq);
+\&  $output .= xml_escape scalar + $block\->(\*(AqSara\*(Aq);
 \&  return $output;
 .Ve
+.PP
+While template blocks cannot be shared between templates, they are most
+commonly used to pass parts of a template to helpers.
 .SS "Adding helpers"
 .IX Subsection "Adding helpers"
 You should always try to keep your actions small and reuse as much code as
-possible. Helpers make this very easy, you can use them to do pretty much
-anything an action could do.
+possible. Helpers make this very easy, they get passed the current controller
+object as first argument and you can use them to do pretty much anything an
+action could do.
 .PP
 .Vb 1
 \&  use Mojolicious::Lite;
@@ -892,9 +921,8 @@ anything an action could do.
 .Ve
 .PP
 Helpers can also accept template blocks as last argument, this for example
-allows very pleasant to use tag helpers and filters. Wrapping the helper
-result into a Mojo::ByteStream object can prevent accidental double
-escaping.
+allows very pleasant to use tag helpers and filters. Wrapping the helper result
+into a Mojo::ByteStream object can prevent accidental double escaping.
 .PP
 .Vb 2
 \&  use Mojolicious::Lite;
@@ -920,11 +948,11 @@ escaping.
 \&  % end
 .Ve
 .PP
-Similar to stash values you can use a prefix like \f(CW\*(C`myapp.*\*(C'\fR to keep helpers
-from getting exposed in templates and to organize them into namespaces as your
-application grows. Every prefix automatically becomes a helper that returns a
-proxy object containing the current controller object and on which you can
-call the nested helpers.
+Similar to stash values, you can use a prefix like \f(CW\*(C`myapp.*\*(C'\fR to keep helpers
+from getting exposed in templates as functions, and to organize them into
+namespaces as your application grows. Every prefix automatically becomes a
+helper that returns a proxy object containing the current controller object and
+on which you can call the nested helpers.
 .PP
 .Vb 1
 \&  use Mojolicious::Lite;
@@ -954,15 +982,22 @@ call the nested helpers.
 \&  app\->start;
 .Ve
 .PP
-While helpers can also be redefined, this should only be done very carefully
-to avoid conflicts.
+While helpers can also be redefined, this should only be done very carefully to
+avoid conflicts.
 .SS "Content blocks"
 .IX Subsection "Content blocks"
-Blocks and the helper \*(L"content_for\*(R" in Mojolicious::Plugin::DefaultHelpers
-can also be used to pass whole sections of the template to the layout.
+Blocks and the helper \*(L"content_for\*(R" in Mojolicious::Plugin::DefaultHelpers can
+also be used to pass whole sections of the template to the layout.
 .PP
-.Vb 9
-\&  @@ foo/bar.html.ep
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => \*(Aqfoo\*(Aq;
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
+\&  @@ foo.html.ep
 \&  % layout \*(Aqmylayout\*(Aq;
 \&  % content_for header => begin
 \&    <meta http\-equiv="Content\-Type" content="text/html">
@@ -975,7 +1010,7 @@ can also be used to pass whole sections of the template to the layout.
 \&  @@ layouts/mylayout.html.ep
 \&  <!DOCTYPE html>
 \&  <html>
-\&    <head><%= content_for \*(Aqheader\*(Aq %></head>
+\&    <head><%= content \*(Aqheader\*(Aq %></head>
 \&    <body><%= content %></body>
 \&  </html>
 .Ve
@@ -986,7 +1021,14 @@ Inheritance takes the layout concept above one step further, the helpers
 \&\*(L"extends\*(R" in Mojolicious::Plugin::DefaultHelpers allow you to build a skeleton
 template with named blocks that child templates can override.
 .PP
-.Vb 10
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => \*(Aqthird\*(Aq;
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
 \&  @@ first.html.ep
 \&  <!DOCTYPE html>
 \&  <html>
@@ -1088,7 +1130,7 @@ to make styling with \s-1CSS\s0 easier.
 \&  <label class="field\-with\-error" for="user">
 \&    Username (required, only characters e\-t)
 \&  </label>
-\&  <input class="field\-with\-error" type="text" name="user" value="sri" />
+\&  <input class="field\-with\-error" type="text" name="user" value="sri">
 .Ve
 .PP
 For a full list of available checks see also
@@ -1158,8 +1200,8 @@ double form submission.
 \&\s-1CSRF\s0 is a very common attack on web applications that trick your logged in
 users to submit forms they did not intend to send. All you have to do to
 protect your users from this, is to add an additional hidden field to your
-forms with \*(L"csrf_field\*(R" in Mojolicious::Plugin::TagHelpers and validate it
-with \*(L"csrf_protect\*(R" in Mojolicious::Validator::Validation.
+forms with \*(L"csrf_field\*(R" in Mojolicious::Plugin::TagHelpers and validate it with
+\&\*(L"csrf_protect\*(R" in Mojolicious::Validator::Validation.
 .PP
 .Vb 1
 \&  use Mojolicious::Lite;
@@ -1209,7 +1251,12 @@ directories, and if that's not enough you can also serve them manually with
 .Vb 1
 \&  use Mojolicious::Lite;
 \&
-\&  get \*(Aq/some_static_file\*(Aq => sub {
+\&  get \*(Aq/\*(Aq => sub {
+\&    my $c = shift;
+\&    $c\->reply\->static(\*(Aqindex.html\*(Aq);
+\&  };
+\&
+\&  get \*(Aq/some_download\*(Aq => sub {
 \&    my $c = shift;
 \&    $c\->res\->headers\->content_disposition(\*(Aqattachment; filename=bar.png;\*(Aq);
 \&    $c\->reply\->static(\*(Aqfoo/bar.png\*(Aq);
@@ -1221,7 +1268,7 @@ directories, and if that's not enough you can also serve them manually with
 .IX Subsection "Custom responses"
 Most response content, static as well as dynamic, gets served through
 Mojo::Asset::File and Mojo::Asset::Memory objects. For somewhat static
-content, like cached \s-1JSON\s0 data or temporary file, you can create your own and
+content, like cached \s-1JSON\s0 data or temporary files, you can create your own and
 use the helper \*(L"reply\->asset\*(R" in Mojolicious::Plugin::DefaultHelpers to
 serve them while allowing content negotiation to be performed with \f(CW\*(C`Range\*(C'\fR,
 \&\f(CW\*(C`If\-Modified\-Since\*(C'\fR and \f(CW\*(C`If\-None\-Match\*(C'\fR headers.
@@ -1284,8 +1331,8 @@ helper to the application you can use \*(L"helper\*(R" in Mojolicious.
 \&
 \&  get \*(Aq/\*(Aq => sub {
 \&    my $c = shift;
-\&    $c\->debug(\*(AqIt works.\*(Aq);
-\&    $c\->render(text => \*(AqHello.\*(Aq);
+\&    $c\->debug(\*(AqIt works!\*(Aq);
+\&    $c\->render(text => \*(AqHello!\*(Aq);
 \&  };
 \&
 \&  app\->start;
@@ -1324,8 +1371,9 @@ plugins, even if you plan to release them to \s-1CPAN.\s0
 \&  $ echo \*(Aq%= javascript "/alertassets.js"\*(Aq > templates/alertassets.html.ep
 .Ve
 .PP
-Just append their respective directories to the list of search paths when
-\&\f(CW\*(C`register\*(C'\fR is called.
+Just give them reasonably unique names, ideally based on the name of your
+plugin, and append their respective directories to the list of search paths
+when \f(CW\*(C`register\*(C'\fR is called.
 .PP
 .Vb 2
 \&  package Mojolicious::Plugin::AlertAssets;
@@ -1338,7 +1386,7 @@ Just append their respective directories to the list of search paths when
 \&    my ($self, $app) = @_;
 \&
 \&    # Append "templates" and "public" directories
-\&    my $base = catdir(dirname(_\|_FILE_\|_), \*(AqAlertAssets\*(Aq);
+\&    my $base = catdir dirname(_\|_FILE_\|_), \*(AqAlertAssets\*(Aq;
 \&    push @{$app\->renderer\->paths}, catdir($base, \*(Aqtemplates\*(Aq);
 \&    push @{$app\->static\->paths},   catdir($base, \*(Aqpublic\*(Aq);
 \&  }
@@ -1454,8 +1502,8 @@ speed up preloading of referenced images and stylesheets.
 \&  app\->start;
 .Ve
 .PP
-The optional drain callback ensures that all previous chunks have been
-written before processing continues. An empty chunk or call to
+The optional drain callback ensures that all previous chunks have been written
+before processing continues. An empty chunk or call to
 \&\*(L"finish\*(R" in Mojolicious::Controller marks the end of the stream.
 .PP
 .Vb 5
@@ -1472,9 +1520,9 @@ written before processing continues. An empty chunk or call to
 \&  0
 .Ve
 .PP
-Especially in combination with long inactivity timeouts this can be very
-useful for Comet (long polling). Due to limitations in some web servers this
-might not work perfectly in all deployment environments.
+Especially in combination with long inactivity timeouts this can be very useful
+for Comet (long polling). Due to limitations in some web servers this might not
+work perfectly in all deployment environments.
 .SS "Encoding"
 .IX Subsection "Encoding"
 Templates stored in files are expected to be \f(CW\*(C`UTF\-8\*(C'\fR by default, but that can
@@ -1504,8 +1552,8 @@ script.
 \&  get \*(Aq/heart\*(Aq;
 \&
 \&  app\->start;
-\&
 \&  _\|_DATA_\|_
+\&
 \&  @@ heart.html.ep
 \&  I X Mojolicious!
 .Ve
@@ -1514,7 +1562,14 @@ script.
 Base64 encoded static files such as images can be easily stored in the \f(CW\*(C`DATA\*(C'\fR
 section of your application, similar to templates.
 .PP
-.Vb 2
+.Vb 1
+\&  use Mojolicious::Lite;
+\&
+\&  get \*(Aq/\*(Aq => {text => \*(AqI X Mojolicious!\*(Aq};
+\&
+\&  app\->start;
+\&  _\|_DATA_\|_
+\&
 \&  @@ favicon.ico (base64)
 \&  ...base64 encoded image...
 .Ve
@@ -1522,9 +1577,9 @@ section of your application, similar to templates.
 .IX Subsection "Inflating DATA templates"
 Templates stored in files get preferred over files from the \f(CW\*(C`DATA\*(C'\fR section,
 this allows you to include a default set of templates in your application that
-the user can later customize. The command Mojolicious::Command::inflate
-will write all templates and static files from the \f(CW\*(C`DATA\*(C'\fR section into actual
-files in the \f(CW\*(C`templates\*(C'\fR and \f(CW\*(C`public\*(C'\fR directories.
+the user can later customize. The command Mojolicious::Command::inflate will
+write all templates and static files from the \f(CW\*(C`DATA\*(C'\fR section into actual files
+in the \f(CW\*(C`templates\*(C'\fR and \f(CW\*(C`public\*(C'\fR directories.
 .PP
 .Vb 1
 \&  $ ./myapp.pl inflate
@@ -1557,10 +1612,10 @@ Mojolicious::Plugin::EPRenderer with a custom configuration.
 Mojo::Template contains the whole list of available options.
 .SS "Adding your favorite template system"
 .IX Subsection "Adding your favorite template system"
-Maybe you would prefer a different template system than \f(CW\*(C`ep\*(C'\fR, and there is
-not already a plugin on \s-1CPAN\s0 for your favorite one, all you have to do is add
-a new \f(CW\*(C`handler\*(C'\fR with \*(L"add_handler\*(R" in Mojolicious::Renderer when \f(CW\*(C`register\*(C'\fR
-is called.
+Maybe you would prefer a different template system than \f(CW\*(C`ep\*(C'\fR, and there is not
+already a plugin on \s-1CPAN\s0 for your favorite one, all you have to do is add a new
+\&\f(CW\*(C`handler\*(C'\fR with \*(L"add_handler\*(R" in Mojolicious::Renderer when \f(CW\*(C`register\*(C'\fR is
+called.
 .PP
 .Vb 2
 \&  package Mojolicious::Plugin::MyRenderer;
@@ -1599,8 +1654,8 @@ is called.
 \&  1;
 .Ve
 .PP
-Since most template systems don't support templates in the \f(CW\*(C`DATA\*(C'\fR section,
-the renderer provides methods to help you with that.
+Since most template systems don't support templates in the \f(CW\*(C`DATA\*(C'\fR section, the
+renderer provides methods to help you with that.
 .PP
 .Vb 1
 \&  use Mojolicious::Lite;
@@ -1617,9 +1672,9 @@ the renderer provides methods to help you with that.
 .Ve
 .SS "Adding a handler to generate binary data"
 .IX Subsection "Adding a handler to generate binary data"
-By default the renderer assumes that every \f(CW\*(C`handler\*(C'\fR generates characters
-that need to be automatically encoded, but this can be easily disabled if
-you're generating bytes instead.
+By default the renderer assumes that every \f(CW\*(C`handler\*(C'\fR generates characters that
+need to be automatically encoded, but this can be easily disabled if you're
+generating bytes instead.
 .PP
 .Vb 2
 \&  use Mojolicious::Lite;

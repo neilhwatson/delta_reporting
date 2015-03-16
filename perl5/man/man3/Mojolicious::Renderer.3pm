@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Renderer 3"
-.TH Mojolicious::Renderer 3 "2014-10-06" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Renderer 3 "2015-03-02" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -172,8 +172,9 @@ Renderer cache, defaults to a Mojo::Cache object.
 \&  $renderer   = $renderer\->classes([\*(Aqmain\*(Aq]);
 .Ve
 .PP
-Classes to use for finding templates in \f(CW\*(C`DATA\*(C'\fR sections, first one has the
-highest precedence, defaults to \f(CW\*(C`main\*(C'\fR.
+Classes to use for finding templates in \f(CW\*(C`DATA\*(C'\fR sections with Mojo::Loader,
+first one has the highest precedence, defaults to \f(CW\*(C`main\*(C'\fR. Only files with
+exactly two extensions will be used, like \f(CW\*(C`index.html.ep\*(C'\fR.
 .PP
 .Vb 2
 \&  # Add another class with templates in DATA section
@@ -194,8 +195,8 @@ The default format to render if \f(CW\*(C`format\*(C'\fR is not set in the stash
 \&  $renderer   = $renderer\->default_handler(\*(Aqep\*(Aq);
 .Ve
 .PP
-The default template handler to use for rendering in cases where auto
-detection doesn't work, like for \f(CW\*(C`inline\*(C'\fR templates.
+The default template handler to use for rendering in cases where auto detection
+doesn't work, like for \f(CW\*(C`inline\*(C'\fR templates.
 .SS "encoding"
 .IX Subsection "encoding"
 .Vb 2
@@ -238,8 +239,8 @@ Directories to look for templates in, first one has the highest precedence.
 .Ve
 .SH "METHODS"
 .IX Header "METHODS"
-Mojolicious::Renderer inherits all methods from Mojo::Base and
-implements the following new ones.
+Mojolicious::Renderer inherits all methods from Mojo::Base and implements
+the following new ones.
 .SS "accepts"
 .IX Subsection "accepts"
 .Vb 2
@@ -285,10 +286,10 @@ Get a \f(CW\*(C`DATA\*(C'\fR section template by name, usually used by handlers.
 \&  my $helper = $renderer\->get_helper(\*(Aqurl_for\*(Aq);
 .Ve
 .PP
-Get a helper by full name, generate a helper dynamically for a prefix or
-return \f(CW\*(C`undef\*(C'\fR if no helper or prefix could be found. Generated helpers
-return a proxy object containing the current controller object and on which
-nested helpers can be called.
+Get a helper by full name, generate a helper dynamically for a prefix or return
+\&\f(CW\*(C`undef\*(C'\fR if no helper or prefix could be found. Generated helpers return a
+proxy object containing the current controller object and on which nested
+helpers can be called.
 .SS "render"
 .IX Subsection "render"
 .Vb 4

@@ -3,19 +3,21 @@ use Mojo::Base -base;
 
 use Mojo::Util 'monkey_patch';
 
-has max_line_size => sub { $ENV{MOJO_MAX_LINE_SIZE} || 10240 };
+has max_line_size => sub { $ENV{MOJO_MAX_LINE_SIZE} || 8192 };
+has max_lines     => sub { $ENV{MOJO_MAX_LINES}     || 100 };
 
 # Common headers
 my %NORMALCASE = map { lc($_) => $_ } (
   qw(Accept Accept-Charset Accept-Encoding Accept-Language Accept-Ranges),
   qw(Access-Control-Allow-Origin Allow Authorization Cache-Control Connection),
   qw(Content-Disposition Content-Encoding Content-Language Content-Length),
-  qw(Content-Location Content-Range Content-Type Cookie DNT Date ETag Expect),
-  qw(Expires Host If-Modified-Since If-None-Match Last-Modified Link Location),
-  qw(Origin Proxy-Authenticate Proxy-Authorization Range Sec-WebSocket-Accept),
-  qw(Sec-WebSocket-Extensions Sec-WebSocket-Key Sec-WebSocket-Protocol),
-  qw(Sec-WebSocket-Version Server Set-Cookie Status Strict-Transport-Security),
-  qw(TE Trailer Transfer-Encoding Upgrade User-Agent Vary WWW-Authenticate)
+  qw(Content-Location Content-Range Content-Security-Policy Content-Type),
+  qw(Cookie DNT Date ETag Expect Expires Host If-Modified-Since If-None-Match),
+  qw(Last-Modified Link Location Origin Proxy-Authenticate),
+  qw(Proxy-Authorization Range Sec-WebSocket-Accept Sec-WebSocket-Extensions),
+  qw(Sec-WebSocket-Key Sec-WebSocket-Protocol Sec-WebSocket-Version Server),
+  qw(Set-Cookie Status Strict-Transport-Security TE Trailer Transfer-Encoding),
+  qw(Upgrade User-Agent Vary WWW-Authenticate)
 );
 for my $header (values %NORMALCASE) {
   my $name = lc $header;
@@ -85,32 +87,33 @@ sub parse {
   $self->{state} = 'headers';
   $self->{buffer} .= shift // '';
   my $headers = $self->{cache} ||= [];
-  my $max = $self->max_line_size;
+  my $size    = $self->max_line_size;
+  my $lines   = $self->max_lines;
   while ($self->{buffer} =~ s/^(.*?)\x0d?\x0a//) {
     my $line = $1;
 
     # Check line size limit
-    if (length $line > $max) {
+    if ($+[0] > $size || @$headers >= $lines) {
       @$self{qw(state limit)} = ('finished', 1);
       return $self;
     }
 
     # New header
-    if ($line =~ /^(\S[^:]*)\s*:\s*(.*)$/) { push @$headers, $1, $2 }
+    if ($line =~ /^(\S[^:]*)\s*:\s*(.*)$/) { push @$headers, [$1, $2] }
 
     # Multiline
-    elsif (@$headers && $line =~ s/^\s+//) { $headers->[-1] .= " $line" }
+    elsif ($line =~ s/^\s+// && @$headers) { $headers->[-1][1] .= " $line" }
 
     # Empty line
     else {
-      $self->add(splice @$headers, 0, 2) while @$headers;
-      $self->{state} = 'finished';
+      $self->add(@$_) for @$headers;
+      @$self{qw(state cache)} = ('finished', []);
       return $self;
     }
   }
 
   # Check line size limit
-  @$self{qw(state limit)} = ('finished', 1) if length $self->{buffer} > $max;
+  @$self{qw(state limit)} = ('finished', 1) if length $self->{buffer} > $size;
 
   return $self;
 }
@@ -182,7 +185,15 @@ L<Mojo::Headers> implements the following attributes.
   $headers = $headers->max_line_size(1024);
 
 Maximum header line size in bytes, defaults to the value of the
-C<MOJO_MAX_LINE_SIZE> environment variable or C<10240> (10KB).
+C<MOJO_MAX_LINE_SIZE> environment variable or C<8192> (8KB).
+
+=head2 max_lines
+
+  my $num  = $headers->max_lines;
+  $headers = $headers->max_lines(200);
+
+Maximum number of header lines, defaults to the value of the C<MOJO_MAX_LINES>
+environment variable or C<100>.
 
 =head1 METHODS
 
@@ -331,6 +342,14 @@ Shortcut for the C<Content-Location> header.
 
 Shortcut for the C<Content-Range> header.
 
+=head2 content_security_policy
+
+  my $policy = $headers->content_security_policy;
+  $headers   = $headers->content_security_policy('default-src https:');
+
+Shortcut for the C<Content-Security-Policy> header from
+L<Content Security Policy 1.0|http://www.w3.org/TR/CSP/>.
+
 =head2 content_type
 
   my $type = $headers->content_type;
@@ -429,7 +448,7 @@ Check if header parser is finished.
 
   my $bool = $headers->is_limit_exceeded;
 
-Check if a header has exceeded C<max_line_size>.
+Check if headers have exceeded L</"max_line_size"> or L</"max_lines">.
 
 =head2 last_modified
 
@@ -442,7 +461,7 @@ Shortcut for the C<Last-Modified> header.
 
   my $bytes = $headers->leftovers;
 
-Get leftover data from header parser.
+Get and remove leftover data from header parser.
 
 =head2 link
 

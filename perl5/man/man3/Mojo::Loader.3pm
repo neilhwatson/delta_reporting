@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Loader 3"
-.TH Mojo::Loader 3 "2014-09-03" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Loader 3 "2015-02-23" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -143,68 +143,91 @@ Mojo::Loader \- Loader
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .Vb 1
-\&  use Mojo::Loader;
+\&  use Mojo::Loader qw(data_section find_modules load_class);
 \&
 \&  # Find modules in a namespace
-\&  my $loader = Mojo::Loader\->new;
-\&  for my $module (@{$loader\->search(\*(AqSome::Namespace\*(Aq)}) {
+\&  for my $module (find_modules \*(AqSome::Namespace\*(Aq) {
 \&
 \&    # Load them safely
-\&    my $e = $loader\->load($module);
+\&    my $e = load_class $module;
 \&    warn qq{Loading "$module" failed: $e} and next if ref $e;
 \&
 \&    # And extract files from the DATA section
-\&    say $loader\->data($module, \*(Aqsome_file.txt\*(Aq);
+\&    say data_section($module, \*(Aqsome_file.txt\*(Aq);
 \&  }
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Loader is a class loader and plugin framework.
-.SH "METHODS"
-.IX Header "METHODS"
-Mojo::Loader inherits all methods from Mojo::Base and implements the
-following new ones.
-.SS "data"
-.IX Subsection "data"
+Mojo::Loader is a class loader and plugin framework. Aside from finding
+modules and loading classes, it allows multiple files to be stored in the
+\&\f(CW\*(C`DATA\*(C'\fR section of a class, which can then be accessed individually.
+.PP
+.Vb 1
+\&  package Foo;
+\&
+\&  1;
+\&  _\|_DATA_\|_
+\&
+\&  @@ test.txt
+\&  This is the first file.
+\&
+\&  @@ test2.html (base64)
+\&  VGhpcyBpcyB0aGUgc2Vjb25kIGZpbGUu
+\&
+\&  @@ test
+\&  This is the
+\&  third file.
+.Ve
+.PP
+Each file has a header starting with \f(CW\*(C`@@\*(C'\fR, followed by the file name and
+optional instructions for decoding its content. Currently only the Base64
+encoding is supported, which can be quite convenient for the storage of binary
+data.
+.SH "FUNCTIONS"
+.IX Header "FUNCTIONS"
+Mojo::Loader implements the following functions, which can be imported
+individually.
+.SS "data_section"
+.IX Subsection "data_section"
 .Vb 2
-\&  my $all   = $loader\->data(\*(AqFoo::Bar\*(Aq);
-\&  my $index = $loader\->data(\*(AqFoo::Bar\*(Aq, \*(Aqindex.html\*(Aq);
+\&  my $all   = data_section \*(AqFoo::Bar\*(Aq;
+\&  my $index = data_section \*(AqFoo::Bar\*(Aq, \*(Aqindex.html\*(Aq;
 .Ve
 .PP
 Extract embedded file from the \f(CW\*(C`DATA\*(C'\fR section of a class, all files will be
 cached once they have been accessed for the first time.
 .PP
 .Vb 1
-\&  say for keys %{$loader\->data(\*(AqFoo::Bar\*(Aq)};
+\&  say for keys %{data_section \*(AqFoo::Bar\*(Aq};
 .Ve
-.SS "is_binary"
-.IX Subsection "is_binary"
+.SS "file_is_binary"
+.IX Subsection "file_is_binary"
 .Vb 1
-\&  my $bool = $loader\->is_binary(\*(AqFoo::Bar\*(Aq, \*(Aqtest.png\*(Aq);
+\&  my $bool = file_is_binary \*(AqFoo::Bar\*(Aq, \*(Aqtest.png\*(Aq;
 .Ve
 .PP
 Check if embedded file from the \f(CW\*(C`DATA\*(C'\fR section of a class was Base64 encoded.
-.SS "load"
-.IX Subsection "load"
+.SS "find_modules"
+.IX Subsection "find_modules"
 .Vb 1
-\&  my $e = $loader\->load(\*(AqFoo::Bar\*(Aq);
+\&  my @modules = find_modules \*(AqMyApp::Namespace\*(Aq;
+.Ve
+.PP
+Search for modules in a namespace non-recursively.
+.SS "load_class"
+.IX Subsection "load_class"
+.Vb 1
+\&  my $e = load_class \*(AqFoo::Bar\*(Aq;
 .Ve
 .PP
 Load a class and catch exceptions. Note that classes are checked for a \f(CW\*(C`new\*(C'\fR
 method to see if they are already loaded.
 .PP
 .Vb 3
-\&  if (my $e = $loader\->load(\*(AqFoo::Bar\*(Aq)) {
+\&  if (my $e = load_class \*(AqFoo::Bar\*(Aq) {
 \&    die ref $e ? "Exception: $e" : \*(AqNot found!\*(Aq;
 \&  }
 .Ve
-.SS "search"
-.IX Subsection "search"
-.Vb 1
-\&  my $modules = $loader\->search(\*(AqMyApp::Namespace\*(Aq);
-.Ve
-.PP
-Search for modules in a namespace non-recursively.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

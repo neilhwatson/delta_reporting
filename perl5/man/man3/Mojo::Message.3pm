@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Message 3"
-.TH Mojo::Message 3 "2014-10-08" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Message 3 "2015-02-27" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -152,10 +152,11 @@ Mojo::Message \- HTTP message base class
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Mojo::Message is an abstract base class for \s-1HTTP\s0 messages based on
+Mojo::Message is an abstract base class for \s-1HTTP\s0 message containers based on
 \&\s-1RFC 7230\s0 <http://tools.ietf.org/html/rfc7230>,
 \&\s-1RFC 7231\s0 <http://tools.ietf.org/html/rfc7231> and
-\&\s-1RFC 2388\s0 <http://tools.ietf.org/html/rfc2388>.
+\&\s-1RFC 2388\s0 <http://tools.ietf.org/html/rfc2388>, like Mojo::Message::Request
+and Mojo::Message::Response.
 .SH "EVENTS"
 .IX Header "EVENTS"
 Mojo::Message inherits all events from Mojo::EventEmitter and can emit
@@ -222,7 +223,9 @@ Message content, defaults to a Mojo::Content::Single object.
 \&  $msg        = $msg\->default_charset(\*(AqUTF\-8\*(Aq);
 .Ve
 .PP
-Default charset used for form-data parsing, defaults to \f(CW\*(C`UTF\-8\*(C'\fR.
+Default charset used by \*(L"text\*(R" and to extract data from
+\&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body,
+defaults to \f(CW\*(C`UTF\-8\*(C'\fR.
 .SS "max_line_size"
 .IX Subsection "max_line_size"
 .Vb 2
@@ -230,8 +233,8 @@ Default charset used for form-data parsing, defaults to \f(CW\*(C`UTF\-8\*(C'\fR
 \&  $msg     = $msg\->max_line_size(1024);
 .Ve
 .PP
-Maximum start line size in bytes, defaults to the value of the
-\&\f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable or \f(CW10240\fR (10KB).
+Maximum start-line size in bytes, defaults to the value of the
+\&\f(CW\*(C`MOJO_MAX_LINE_SIZE\*(C'\fR environment variable or \f(CW8192\fR (8KB).
 .SS "max_message_size"
 .IX Subsection "max_message_size"
 .Vb 2
@@ -240,7 +243,7 @@ Maximum start line size in bytes, defaults to the value of the
 .Ve
 .PP
 Maximum message size in bytes, defaults to the value of the
-\&\f(CW\*(C`MOJO_MAX_MESSAGE_SIZE\*(C'\fR environment variable or \f(CW10485760\fR (10MB). Setting
+\&\f(CW\*(C`MOJO_MAX_MESSAGE_SIZE\*(C'\fR environment variable or \f(CW16777216\fR (16MB). Setting
 the value to \f(CW0\fR will allow messages of indefinite size. Note that increasing
 this value can also drastically increase memory usage, should you for example
 attempt to parse an excessively large message body with the \*(L"body_params\*(R",
@@ -255,8 +258,8 @@ attempt to parse an excessively large message body with the \*(L"body_params\*(R
 \&\s-1HTTP\s0 version of message, defaults to \f(CW1.1\fR.
 .SH "METHODS"
 .IX Header "METHODS"
-Mojo::Message inherits all methods from Mojo::EventEmitter and
-implements the following new ones.
+Mojo::Message inherits all methods from Mojo::EventEmitter and implements
+the following new ones.
 .SS "body"
 .IX Subsection "body"
 .Vb 2
@@ -273,15 +276,15 @@ automatically downgraded to Mojo::Content::Single.
 .Ve
 .PP
 \&\f(CW\*(C`POST\*(C'\fR parameters extracted from \f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or
-\&\f(CW\*(C`multipart/form\-data\*(C'\fR message body, usually a Mojo::Parameters object.
-Note that this method caches all data, so it should not be called before the
-entire message body has been received. Parts of the message body need to be
-loaded into memory to parse \f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is
-not excessively large, there's a 10MB limit by default.
+\&\f(CW\*(C`multipart/form\-data\*(C'\fR message body, usually a Mojo::Parameters object. Note
+that this method caches all data, so it should not be called before the entire
+message body has been received. Parts of the message body need to be loaded
+into memory to parse \f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is not
+excessively large, there's a 16MB limit by default.
 .PP
 .Vb 2
-\&  # Get POST parameter value
-\&  say $msg\->body_params\->param(\*(Aqfoo\*(Aq);
+\&  # Get POST parameter names and values
+\&  my $hash = $msg\->body_params\->to_hash;
 .Ve
 .SS "body_size"
 .IX Subsection "body_size"
@@ -310,12 +313,11 @@ Render all headers.
 \&  my $bytes = $msg\->build_start_line;
 .Ve
 .PP
-Render start line.
+Render start-line.
 .SS "cookie"
 .IX Subsection "cookie"
-.Vb 2
-\&  my $cookie      = $msg\->cookie(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $msg\->cookie([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+.Vb 1
+\&  my $cookie = $msg\->cookie(\*(Aqfoo\*(Aq);
 .Ve
 .PP
 Access message cookies, usually Mojo::Cookie::Request or
@@ -342,30 +344,39 @@ Access message cookies. Meant to be overloaded in a subclass.
 \&  my $collection = $msg\->dom(\*(Aqa[href]\*(Aq);
 .Ve
 .PP
-Turns message body into a Mojo::DOM object and takes an optional selector
-to call the method \*(L"find\*(R" in Mojo::DOM on it right away, which returns a
-Mojo::Collection object. Note that this method caches all data, so it
-should not be called before the entire message body has been received. The
-whole message body needs to be loaded into memory to parse it, so you have to
-make sure it is not excessively large, there's a 10MB limit by default.
+Retrieve message body from \*(L"text\*(R" and turn it into a Mojo::DOM object,
+an optional selector can be used to call the method \*(L"find\*(R" in Mojo::DOM on it
+right away, which then returns a Mojo::Collection object. Note that this
+method caches all data, so it should not be called before the entire message
+body has been received. The whole message body needs to be loaded into memory
+to parse it, so you have to make sure it is not excessively large, there's a
+16MB limit by default.
 .PP
 .Vb 2
 \&  # Perform "find" right away
-\&  say $msg\->dom(\*(Aqh1, h2, h3\*(Aq)\->text;
+\&  say $msg\->dom(\*(Aqh1, h2, h3\*(Aq)\->map(\*(Aqtext\*(Aq)\->join("\en");
 \&
 \&  # Use everything else Mojo::DOM has to offer
 \&  say $msg\->dom\->at(\*(Aqtitle\*(Aq)\->text;
-\&  say $msg\->dom\->html\->body\->children\->type\->uniq;
+\&  say $msg\->dom\->at(\*(Aqbody\*(Aq)\->children\->map(\*(Aqtag\*(Aq)\->uniq\->join("\en");
 .Ve
 .SS "error"
 .IX Subsection "error"
 .Vb 2
 \&  my $err = $msg\->error;
-\&  $msg    = $msg\->error({message => \*(AqParser error\*(Aq, advice => 500});
+\&  $msg    = $msg\->error({message => \*(AqParser error\*(Aq});
 .Ve
 .PP
 Get or set message error, an \f(CW\*(C`undef\*(C'\fR return value indicates that there is no
 error.
+.PP
+.Vb 2
+\&  # Connection or parser error
+\&  $msg\->error({message => \*(AqConnection refused\*(Aq});
+\&
+\&  # 4xx/5xx response
+\&  $msg\->error({message => \*(AqInternal Server Error\*(Aq, code => 500});
+.Ve
 .SS "every_cookie"
 .IX Subsection "every_cookie"
 .Vb 1
@@ -398,7 +409,7 @@ an array reference.
 \&  my $bool = $msg\->extract_start_line(\e$str);
 .Ve
 .PP
-Extract start line from string. Meant to be overloaded in a subclass.
+Extract start-line from string. Meant to be overloaded in a subclass.
 .SS "finish"
 .IX Subsection "finish"
 .Vb 1
@@ -433,7 +444,7 @@ Get a chunk of header data, starting from a specific position.
 \&  my $bytes = $msg\->get_start_line_chunk($offset);
 .Ve
 .PP
-Get a chunk of start line data starting from a specific position. Meant to be
+Get a chunk of start-line data starting from a specific position. Meant to be
 overloaded in a subclass.
 .SS "header_size"
 .IX Subsection "header_size"
@@ -449,6 +460,11 @@ Size of headers in bytes.
 .Ve
 .PP
 Message headers, usually a Mojo::Headers object.
+.PP
+.Vb 2
+\&  # Longer version
+\&  my $headers = $msg\->content\->headers;
+.Ve
 .SS "is_finished"
 .IX Subsection "is_finished"
 .Vb 1
@@ -462,7 +478,8 @@ Check if message parser/generator is finished.
 \&  my $bool = $msg\->is_limit_exceeded;
 .Ve
 .PP
-Check if message has exceeded \*(L"max_line_size\*(R" or \*(L"max_message_size\*(R".
+Check if message has exceeded \*(L"max_line_size\*(R", \*(L"max_message_size\*(R",
+\&\*(L"max_buffer_size\*(R" in Mojo::Content or \*(L"max_line_size\*(R" in Mojo::Headers.
 .SS "json"
 .IX Subsection "json"
 .Vb 2
@@ -471,12 +488,12 @@ Check if message has exceeded \*(L"max_line_size\*(R" or \*(L"max_message_size\*
 .Ve
 .PP
 Decode \s-1JSON\s0 message body directly using Mojo::JSON if possible, an \f(CW\*(C`undef\*(C'\fR
-return value indicates a bare \f(CW\*(C`null\*(C'\fR or that decoding failed. An optional
-\&\s-1JSON\s0 Pointer can be used to extract a specific value with
-Mojo::JSON::Pointer. Note that this method caches all data, so it should
-not be called before the entire message body has been received. The whole
-message body needs to be loaded into memory to parse it, so you have to make
-sure it is not excessively large, there's a 10MB limit by default.
+return value indicates a bare \f(CW\*(C`null\*(C'\fR or that decoding failed. An optional \s-1JSON\s0
+Pointer can be used to extract a specific value with Mojo::JSON::Pointer.
+Note that this method caches all data, so it should not be called before the
+entire message body has been received. The whole message body needs to be
+loaded into memory to parse it, so you have to make sure it is not excessively
+large, there's a 16MB limit by default.
 .PP
 .Vb 3
 \&  # Extract JSON values
@@ -496,15 +513,15 @@ Parse message chunk.
 \&  my $size = $msg\->start_line_size;
 .Ve
 .PP
-Size of the start line in bytes.
+Size of the start-line in bytes.
 .SS "text"
 .IX Subsection "text"
 .Vb 1
 \&  my $str = $msg\->text;
 .Ve
 .PP
-Retrieve \*(L"body\*(R" and try to decode it if a charset could be extracted with
-\&\*(L"charset\*(R" in Mojo::Content.
+Retrieve \*(L"body\*(R" and try to decode it with \*(L"charset\*(R" in Mojo::Content or
+\&\*(L"default_charset\*(R".
 .SS "to_string"
 .IX Subsection "to_string"
 .Vb 1
@@ -514,16 +531,15 @@ Retrieve \*(L"body\*(R" and try to decode it if a charset could be extracted wit
 Render whole message.
 .SS "upload"
 .IX Subsection "upload"
-.Vb 2
-\&  my $upload      = $msg\->upload(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $msg\->upload([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+.Vb 1
+\&  my $upload = $msg\->upload(\*(Aqfoo\*(Aq);
 .Ve
 .PP
-Access \f(CW\*(C`multipart/form\-data\*(C'\fR file uploads, usually Mojo::Upload objects.
-If there are multiple uploads sharing the same name, and you want to access
-more than just the last one, you can use \*(L"every_upload\*(R". Note that this
-method caches all data, so it should not be called before the entire message
-body has been received.
+Access \f(CW\*(C`multipart/form\-data\*(C'\fR file uploads, usually Mojo::Upload objects. If
+there are multiple uploads sharing the same name, and you want to access more
+than just the last one, you can use \*(L"every_upload\*(R". Note that this method
+caches all data, so it should not be called before the entire message body has
+been received.
 .PP
 .Vb 2
 \&  # Get content of uploaded file
@@ -536,6 +552,11 @@ body has been received.
 .Ve
 .PP
 All \f(CW\*(C`multipart/form\-data\*(C'\fR file uploads, usually Mojo::Upload objects.
+.PP
+.Vb 2
+\&  # Names of all uploads
+\&  say $_\->name for @{$msg\->uploads};
+.Ve
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 Mojolicious, Mojolicious::Guides, <http://mojolicio.us>.

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::UserAgent::Server 3"
-.TH Mojo::UserAgent::Server 3 "2014-09-26" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::UserAgent::Server 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -172,9 +172,9 @@ implements the following new ones.
 .IX Subsection "app"
 .Vb 4
 \&  my $app = Mojo::UserAgent::Server\->app;
-\&            Mojo::UserAgent::Server\->app(MyApp\->new);
+\&            Mojo::UserAgent::Server\->app(Mojolicious\->new);
 \&  my $app = $server\->app;
-\&  $server = $server\->app(MyApp\->new);
+\&  $server = $server\->app(Mojolicious\->new);
 .Ve
 .PP
 Application this server handles, instance specific applications override the

@@ -7,9 +7,8 @@ sub parse {
   my ($self, $str) = @_;
 
   my @cookies;
-  my @pairs = map {@$_} @{split_header($str // '')};
-  while (@pairs) {
-    my ($name, $value) = (shift @pairs, shift @pairs);
+  my @pairs = map {@$_} @{split_header $str // ''};
+  while (my ($name, $value) = splice @pairs, 0, 2) {
     next if $name =~ /^\$/;
     push @cookies, $self->new(name => $name, value => $value // '');
   }
@@ -21,7 +20,7 @@ sub to_string {
   my $self = shift;
   return '' unless length(my $name = $self->name // '');
   my $value = $self->value // '';
-  return join '=', $name, $value =~ /[,;" ]/ ? quote($value) : $value;
+  return join '=', $name, $value =~ /[,;" ]/ ? quote $value : $value;
 }
 
 1;

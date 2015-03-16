@@ -5,7 +5,7 @@ use File::Spec::Functions 'catfile';
 use Mojo::Cache;
 use Mojo::JSON 'encode_json';
 use Mojo::Home;
-use Mojo::Loader;
+use Mojo::Loader 'data_section';
 use Mojo::Util qw(decamelize encode md5_sum monkey_patch slurp);
 
 has cache   => sub { Mojo::Cache->new };
@@ -29,8 +29,6 @@ $HOME->parse(
   $HOME->parse($HOME->mojo_lib_dir)->rel_dir('Mojolicious/templates'));
 my %TEMPLATES = map { $_ => slurp $HOME->rel_file($_) } @{$HOME->list_files};
 
-my $LOADER = Mojo::Loader->new;
-
 sub DESTROY { Mojo::Util::_teardown($_) for @{shift->{namespaces}} }
 
 sub accepts {
@@ -51,15 +49,21 @@ sub accepts {
   return @exts ? undef : shift;
 }
 
-sub add_handler { shift->_add(handlers => @_) }
-sub add_helper  { shift->_add(helpers  => @_) }
+sub add_handler { $_[0]->handlers->{$_[1]} = $_[2] and return $_[0] }
+
+sub add_helper {
+  my ($self, $name, $cb) = @_;
+  $self->helpers->{$name} = $cb;
+  delete $self->{proxy};
+  return $self;
+}
 
 sub get_data_template {
   my ($self, $options) = @_;
 
   # Find template
   return undef unless my $template = $self->template_name($options);
-  return $LOADER->data($self->{index}{$template}, $template);
+  return data_section $self->{index}{$template}, $template;
 }
 
 sub get_helper {
@@ -108,20 +112,20 @@ sub render {
   # Data
   my $output;
   if (defined(my $data = delete $stash->{data})) {
-    $self->handlers->{data}->($self, $c, \$output, {data => $data});
+    $self->handlers->{data}($self, $c, \$output, {data => $data});
     return $output, $options->{format};
   }
 
   # JSON
   elsif (exists $stash->{json}) {
     my $json = delete $stash->{json};
-    $self->handlers->{json}->($self, $c, \$output, {json => $json});
+    $self->handlers->{json}($self, $c, \$output, {json => $json});
     return $output, 'json';
   }
 
   # Text
   elsif (defined(my $text = delete $stash->{text})) {
-    $self->handlers->{text}->($self, $c, \$output, {text => $text});
+    $self->handlers->{text}($self, $c, \$output, {text => $text});
   }
 
   # Template or templateless handler
@@ -154,7 +158,7 @@ sub template_for {
   # Normal default template
   my $stash = $c->stash;
   my ($controller, $action) = @$stash{qw(controller action)};
-  return join '/', split('-', decamelize($controller)), $action
+  return join '/', split('-', decamelize $controller), $action
     if $controller && $action;
 
   # Try the route name if we don't have controller and action
@@ -199,18 +203,11 @@ sub template_path {
 
   # Search all paths
   for my $path (@{$self->paths}) {
-    my $file = catfile($path, split '/', $name);
+    my $file = catfile $path, split('/', $name);
     return $file if -r $file;
   }
 
   return undef;
-}
-
-sub _add {
-  my ($self, $attr, $name, $cb) = @_;
-  $self->$attr->{$name} = $cb;
-  delete $self->{proxy};
-  return $self;
 }
 
 sub _bundled { $TEMPLATES{"@{[pop]}.html.ep"} }
@@ -233,7 +230,7 @@ sub _render_template {
   }
 
   # No handler
-  else { $c->app->log->error(qq{No handler for "$handler" available.}) }
+  else { $c->app->log->error(qq{No handler for "$handler" available}) }
   return undef;
 }
 
@@ -248,7 +245,7 @@ sub _warmup {
 
   # Handlers and classes for DATA templates
   for my $class (reverse @{$self->classes}) {
-    $index->{$_} = $class for my @keys = sort keys %{$LOADER->data($class)};
+    $index->{$_} = $class for my @keys = sort keys %{data_section $class};
     s/\.(\w+)$// and unshift @{$templates->{$_}}, $1 for reverse @keys;
   }
 }
@@ -291,8 +288,9 @@ Renderer cache, defaults to a L<Mojo::Cache> object.
   my $classes = $renderer->classes;
   $renderer   = $renderer->classes(['main']);
 
-Classes to use for finding templates in C<DATA> sections, first one has the
-highest precedence, defaults to C<main>.
+Classes to use for finding templates in C<DATA> sections with L<Mojo::Loader>,
+first one has the highest precedence, defaults to C<main>. Only files with
+exactly two extensions will be used, like C<index.html.ep>.
 
   # Add another class with templates in DATA section
   push @{$renderer->classes}, 'Mojolicious::Plugin::Fun';
@@ -309,8 +307,8 @@ The default format to render if C<format> is not set in the stash.
   my $default = $renderer->default_handler;
   $renderer   = $renderer->default_handler('ep');
 
-The default template handler to use for rendering in cases where auto
-detection doesn't work, like for C<inline> templates.
+The default template handler to use for rendering in cases where auto detection
+doesn't work, like for C<inline> templates.
 
 =head2 encoding
 
@@ -348,8 +346,8 @@ Directories to look for templates in, first one has the highest precedence.
 
 =head1 METHODS
 
-L<Mojolicious::Renderer> inherits all methods from L<Mojo::Base> and
-implements the following new ones.
+L<Mojolicious::Renderer> inherits all methods from L<Mojo::Base> and implements
+the following new ones.
 
 =head2 accepts
 
@@ -390,10 +388,10 @@ Get a C<DATA> section template by name, usually used by handlers.
 
   my $helper = $renderer->get_helper('url_for');
 
-Get a helper by full name, generate a helper dynamically for a prefix or
-return C<undef> if no helper or prefix could be found. Generated helpers
-return a proxy object containing the current controller object and on which
-nested helpers can be called.
+Get a helper by full name, generate a helper dynamically for a prefix or return
+C<undef> if no helper or prefix could be found. Generated helpers return a
+proxy object containing the current controller object and on which nested
+helpers can be called.
 
 =head2 render
 

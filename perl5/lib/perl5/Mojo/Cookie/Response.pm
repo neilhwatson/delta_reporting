@@ -2,49 +2,26 @@ package Mojo::Cookie::Response;
 use Mojo::Base 'Mojo::Cookie';
 
 use Mojo::Date;
-use Mojo::Util qw(quote split_header);
+use Mojo::Util qw(quote split_cookie_header);
 
-has [qw(domain httponly max_age origin path secure)];
+has [qw(domain expires httponly max_age origin path secure)];
 
-sub expires {
-  my $self = shift;
-
-  # Upgrade
-  my $e = $self->{expires};
-  return $self->{expires} = defined $e && !ref $e ? Mojo::Date->new($e) : $e
-    unless @_;
-  $self->{expires} = shift;
-
-  return $self;
-}
+my %ATTRS = map { $_ => 1 } qw(domain expires httponly max-age path secure);
 
 sub parse {
   my ($self, $str) = @_;
 
   my @cookies;
-  my $tree = split_header($str // '');
+  my $tree = split_cookie_header $str // '';
   while (my $pairs = shift @$tree) {
-    my $i = 0;
-    while (@$pairs) {
-      my ($name, $value) = (shift @$pairs, shift @$pairs);
+    my ($name, $value) = splice @$pairs, 0, 2;
+    push @cookies, $self->new(name => $name, value => $value // '');
 
-      # "expires" is a special case, thank you Netscape...
-      if ($name =~ /^expires$/i) {
-        push @$pairs, @{shift @$tree // []};
-        my $len = ($pairs->[0] // '') =~ /-/ ? 6 : 10;
-        $value .= join ' ', ',', grep {defined} splice @$pairs, 0, $len;
-      }
-
-      # This will only run once
-      push @cookies, $self->new(name => $name, value => $value // '') and next
-        unless $i++;
-
-      # Attributes (Netscape and RFC 6265)
-      next unless $name =~ /^(expires|domain|path|secure|max-age|httponly)$/i;
-      my $attr = lc $1;
-      $attr = 'max_age' if $attr eq 'max-age';
-      $cookies[-1]
-        ->$attr($attr eq 'secure' || $attr eq 'httponly' ? 1 : $value);
+    while (my ($name, $value) = splice @$pairs, 0, 2) {
+      next unless $ATTRS{my $attr = lc $name};
+      $value = Mojo::Date->new($value)->epoch if $attr eq 'expires';
+      $value = 1 if $attr eq 'secure' || $attr eq 'httponly';
+      $cookies[-1]{$attr eq 'max-age' ? 'max_age' : $attr} = $value;
     }
   }
 
@@ -54,28 +31,29 @@ sub parse {
 sub to_string {
   my $self = shift;
 
-  # Name and value (Netscape)
+  # Name and value
   return '' unless length(my $name = $self->name // '');
   my $value = $self->value // '';
-  my $cookie = join '=', $name, $value =~ /[,;" ]/ ? quote($value) : $value;
+  my $cookie = join '=', $name, $value =~ /[,;" ]/ ? quote $value : $value;
 
-  # "expires" (Netscape)
-  if (defined(my $e = $self->expires)) { $cookie .= "; expires=$e" }
+  # "expires"
+  my $expires = $self->expires;
+  $cookie .= '; expires=' . Mojo::Date->new($expires) if defined $expires;
 
-  # "domain" (Netscape)
+  # "domain"
   if (my $domain = $self->domain) { $cookie .= "; domain=$domain" }
 
-  # "path" (Netscape)
+  # "path"
   if (my $path = $self->path) { $cookie .= "; path=$path" }
 
-  # "secure" (Netscape)
+  # "secure"
   $cookie .= "; secure" if $self->secure;
 
-  # "Max-Age" (RFC 6265)
-  if (defined(my $max = $self->max_age)) { $cookie .= "; Max-Age=$max" }
-
-  # "HttpOnly" (RFC 6265)
+  # "HttpOnly"
   $cookie .= "; HttpOnly" if $self->httponly;
+
+  # "Max-Age"
+  if (defined(my $max = $self->max_age)) { $cookie .= "; Max-Age=$max" }
 
   return $cookie;
 }
@@ -113,6 +91,13 @@ implements the following new ones.
   $cookie    = $cookie->domain('localhost');
 
 Cookie domain.
+
+=head2 expires
+
+  my $expires = $cookie->expires;
+  $cookie     = $cookie->expires(time + 60);
+
+Expiration for cookie.
 
 =head2 httponly
 
@@ -155,14 +140,6 @@ connections.
 
 L<Mojo::Cookie::Response> inherits all methods from L<Mojo::Cookie> and
 implements the following new ones.
-
-=head2 expires
-
-  my $expires = $cookie->expires;
-  $cookie     = $cookie->expires(time + 60);
-  $cookie     = $cookie->expires(Mojo::Date->new(time + 60));
-
-Expiration for cookie.
 
 =head2 parse
 

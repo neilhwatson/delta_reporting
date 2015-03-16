@@ -2,23 +2,16 @@ package Mojo::Reactor;
 use Mojo::Base 'Mojo::EventEmitter';
 
 use Carp 'croak';
-use IO::Poll qw(POLLIN POLLPRI);
-use Mojo::Loader;
+use Mojo::Loader 'load_class';
 
 sub again { croak 'Method "again" not implemented by subclass' }
 
 sub detect {
   my $try = $ENV{MOJO_REACTOR} || 'Mojo::Reactor::EV';
-  return Mojo::Loader->new->load($try) ? 'Mojo::Reactor::Poll' : $try;
+  return load_class($try) ? 'Mojo::Reactor::Poll' : $try;
 }
 
-sub io { croak 'Method "io" not implemented by subclass' }
-
-# This may break at some point in the future, but is worth it for performance
-sub is_readable {
-  !(IO::Poll::_poll(0, fileno(pop), my $dummy = POLLIN | POLLPRI) == 0);
-}
-
+sub io         { croak 'Method "io" not implemented by subclass' }
 sub is_running { croak 'Method "is_running" not implemented by subclass' }
 
 sub next_tick { shift->timer(0 => @_) and return undef }
@@ -45,8 +38,6 @@ Mojo::Reactor - Low-level event reactor base class
   package Mojo::Reactor::MyEventLoop;
   use Mojo::Base 'Mojo::Reactor';
 
-  $ENV{MOJO_REACTOR} ||= 'Mojo::Reactor::MyEventLoop';
-
   sub again      {...}
   sub io         {...}
   sub is_running {...}
@@ -61,7 +52,8 @@ Mojo::Reactor - Low-level event reactor base class
 
 =head1 DESCRIPTION
 
-L<Mojo::Reactor> is an abstract base class for low-level event reactors.
+L<Mojo::Reactor> is an abstract base class for low-level event reactors, like
+L<Mojo::Reactor::EV> and L<Mojo::Reactor::Poll>.
 
 =head1 EVENTS
 
@@ -86,8 +78,8 @@ careful.
 
 =head1 METHODS
 
-L<Mojo::Reactor> inherits all methods from L<Mojo::EventEmitter> and
-implements the following new ones.
+L<Mojo::Reactor> inherits all methods from L<Mojo::EventEmitter> and implements
+the following new ones.
 
 =head2 again
 
@@ -118,13 +110,6 @@ readable or writable. Meant to be overloaded in a subclass.
     my ($reactor, $writable) = @_;
     say $writable ? 'Handle is writable' : 'Handle is readable';
   });
-
-=head2 is_readable
-
-  my $bool = $reactor->is_readable($handle);
-
-Quick non-blocking check if a handle is readable, useful for identifying
-tainted sockets.
 
 =head2 is_running
 
@@ -176,8 +161,11 @@ Remove all handles and timers. Meant to be overloaded in a subclass.
   $reactor->start;
 
 Start watching for I/O and timer events, this will block until L</"stop"> is
-called. Note that some reactors stop automatically if there are no events
-being watched anymore. Meant to be overloaded in a subclass.
+called. Note that some reactors stop automatically if there are no events being
+watched anymore. Meant to be overloaded in a subclass.
+
+  # Start reactor only if it is not running already
+  $reactor->start unless $reactor->is_running;
 
 =head2 stop
 
@@ -197,8 +185,7 @@ seconds. Meant to be overloaded in a subclass.
   $reactor = $reactor->watch($handle, $readable, $writable);
 
 Change I/O events to watch handle for with true and false values. Meant to be
-overloaded in a subclass. Note that this method requires an active I/O
-watcher.
+overloaded in a subclass. Note that this method requires an active I/O watcher.
 
   # Watch only for readable events
   $reactor->watch($handle, 1, 0);

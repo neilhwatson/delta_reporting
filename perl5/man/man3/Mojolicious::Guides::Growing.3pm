@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Guides::Growing 3"
-.TH Mojolicious::Guides::Growing 3 "2014-10-18" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Guides::Growing 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -142,9 +142,8 @@
 Mojolicious::Guides::Growing \- Growing
 .SH "OVERVIEW"
 .IX Header "OVERVIEW"
-This document explains the process of starting a Mojolicious::Lite
-prototype from scratch and growing it into a well-structured Mojolicious
-application.
+This document explains the process of starting a Mojolicious::Lite prototype
+from scratch and growing it into a well-structured Mojolicious application.
 .SH "CONCEPTS"
 .IX Header "CONCEPTS"
 Essentials every Mojolicious developer should know.
@@ -197,9 +196,9 @@ server for the \s-1HTML \s0\fIrepresentation\fR of the \f(CW\*(C`http://mojolici
 .Ve
 .PP
 The fundamental idea here is that all resources are uniquely addressable with
-URLs and every resource can have different representations such as \s-1HTML, RSS\s0
-or \s-1JSON.\s0 User interface concerns are separated from data storage concerns and
-all session state is kept client-side.
+URLs and every resource can have different representations such as \s-1HTML, RSS\s0 or
+\&\s-1JSON.\s0 User interface concerns are separated from data storage concerns and all
+session state is kept client-side.
 .PP
 .Vb 10
 \&  +\-\-\-\-\-\-\-\-\-+                        +\-\-\-\-\-\-\-\-\-\-\-\-+
@@ -230,13 +229,13 @@ Sessions solve this problem by allowing web applications to keep stateful
 information across several \s-1HTTP\s0 requests.
 .PP
 .Vb 2
-\&  GET /login?user=sri&pass=s3cret HTTP/1.1
+\&  GET /login?user=sebastian&pass=s3cret HTTP/1.1
 \&  Host: mojolicio.us
 \&
 \&  HTTP/1.1 200 OK
 \&  Set\-Cookie: sessionid=987654321
 \&  Content\-Length: 10
-\&  Hello sri.
+\&  Hello sebastian.
 \&
 \&  GET /protected HTTP/1.1
 \&  Host: mojolicio.us
@@ -245,7 +244,7 @@ information across several \s-1HTTP\s0 requests.
 \&  HTTP/1.1 200 OK
 \&  Set\-Cookie: sessionid=987654321
 \&  Content\-Length: 16
-\&  Hello again sri.
+\&  Hello again sebastian.
 .Ve
 .PP
 Traditionally all session data was stored on the server-side and only session
@@ -264,14 +263,14 @@ infrastructure requirements.
 \&\s-1TDD\s0 is a software development process where the developer starts writing
 failing test cases that define the desired functionality and then moves on to
 producing code that passes these tests. There are many advantages such as
-always having good test coverage and code being designed for testability,
-which will in turn often prevent future changes from breaking old code. Much
-of Mojolicious was developed using \s-1TDD.\s0
+always having good test coverage and code being designed for testability, which
+will in turn often prevent future changes from breaking old code. Much of
+Mojolicious was developed using \s-1TDD.\s0
 .SH "PROTOTYPE"
 .IX Header "PROTOTYPE"
 One of the main differences between Mojolicious and other web frameworks is
-that it also includes Mojolicious::Lite, a micro web framework optimized
-for rapid prototyping.
+that it also includes Mojolicious::Lite, a micro web framework optimized for
+rapid prototyping.
 .SS "Differences"
 .IX Subsection "Differences"
 You likely know the feeling, you've got a really cool idea and want to try it
@@ -288,7 +287,7 @@ organized \s-1CPAN\s0 distribution to maximize maintainability.
 .Vb 10
 \&  myapp                      # Application directory
 \&  |\- script                  # Script directory
-\&  |  +\- myapp                # Application script
+\&  |  +\- my_app               # Application script
 \&  |\- lib                     # Library directory
 \&  |  |\- MyApp.pm             # Application class
 \&  |  +\- MyApp                # Application namespace
@@ -348,7 +347,7 @@ fun thanks to automatic reloading.
 .PP
 .Vb 2
 \&  $ morbo ./myapp.pl
-\&  Server available at http://127.0.0.1:3000.
+\&  Server available at http://127.0.0.1:3000
 .Ve
 .PP
 Just save your changes and they will be automatically in effect the next time
@@ -362,9 +361,9 @@ It all starts with an \s-1HTTP\s0 request like this, sent by your browser.
 \&  Host: localhost:3000
 .Ve
 .PP
-Once the request has been received by the web server through the event loop,
-it will be passed on to Mojolicious, where it will be handled in a few
-simple steps.
+Once the request has been received by the web server through the event loop, it
+will be passed on to Mojolicious, where it will be handled in a few simple
+steps.
 .PP
 .Vb 6
 \&  1. Check if a static file exists that would meet the requirements.
@@ -408,9 +407,9 @@ separation of concerns more visible.
 \&  use warnings;
 \&
 \&  my $USERS = {
-\&    sri    => \*(Aqsecr3t\*(Aq,
-\&    marcus => \*(Aqlulz\*(Aq,
-\&    yko    => \*(Aqzeecaptain\*(Aq
+\&    joel      => \*(Aqlas3rs\*(Aq,
+\&    marcus    => \*(Aqlulz\*(Aq,
+\&    sebastian => \*(Aqsecr3t\*(Aq
 \&  };
 \&
 \&  sub new { bless {}, shift }
@@ -442,7 +441,7 @@ templates.
 \&  # Helper to lazy initialize and store our model object
 \&  helper users => sub { state $users = MyApp::Model::Users\->new };
 \&
-\&  # /?user=sri&pass=secr3t
+\&  # /?user=sebastian&pass=secr3t
 \&  any \*(Aq/\*(Aq => sub {
 \&    my $c = shift;
 \&
@@ -476,8 +475,8 @@ experience.
 .Ve
 .PP
 Test::Mojo is a scriptable \s-1HTTP\s0 user agent designed specifically for
-testing, with many fun state of the art features such as \s-1CSS\s0 selectors based
-on Mojo::DOM.
+testing, with many fun state of the art features such as \s-1CSS\s0 selectors based on
+Mojo::DOM.
 .PP
 .Vb 2
 \&  use Test::More;
@@ -499,8 +498,8 @@ on Mojo::DOM.
 \&    \->element_exists(\*(Aqform input[type="submit"]\*(Aq);
 \&
 \&  # Test login with valid credentials
-\&  $t\->post_ok(\*(Aq/\*(Aq => form => {user => \*(Aqsri\*(Aq, pass => \*(Aqsecr3t\*(Aq})
-\&    \->status_is(200)\->text_like(\*(Aqhtml body\*(Aq => qr/Welcome sri/);
+\&  $t\->post_ok(\*(Aq/\*(Aq => form => {user => \*(Aqsebastian\*(Aq, pass => \*(Aqsecr3t\*(Aq})
+\&    \->status_is(200)\->text_like(\*(Aqhtml body\*(Aq => qr/Welcome sebastian/);
 \&
 \&  # Test accessing a protected page
 \&  $t\->get_ok(\*(Aq/protected\*(Aq)\->status_is(200)\->text_like(\*(Aqa\*(Aq => qr/Logout/);
@@ -530,8 +529,8 @@ Mojolicious::Command::get.
 \&  $ ./myapp.pl get /
 \&  Wrong username or password.
 \&
-\&  $ ./myapp.pl get \-v \*(Aq/?user=sri&pass=secr3t\*(Aq
-\&  GET /?user=sri&pass=secr3t HTTP/1.1
+\&  $ ./myapp.pl get \-v \*(Aq/?user=sebastian&pass=secr3t\*(Aq
+\&  GET /?user=sebastian&pass=secr3t HTTP/1.1
 \&  User\-Agent: Mojolicious (Perl)
 \&  Connection: keep\-alive
 \&  Accept\-Encoding: gzip
@@ -545,7 +544,7 @@ Mojolicious::Command::get.
 \&  Content\-Length: 12
 \&  Content\-Type: text/plain
 \&
-\&  Welcome sri.
+\&  Welcome sebastian.
 .Ve
 .SS "State keeping"
 .IX Subsection "State keeping"
@@ -562,12 +561,12 @@ This passphrase is used by the \s-1HMAC\-SHA1\s0 algorithm to make signed cookie
 secure and can be changed at any time to invalidate all existing sessions.
 .PP
 .Vb 2
-\&  $c\->session(user => \*(Aqsri\*(Aq);
+\&  $c\->session(user => \*(Aqsebastian\*(Aq);
 \&  my $user = $c\->session(\*(Aquser\*(Aq);
 .Ve
 .PP
-By default all sessions expire after one hour, for more control you can use
-the \f(CW\*(C`expiration\*(C'\fR session value to set an expiration date in seconds from now.
+By default all sessions expire after one hour, for more control you can use the
+\&\f(CW\*(C`expiration\*(C'\fR session value to set an expiration date in seconds from now.
 .PP
 .Vb 1
 \&  $c\->session(expiration => 3600);
@@ -781,8 +780,8 @@ actual action code needs to be changed.
 .Ve
 .PP
 The \f(CW\*(C`startup\*(C'\fR method gets called right after instantiation and is the place
-where the whole application gets set up. Since full Mojolicious
-applications can use nested routes they have no need for \f(CW\*(C`group\*(C'\fR blocks.
+where the whole application gets set up. Since full Mojolicious applications
+can use nested routes they have no need for \f(CW\*(C`group\*(C'\fR blocks.
 .SS "Simplified application script"
 .IX Subsection "Simplified application script"
 \&\f(CW\*(C`myapp.pl\*(C'\fR itself can now be turned into a simplified application script to
@@ -795,9 +794,9 @@ allow running tests again.
 \&  use warnings;
 \&
 \&  use lib \*(Aqlib\*(Aq;
-\&  use Mojolicious::Commands;
 \&
 \&  # Start command line interface for application
+\&  require Mojolicious::Commands;
 \&  Mojolicious::Commands\->start_app(\*(AqMyApp\*(Aq);
 .Ve
 .PP
@@ -831,8 +830,8 @@ makes sense to split our action code from its routing information.
 \&  $ chmod 644 lib/MyApp/Controller/Login.pm
 .Ve
 .PP
-Once again the actual action code does not need to change, we just rename
-\&\f(CW$c\fR to \f(CW$self\fR since the controller is now the invocant.
+Once again the actual action code does not need to change, we just rename \f(CW$c\fR
+to \f(CW$self\fR since the controller is now the invocant.
 .PP
 .Vb 2
 \&  package MyApp::Controller::Login;
@@ -911,30 +910,12 @@ moved into the appropriate directories.
 .Ve
 .SS "Script"
 .IX Subsection "Script"
-Finally \f(CW\*(C`myapp.pl\*(C'\fR can be replaced with a proper Mojolicious script.
+Finally \f(CW\*(C`myapp.pl\*(C'\fR can be moved into a \f(CW\*(C`script\*(C'\fR directory and renamed to
+\&\f(CW\*(C`my_app\*(C'\fR to follow the \s-1CPAN\s0 standard.
 .PP
-.Vb 4
-\&  $ rm myapp.pl
+.Vb 2
 \&  $ mkdir script
-\&  $ touch script/myapp
-\&  $ chmod 744 script/myapp
-.Ve
-.PP
-Only a few small details change, since installable scripts can't use lib
-without breaking updated dual-life modules.
-.PP
-.Vb 1
-\&  #!/usr/bin/env perl
-\&
-\&  use strict;
-\&  use warnings;
-\&
-\&  use FindBin;
-\&  BEGIN { unshift @INC, "$FindBin::Bin/../lib" }
-\&
-\&  # Start command line interface for application
-\&  require Mojolicious::Commands;
-\&  Mojolicious::Commands\->start_app(\*(AqMyApp\*(Aq);
+\&  $ mv myapp.pl script/my_app
 .Ve
 .SS "Simplified tests"
 .IX Subsection "Simplified tests"
@@ -955,8 +936,8 @@ can be simplified.
 \&    \->element_exists(\*(Aqform input[name="pass"]\*(Aq)
 \&    \->element_exists(\*(Aqform input[type="submit"]\*(Aq);
 \&
-\&  $t\->post_ok(\*(Aq/\*(Aq => form => {user => \*(Aqsri\*(Aq, pass => \*(Aqsecr3t\*(Aq})
-\&    \->status_is(200)\->text_like(\*(Aqhtml body\*(Aq => qr/Welcome sri/);
+\&  $t\->post_ok(\*(Aq/\*(Aq => form => {user => \*(Aqsebastian\*(Aq, pass => \*(Aqsecr3t\*(Aq})
+\&    \->status_is(200)\->text_like(\*(Aqhtml body\*(Aq => qr/Welcome sebastian/);
 \&
 \&  $t\->get_ok(\*(Aq/protected\*(Aq)\->status_is(200)\->text_like(\*(Aqa\*(Aq => qr/Logout/);
 \&
@@ -973,7 +954,7 @@ And our final directory structure should be looking like this.
 .Vb 10
 \&  myapp
 \&  |\- script
-\&  |  +\- myapp
+\&  |  +\- my_app
 \&  |\- lib
 \&  |  |\- MyApp.pm
 \&  |  +\- MyApp

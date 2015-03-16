@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Routes::Route 3"
-.TH Mojolicious::Routes::Route 3 "2014-10-10" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Routes::Route 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -223,28 +223,11 @@ current parent if necessary.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object matching any of the listed \s-1HTTP\s0
-request methods or all. See also the Mojolicious::Lite tutorial for many
-more argument variations.
+request methods or all. See also Mojolicious::Guides::Tutorial for many more
+argument variations.
 .PP
 .Vb 1
 \&  $r\->any(\*(Aq/user\*(Aq)\->to(\*(Aquser#whatever\*(Aq);
-.Ve
-.SS "bridge"
-.IX Subsection "bridge"
-.Vb 4
-\&  my $route = $r\->bridge;
-\&  my $route = $r\->bridge(\*(Aq/:action\*(Aq);
-\&  my $route = $r\->bridge(\*(Aq/:action\*(Aq, action => qr/\ew+/);
-\&  my $route = $r\->bridge(format => 0);
-.Ve
-.PP
-Low-level generator for nested routes with their own intermediate destination,
-returns a Mojolicious::Routes::Route object.
-.PP
-.Vb 3
-\&  my $auth = $r\->bridge(\*(Aq/user\*(Aq)\->to(\*(Aquser#auth\*(Aq);
-\&  $auth\->get(\*(Aq/show\*(Aq)\->to(\*(Aq#show\*(Aq);
-\&  $auth\->post(\*(Aq/create\*(Aq)\->to(\*(Aq#create\*(Aq);
 .Ve
 .SS "delete"
 .IX Subsection "delete"
@@ -255,9 +238,8 @@ returns a Mojolicious::Routes::Route object.
 \&  my $route = $r\->delete(\*(Aq/:foo\*(Aq => [foo => qr/\ew+/] => sub {...});
 .Ve
 .PP
-Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`DELETE\*(C'\fR
-requests. See also the Mojolicious::Lite tutorial for many more argument
-variations.
+Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`DELETE\*(C'\fR requests.
+See also Mojolicious::Guides::Tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->delete(\*(Aq/user\*(Aq)\->to(\*(Aquser#remove\*(Aq);
@@ -295,7 +277,7 @@ generated ones.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`GET\*(C'\fR requests.
-See also the Mojolicious::Lite tutorial for many more argument variations.
+See also Mojolicious::Guides::Tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->get(\*(Aq/user\*(Aq)\->to(\*(Aquser#show\*(Aq);
@@ -345,13 +327,15 @@ the current route.
 .Ve
 .SS "new"
 .IX Subsection "new"
-.Vb 2
+.Vb 4
 \&  my $r = Mojolicious::Routes::Route\->new;
-\&  my $r = Mojolicious::Routes::Route\->new(\*(Aq/:controller/:action\*(Aq);
+\&  my $r = Mojolicious::Routes::Route\->new(\*(Aq/:action\*(Aq);
+\&  my $r = Mojolicious::Routes::Route\->new(\*(Aq/:action\*(Aq, action => qr/\ew+/);
+\&  my $r = Mojolicious::Routes::Route\->new(format => 0);
 .Ve
 .PP
-Construct a new Mojolicious::Routes::Route object and \*(L"parse\*(R" pattern
-if necessary.
+Construct a new Mojolicious::Routes::Route object and \*(L"parse\*(R" pattern if
+necessary.
 .SS "options"
 .IX Subsection "options"
 .Vb 4
@@ -362,7 +346,7 @@ if necessary.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`OPTIONS\*(C'\fR
-requests. See also the Mojolicious::Lite tutorial for many more argument
+requests. See also Mojolicious::Guides::Tutorial for many more argument
 variations.
 .PP
 .Vb 1
@@ -402,7 +386,7 @@ Parse pattern.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`PATCH\*(C'\fR requests.
-See also the Mojolicious::Lite tutorial for many more argument variations.
+See also Mojolicious::Guides::Tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->patch(\*(Aq/user\*(Aq)\->to(\*(Aquser#update\*(Aq);
@@ -417,7 +401,7 @@ See also the Mojolicious::Lite tutorial for many more argument variations.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`POST\*(C'\fR requests.
-See also the Mojolicious::Lite tutorial for many more argument variations.
+See also Mojolicious::Guides::Tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->post(\*(Aq/user\*(Aq)\->to(\*(Aquser#create\*(Aq);
@@ -432,7 +416,7 @@ See also the Mojolicious::Lite tutorial for many more argument variations.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object matching only \f(CW\*(C`PUT\*(C'\fR requests.
-See also the Mojolicious::Lite tutorial for many more argument variations.
+See also Mojolicious::Guides::Tutorial for many more argument variations.
 .PP
 .Vb 1
 \&  $r\->put(\*(Aq/user\*(Aq)\->to(\*(Aquser#replace\*(Aq);
@@ -513,7 +497,7 @@ Stringify the whole route.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object for a nested route with its own
-intermediate destination. See also the Mojolicious::Lite tutorial for many
+intermediate destination. See also Mojolicious::Guides::Tutorial for many
 more argument variations.
 .PP
 .Vb 3
@@ -546,7 +530,7 @@ restrictions.
 .Ve
 .PP
 Generate Mojolicious::Routes::Route object matching only WebSocket
-handshakes. See also the Mojolicious::Lite tutorial for many more argument
+handshakes. See also Mojolicious::Guides::Tutorial for many more argument
 variations.
 .PP
 .Vb 1

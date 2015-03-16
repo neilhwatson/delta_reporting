@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Cookie::Response 3"
-.TH Mojo::Cookie::Response 3 "2014-09-02" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Cookie::Response 3 "2015-02-21" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -166,6 +166,14 @@ implements the following new ones.
 .Ve
 .PP
 Cookie domain.
+.SS "expires"
+.IX Subsection "expires"
+.Vb 2
+\&  my $expires = $cookie\->expires;
+\&  $cookie     = $cookie\->expires(time + 60);
+.Ve
+.PP
+Expiration for cookie.
 .SS "httponly"
 .IX Subsection "httponly"
 .Vb 2
@@ -212,15 +220,6 @@ connections.
 .IX Header "METHODS"
 Mojo::Cookie::Response inherits all methods from Mojo::Cookie and
 implements the following new ones.
-.SS "expires"
-.IX Subsection "expires"
-.Vb 3
-\&  my $expires = $cookie\->expires;
-\&  $cookie     = $cookie\->expires(time + 60);
-\&  $cookie     = $cookie\->expires(Mojo::Date\->new(time + 60));
-.Ve
-.PP
-Expiration for cookie.
 .SS "parse"
 .IX Subsection "parse"
 .Vb 1

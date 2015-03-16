@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::URL 3"
-.TH Mojo::URL 3 "2014-10-28" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::URL 3 "2015-02-27" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -146,8 +146,7 @@ Mojo::URL \- Uniform Resource Locator
 \&  use Mojo::URL;
 \&
 \&  # Parse
-\&  my $url
-\&    = Mojo::URL\->new(\*(Aqhttp://sri:foobar@example.com:3000/foo/bar?foo=bar#23\*(Aq);
+\&  my $url = Mojo::URL\->new(\*(Aqhttp://sri:foo@example.com:3000/foo?foo=bar#23\*(Aq);
 \&  say $url\->scheme;
 \&  say $url\->userinfo;
 \&  say $url\->host;
@@ -163,16 +162,17 @@ Mojo::URL \- Uniform Resource Locator
 \&  $url\->host(\*(Aqexample.com\*(Aq);
 \&  $url\->port(3000);
 \&  $url\->path(\*(Aq/foo/bar\*(Aq);
-\&  $url\->query\->param(foo => \*(Aqbar\*(Aq);
+\&  $url\->query(foo => \*(Aqbar\*(Aq);
 \&  $url\->fragment(23);
 \&  say "$url";
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 Mojo::URL implements a subset of
-\&\s-1RFC 3986\s0 <http://tools.ietf.org/html/rfc3986> and
-\&\s-1RFC 3987\s0 <http://tools.ietf.org/html/rfc3987> for Uniform Resource Locators
-with support for \s-1IDNA\s0 and IRIs.
+\&\s-1RFC 3986\s0 <http://tools.ietf.org/html/rfc3986>,
+\&\s-1RFC 3987\s0 <http://tools.ietf.org/html/rfc3987> and the
+\&\s-1URL\s0 Living Standard <https://url.spec.whatwg.org> for Uniform Resource
+Locators with support for \s-1IDNA\s0 and IRIs.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
 Mojo::URL implements the following attributes.
@@ -188,7 +188,7 @@ Base of this \s-1URL,\s0 defaults to a Mojo::URL object.
 .IX Subsection "fragment"
 .Vb 2
 \&  my $fragment = $url\->fragment;
-\&  $url         = $url\->fragment(\*(Aqfoo\*(Aq);
+\&  $url         = $url\->fragment(\*(AqXmojoliciousX\*(Aq);
 .Ve
 .PP
 Fragment part of this \s-1URL.\s0
@@ -220,7 +220,7 @@ Scheme part of this \s-1URL.\s0
 .IX Subsection "userinfo"
 .Vb 2
 \&  my $info = $url\->userinfo;
-\&  $url     = $url\->userinfo(\*(Aqroot:pass%3Bw0rd\*(Aq);
+\&  $url     = $url\->userinfo(\*(Aqroot:X\*(Aq);
 .Ve
 .PP
 Userinfo part of this \s-1URL.\s0
@@ -232,10 +232,18 @@ following new ones.
 .IX Subsection "authority"
 .Vb 2
 \&  my $authority = $url\->authority;
-\&  $url          = $url\->authority(\*(Aqroot:pass%3Bw0rd@localhost:8080\*(Aq);
+\&  $url          = $url\->authority(\*(Aqroot:%E2%99%A5@localhost:8080\*(Aq);
 .Ve
 .PP
 Authority part of this \s-1URL.\s0
+.PP
+.Vb 2
+\&  # "root:%E2%99%A5@xn\-\-n3h.net:8080"
+\&  Mojo::URL\->new(\*(Aqhttp://root:X@X.net:8080/test\*(Aq)\->authority;
+\&
+\&  # "root@example.com"
+\&  Mojo::URL\->new(\*(Aqhttp://root@example.com/test\*(Aq)\->authority;
+.Ve
 .SS "clone"
 .IX Subsection "clone"
 .Vb 1
@@ -254,6 +262,9 @@ Normalized version of \*(L"host\*(R" and \*(L"port\*(R".
 .Vb 2
 \&  # "xn\-\-n3h.net:8080"
 \&  Mojo::URL\->new(\*(Aqhttp://X.net:8080/test\*(Aq)\->host_port;
+\&
+\&  # "example.com"
+\&  Mojo::URL\->new(\*(Aqhttp://example.com/test\*(Aq)\->host_port;
 .Ve
 .SS "ihost"
 .IX Subsection "ihost"
@@ -267,6 +278,9 @@ Host part of this \s-1URL\s0 in punycode format.
 .Vb 2
 \&  # "xn\-\-n3h.net"
 \&  Mojo::URL\->new(\*(Aqhttp://X.net\*(Aq)\->ihost;
+\&
+\&  # "example.com"
+\&  Mojo::URL\->new(\*(Aqhttp://example.com\*(Aq)\->ihost;
 .Ve
 .SS "is_abs"
 .IX Subsection "is_abs"
@@ -275,6 +289,17 @@ Host part of this \s-1URL\s0 in punycode format.
 .Ve
 .PP
 Check if \s-1URL\s0 is absolute.
+.PP
+.Vb 3
+\&  # True
+\&  Mojo::URL\->new(\*(Aqhttp://example.com\*(Aq)\->is_abs;
+\&  Mojo::URL\->new(\*(Aqhttp://example.com/test/index.html\*(Aq)\->is_abs;
+\&
+\&  # False
+\&  Mojo::URL\->new(\*(Aqtest/index.html\*(Aq)\->is_abs;
+\&  Mojo::URL\->new(\*(Aq/test/index.html\*(Aq)\->is_abs;
+\&  Mojo::URL\->new(\*(Aq//example.com/test/index.html\*(Aq)\->is_abs;
+.Ve
 .SS "new"
 .IX Subsection "new"
 .Vb 2
@@ -305,15 +330,21 @@ Parse relative or absolute \s-1URL.\s0
 .IX Subsection "path"
 .Vb 4
 \&  my $path = $url\->path;
-\&  $url     = $url\->path(\*(Aq/foo/bar\*(Aq);
 \&  $url     = $url\->path(\*(Aqfoo/bar\*(Aq);
+\&  $url     = $url\->path(\*(Aq/foo/bar\*(Aq);
 \&  $url     = $url\->path(Mojo::Path\->new);
 .Ve
 .PP
-Path part of this \s-1URL,\s0 relative paths will be merged with the existing path,
-defaults to a Mojo::Path object.
+Path part of this \s-1URL,\s0 relative paths will be merged with
+\&\*(L"merge\*(R" in Mojo::Path, defaults to a Mojo::Path object.
 .PP
 .Vb 2
+\&  # "perldoc"
+\&  Mojo::URL\->new(\*(Aqhttp://example.com/perldoc/Mojo\*(Aq)\->path\->parts\->[0];
+\&
+\&  # "/perldoc/DOM/HTML"
+\&  Mojo::URL\->new(\*(Aqhttp://example.com/perldoc/Mojo\*(Aq)\->path\->merge(\*(AqDOM/HTML\*(Aq);
+\&
 \&  # "http://example.com/DOM/HTML"
 \&  Mojo::URL\->new(\*(Aqhttp://example.com/perldoc/Mojo\*(Aq)\->path(\*(Aq/DOM/HTML\*(Aq);
 \&
@@ -330,6 +361,14 @@ defaults to a Mojo::Path object.
 .Ve
 .PP
 Normalized version of \*(L"path\*(R" and \*(L"query\*(R".
+.PP
+.Vb 2
+\&  # "/test?a=1&b=2"
+\&  Mojo::URL\->new(\*(Aqhttp://example.com/test?a=1&b=2\*(Aq)\->path_query;
+\&
+\&  # "/"
+\&  Mojo::URL\->new(\*(Aqhttp://example.com/\*(Aq)\->path_query;
+.Ve
 .SS "protocol"
 .IX Subsection "protocol"
 .Vb 1
@@ -344,20 +383,26 @@ Normalized version of \*(L"scheme\*(R".
 .Ve
 .SS "query"
 .IX Subsection "query"
-.Vb 5
+.Vb 6
 \&  my $query = $url\->query;
-\&  $url      = $url\->query(replace => \*(Aqwith\*(Aq);
 \&  $url      = $url\->query([merge => \*(Aqwith\*(Aq]);
 \&  $url      = $url\->query({append => \*(Aqto\*(Aq});
+\&  $url      = $url\->query(replace => \*(Aqwith\*(Aq);
+\&  $url      = $url\->query(\*(Aqa=1&b=2\*(Aq);
 \&  $url      = $url\->query(Mojo::Parameters\->new);
 .Ve
 .PP
-Query part of this \s-1URL,\s0 pairs in an array will be merged and pairs in a hash
-appended, defaults to a Mojo::Parameters object.
+Query part of this \s-1URL,\s0 key/value pairs in an array reference will be merged
+with \*(L"merge\*(R" in Mojo::Parameters, and key/value pairs in a hash reference
+appended with \*(L"append\*(R" in Mojo::Parameters, defaults to a Mojo::Parameters
+object.
 .PP
 .Vb 2
 \&  # "2"
 \&  Mojo::URL\->new(\*(Aqhttp://example.com?a=1&b=2\*(Aq)\->query\->param(\*(Aqb\*(Aq);
+\&
+\&  # "a=2&b=2&c=3"
+\&  Mojo::URL\->new(\*(Aqhttp://example.com?a=1&b=2\*(Aq)\->query\->merge(a => 2, c => 3);
 \&
 \&  # "http://example.com?a=2&c=3"
 \&  Mojo::URL\->new(\*(Aqhttp://example.com?a=1&b=2\*(Aq)\->query(a => 2, c => 3);

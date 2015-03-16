@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Commands 3"
-.TH Mojolicious::Commands 3 "2014-09-01" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Commands 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -149,11 +149,11 @@ Mojolicious::Commands \- Command line interface
 \&       work without commands.
 \&
 \&  Options (for all commands):
-\&    \-h, \-\-help          Get more information on a specific command.
+\&    \-h, \-\-help          Get more information on a specific command
 \&        \-\-home <path>   Path to your applications home directory, defaults to
-\&                        the value of MOJO_HOME or auto detection.
+\&                        the value of MOJO_HOME or auto detection
 \&    \-m, \-\-mode <name>   Operating mode for your application, defaults to the
-\&                        value of MOJO_MODE/PLACK_ENV or "development".
+\&                        value of MOJO_MODE/PLACK_ENV or "development"
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -169,8 +169,8 @@ These commands are available by default.
 \&  $ ./myapp.pl cgi
 .Ve
 .PP
-Use Mojolicious::Command::cgi to start application with \s-1CGI\s0 backend,
-usually auto detected.
+Use Mojolicious::Command::cgi to start application with \s-1CGI\s0 backend, usually
+auto detected.
 .SS "cpanify"
 .IX Subsection "cpanify"
 .Vb 1
@@ -232,8 +232,8 @@ Mojolicious::Lite application.
 \&  $ ./myapp.pl generate makefile
 .Ve
 .PP
-Use Mojolicious::Command::generate::makefile to generate \f(CW\*(C`Makefile.PL\*(C'\fR
-file for application.
+Use Mojolicious::Command::generate::makefile to generate \f(CW\*(C`Makefile.PL\*(C'\fR file
+for application.
 .SS "generate plugin"
 .IX Subsection "generate plugin"
 .Vb 1
@@ -314,7 +314,7 @@ directory.
 \&  $ ./myapp.pl version
 .Ve
 .PP
-Use Mojolicious::Command::version to show version information for installed
+Use Mojolicious::Command::version to show version information for available
 core and optional modules, very useful for debugging.
 .SH "ATTRIBUTES"
 .IX Header "ATTRIBUTES"
@@ -324,7 +324,7 @@ and implements the following new ones.
 .IX Subsection "hint"
 .Vb 2
 \&  my $hint  = $commands\->hint;
-\&  $commands = $commands\->hint(\*(AqFoo!\*(Aq);
+\&  $commands = $commands\->hint(\*(AqFoo\*(Aq);
 .Ve
 .PP
 Short hint shown after listing available commands.
@@ -355,12 +355,11 @@ Mojolicious::Commands inherits all methods from Mojolicious::Command and
 implements the following new ones.
 .SS "detect"
 .IX Subsection "detect"
-.Vb 2
+.Vb 1
 \&  my $env = $commands\->detect;
-\&  my $env = $commands\->detect($guess);
 .Ve
 .PP
-Try to detect environment.
+Try to detect environment or return \f(CW\*(C`undef\*(C'\fR if none could be detected.
 .SS "run"
 .IX Subsection "run"
 .Vb 2
@@ -377,10 +376,12 @@ disabled with the \f(CW\*(C`MOJO_NO_DETECT\*(C'\fR environment variable.
 \&  Mojolicious::Commands\->start_app(MyApp => @ARGV);
 .Ve
 .PP
-Load application from class and start the command line interface for it.
+Load application from class and start the command line interface for it. Note
+that the options \f(CW\*(C`\-h\*(C'\fR/\f(CW\*(C`\-\-help\*(C'\fR, \f(CW\*(C`\-\-home\*(C'\fR and \f(CW\*(C`\-m\*(C'\fR/\f(CW\*(C`\-\-mode\*(C'\fR, which are
+shared by all commands, will be parsed from \f(CW@ARGV\fR during compile time.
 .PP
 .Vb 2
-\&  # Always start daemon for application and ignore @ARGV
+\&  # Always start daemon for application
 \&  Mojolicious::Commands\->start_app(\*(AqMyApp\*(Aq, \*(Aqdaemon\*(Aq, \*(Aq\-l\*(Aq, \*(Aqhttp://*:8080\*(Aq);
 .Ve
 .SH "SEE ALSO"

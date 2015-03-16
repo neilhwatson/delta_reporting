@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Static 3"
-.TH Mojolicious::Static 3 "2014-10-09" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Static 3 "2015-02-26" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -165,8 +165,9 @@ Mojolicious::Static implements the following attributes.
 \&  $static     = $static\->classes([\*(Aqmain\*(Aq]);
 .Ve
 .PP
-Classes to use for finding files in \f(CW\*(C`DATA\*(C'\fR sections, first one has the
-highest precedence, defaults to \f(CW\*(C`main\*(C'\fR.
+Classes to use for finding files in \f(CW\*(C`DATA\*(C'\fR sections with Mojo::Loader,
+first one has the highest precedence, defaults to \f(CW\*(C`main\*(C'\fR. Only files with
+exactly one extension will be used, like \f(CW\*(C`index.html\*(C'\fR.
 .PP
 .Vb 2
 \&  # Add another class with static files in DATA section
@@ -204,8 +205,9 @@ Serve static file for Mojolicious::Controller object.
 .Ve
 .PP
 Build Mojo::Asset::File or Mojo::Asset::Memory object for a file,
-relative to \*(L"paths\*(R" or from \*(L"classes\*(R". Note that this method does not
-protect from traversing to parent directories.
+relative to \*(L"paths\*(R" or from \*(L"classes\*(R", or return \f(CW\*(C`undef\*(C'\fR if it doesn't
+exist. Note that this method does not protect from traversing to parent
+directories.
 .PP
 .Vb 1
 \&  my $content = $static\->file(\*(Aqfoo/bar.html\*(Aq)\->slurp;
@@ -242,8 +244,8 @@ Add \f(CW\*(C`Last\-Modified\*(C'\fR header before comparing.
 \&  my $bool = $static\->serve(Mojolicious::Controller\->new, \*(Aq../lib/MyApp.pm\*(Aq);
 .Ve
 .PP
-Serve a specific file, relative to \*(L"paths\*(R" or from \*(L"classes\*(R". Note
-that this method does not protect from traversing to parent directories.
+Serve a specific file, relative to \*(L"paths\*(R" or from \*(L"classes\*(R". Note that
+this method does not protect from traversing to parent directories.
 .SS "serve_asset"
 .IX Subsection "serve_asset"
 .Vb 1

@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojolicious::Plugin::DefaultHelpers 3"
-.TH Mojolicious::Plugin::DefaultHelpers 3 "2014-10-08" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojolicious::Plugin::DefaultHelpers 3 "2015-03-03" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -169,8 +169,8 @@ Mojolicious::Plugin::DefaultHelpers implements the following helpers.
 \&  my $format  = $c\->accepts(\*(Aqhtml\*(Aq, \*(Aqjson\*(Aq, \*(Aqtxt\*(Aq);
 .Ve
 .PP
-Select best possible representation for resource from \f(CW\*(C`Accept\*(C'\fR request
-header, \f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \f(CW\*(C`GET\*(C'\fR/\f(CW\*(C`POST\*(C'\fR parameter with
+Select best possible representation for resource from \f(CW\*(C`Accept\*(C'\fR request header,
+\&\f(CW\*(C`format\*(C'\fR stash value or \f(CW\*(C`format\*(C'\fR \f(CW\*(C`GET\*(C'\fR/\f(CW\*(C`POST\*(C'\fR parameter with
 \&\*(L"accepts\*(R" in Mojolicious::Renderer, defaults to returning the first extension
 if no preference could be detected.
 .PP
@@ -228,10 +228,10 @@ Alias for \*(L"config\*(R" in Mojo.
 \&  %= content
 .Ve
 .PP
-Store partial rendered content in named buffer and retrieve it, defaults to
-retrieving the named buffer \f(CW\*(C`content\*(C'\fR, which is commonly used for the
-renderers \f(CW\*(C`layout\*(C'\fR and \f(CW\*(C`extends\*(C'\fR features. Note that new content will be
-ignored if the named buffer is already in use.
+Store partial rendered content in a named buffer and retrieve it later,
+defaults to retrieving the named buffer \f(CW\*(C`content\*(C'\fR, which is commonly used for
+the renderers \f(CW\*(C`layout\*(C'\fR and \f(CW\*(C`extends\*(C'\fR features. New content will be ignored if
+the named buffer is already in use.
 .SS "content_for"
 .IX Subsection "content_for"
 .Vb 4
@@ -241,8 +241,8 @@ ignored if the named buffer is already in use.
 \&  %= content_for \*(Aqfoo\*(Aq
 .Ve
 .PP
-Append partial rendered content to named buffer and retrieve it. Note that
-named buffers are shared with the \*(L"content\*(R" helper.
+Same as \*(L"content\*(R", but appends content to named buffers if they are already
+in use.
 .PP
 .Vb 7
 \&  % content_for message => begin
@@ -251,7 +251,28 @@ named buffers are shared with the \*(L"content\*(R" helper.
 \&  % content_for message => begin
 \&    world!
 \&  % end
-\&  %= content_for \*(Aqmessage\*(Aq
+\&  %= content \*(Aqmessage\*(Aq
+.Ve
+.SS "content_with"
+.IX Subsection "content_with"
+.Vb 4
+\&  % content_with foo => begin
+\&    test
+\&  % end
+\&  %= content_with \*(Aqfoo\*(Aq
+.Ve
+.PP
+Same as \*(L"content\*(R", but replaces content of named buffers if they are
+already in use.
+.PP
+.Vb 7
+\&  % content message => begin
+\&    world!
+\&  % end
+\&  % content_with message => begin
+\&    Hello <%= content \*(Aqmessage\*(Aq %>
+\&  % end
+\&  %= content \*(Aqmessage\*(Aq
 .Ve
 .SS "csrf_token"
 .IX Subsection "csrf_token"
@@ -276,12 +297,12 @@ Check or get name of current route.
 \&  $c\->delay(sub {...}, sub {...});
 .Ve
 .PP
-Disable automatic rendering and use \*(L"delay\*(R" in Mojo::IOLoop to manage
-callbacks and control the flow of events, which can help you avoid deep nested
-closures and memory leaks that often result from continuation-passing style.
-Also keeps a reference to \*(L"tx\*(R" in Mojolicious::Controller in case the
-underlying connection gets closed early, and calls \*(L"reply\->exception\*(R"
-if an exception gets thrown in one of the steps, breaking the chain.
+Disable automatic rendering and use \*(L"delay\*(R" in Mojo::IOLoop to manage callbacks
+and control the flow of events, which can help you avoid deep nested closures
+and memory leaks that often result from continuation-passing style. Also keeps
+a reference to \*(L"tx\*(R" in Mojolicious::Controller in case the underlying
+connection gets closed early, and calls \*(L"reply\->exception\*(R" if an
+exception gets thrown in one of the steps, breaking the chain.
 .PP
 .Vb 5
 \&  # Longer version
@@ -308,7 +329,8 @@ if an exception gets thrown in one of the steps, breaking the chain.
 \&  %= dumper {some => \*(Aqdata\*(Aq}
 .Ve
 .PP
-Dump a Perl data structure with \*(L"dumper\*(R" in Mojo::Util.
+Dump a Perl data structure with \*(L"dumper\*(R" in Mojo::Util, very useful for
+debugging.
 .SS "extends"
 .IX Subsection "extends"
 .Vb 2
@@ -316,7 +338,7 @@ Dump a Perl data structure with \*(L"dumper\*(R" in Mojo::Util.
 \&  % extends \*(Aqblue\*(Aq, title => \*(AqBlue!\*(Aq;
 .Ve
 .PP
-Set \f(CW\*(C`extends\*(C'\fR stash value, all additional pairs get merged into the
+Set \f(CW\*(C`extends\*(C'\fR stash value, all additional key/value pairs get merged into the
 \&\*(L"stash\*(R".
 .SS "flash"
 .IX Subsection "flash"
@@ -345,7 +367,7 @@ timeout if possible.
 \&  %= include \*(Aqmenubar\*(Aq, format => \*(Aqtxt\*(Aq
 .Ve
 .PP
-Alias for \f(CW\*(C`Mojolicious::Controller/"render_to_string"\*(C'\fR.
+Alias for \*(L"render_to_string\*(R" in Mojolicious::Controller.
 .SS "is_fresh"
 .IX Subsection "is_fresh"
 .Vb 3
@@ -359,8 +381,8 @@ Check freshness of request by comparing the \f(CW\*(C`If\-None\-Match\*(C'\fR an
 response headers with \*(L"is_fresh\*(R" in Mojolicious::Static.
 .PP
 .Vb 4
-\&  # Add ETag header and check freshness before rendering
-\&  $c\->is_fresh(etag => \*(Aqabc\*(Aq)
+\&  # Add ETag/Last\-Modified headers and check freshness before rendering
+\&  $c\->is_fresh(etag => \*(Aqabc\*(Aq, last_modified => 1424985708)
 \&    ? $c\->rendered(304)
 \&    : $c\->render(text => \*(AqI X Mojolicious!\*(Aq);
 .Ve
@@ -371,7 +393,7 @@ response headers with \*(L"is_fresh\*(R" in Mojolicious::Static.
 \&  % layout \*(Aqgreen\*(Aq, title => \*(AqGreen!\*(Aq;
 .Ve
 .PP
-Set \f(CW\*(C`layout\*(C'\fR stash value, all additional pairs get merged into the
+Set \f(CW\*(C`layout\*(C'\fR stash value, all additional key/value pairs get merged into the
 \&\*(L"stash\*(R".
 .SS "param"
 .IX Subsection "param"
@@ -396,6 +418,12 @@ Reply with a Mojo::Asset::File or Mojo::Asset::Memory object using
 \&  $asset\->add_chunk(\*(AqHello World!\*(Aq)\->mtime(784111777);
 \&  $c\->res\->headers\->content_type(\*(Aqtext/plain\*(Aq);
 \&  $c\->reply\->asset($asset);
+\&
+\&  # Serve static file if it exists
+\&  if (my $asset = $c\->app\->static\->file(\*(Aqimages/logo.png\*(Aq)) {
+\&    $c\->res\->headers\->content_type(\*(Aqimage/png\*(Aq);
+\&    $c\->reply\->asset($asset);
+\&  }
 .Ve
 .SS "reply\->exception"
 .IX Subsection "reply->exception"
@@ -406,8 +434,8 @@ Reply with a Mojo::Asset::File or Mojo::Asset::Memory object using
 .PP
 Render the exception template \f(CW\*(C`exception.$mode.$format.*\*(C'\fR or
 \&\f(CW\*(C`exception.$format.*\*(C'\fR and set the response status code to \f(CW500\fR. Also sets
-the stash values \f(CW\*(C`exception\*(C'\fR to a Mojo::Exception object and \f(CW\*(C`snapshot\*(C'\fR
-to a copy of the \*(L"stash\*(R" for use in the templates.
+the stash values \f(CW\*(C`exception\*(C'\fR to a Mojo::Exception object and \f(CW\*(C`snapshot\*(C'\fR to
+a copy of the \*(L"stash\*(R" for use in the templates.
 .SS "reply\->not_found"
 .IX Subsection "reply->not_found"
 .Vb 1
@@ -425,9 +453,9 @@ templates.
 \&  my $bool = $c\->reply\->static(\*(Aq../lib/MyApp.pm\*(Aq);
 .Ve
 .PP
-Reply with a static file using \*(L"serve\*(R" in Mojolicious::Static, usually from
-the \f(CW\*(C`public\*(C'\fR directories or \f(CW\*(C`DATA\*(C'\fR sections of your application. Note that
-this helper does not protect from traversing to parent directories.
+Reply with a static file using \*(L"static\*(R" in Mojolicious, usually from the
+\&\f(CW\*(C`public\*(C'\fR directories or \f(CW\*(C`DATA\*(C'\fR sections of your application. Note that this
+helper does not protect from traversing to parent directories.
 .PP
 .Vb 3
 \&  # Serve file with a custom content type
@@ -461,8 +489,8 @@ Alias for \*(L"stash\*(R" in Mojolicious::Controller.
 \&  % title \*(AqWelcome!\*(Aq, foo => \*(Aqbar\*(Aq;
 .Ve
 .PP
-Get of set \f(CW\*(C`title\*(C'\fR stash value, all additional pairs get merged into the
-\&\*(L"stash\*(R".
+Get or set \f(CW\*(C`title\*(C'\fR stash value, all additional key/value pairs get merged into
+the \*(L"stash\*(R".
 .SS "ua"
 .IX Subsection "ua"
 .Vb 1

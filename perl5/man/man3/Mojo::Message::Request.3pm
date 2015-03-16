@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Message::Request 3"
-.TH Mojo::Message::Request 3 "2014-10-08" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Message::Request 3 "2015-03-02" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -165,8 +165,8 @@ Mojo::Message::Request \- HTTP request
 .IX Header "DESCRIPTION"
 Mojo::Message::Request is a container for \s-1HTTP\s0 requests based on
 \&\s-1RFC 7230\s0 <http://tools.ietf.org/html/rfc7230>,
-\&\s-1RFC 7231\s0 <http://tools.ietf.org/html/rfc7235>,
-\&\s-1RFC 7231\s0 <http://tools.ietf.org/html/rfc7235> and
+\&\s-1RFC 7231\s0 <http://tools.ietf.org/html/rfc7231>,
+\&\s-1RFC 7235\s0 <http://tools.ietf.org/html/rfc7235> and
 \&\s-1RFC 2817\s0 <http://tools.ietf.org/html/rfc2817>.
 .SH "EVENTS"
 .IX Header "EVENTS"
@@ -210,9 +210,9 @@ Direct access to the \f(CW\*(C`CGI\*(C'\fR or \f(CW\*(C`PSGI\*(C'\fR environment
 .PP
 .Vb 4
 \&  # Get request information
-\&  say $req\->url\->to_abs\->userinfo;
-\&  say $req\->url\->to_abs\->host;
-\&  say $req\->url\->to_abs\->path;
+\&  my $info = $req\->url\->to_abs\->userinfo;
+\&  my $host = $req\->url\->to_abs\->host;
+\&  my $path = $req\->url\->to_abs\->path;
 .Ve
 .SS "reverse_proxy"
 .IX Subsection "reverse_proxy"
@@ -242,6 +242,11 @@ Clone request if possible, otherwise return \f(CW\*(C`undef\*(C'\fR.
 .Ve
 .PP
 Access request cookies, usually Mojo::Cookie::Request objects.
+.PP
+.Vb 2
+\&  # Names of all cookies
+\&  say $_\->name for @{$req\->cookies};
+.Ve
 .SS "every_param"
 .IX Subsection "every_param"
 .Vb 1
@@ -261,7 +266,7 @@ array reference.
 \&  my $bool = $req\->extract_start_line(\e$str);
 .Ve
 .PP
-Extract request line from string.
+Extract request-line from string.
 .SS "fix_headers"
 .IX Subsection "fix_headers"
 .Vb 1
@@ -275,7 +280,7 @@ Make sure request has all required headers.
 \&  my $bytes = $req\->get_start_line_chunk($offset);
 .Ve
 .PP
-Get a chunk of request line data starting from a specific position.
+Get a chunk of request-line data starting from a specific position.
 .SS "is_handshake"
 .IX Subsection "is_handshake"
 .Vb 1
@@ -299,20 +304,18 @@ Check if connection is secure.
 Check \f(CW\*(C`X\-Requested\-With\*(C'\fR header for \f(CW\*(C`XMLHttpRequest\*(C'\fR value.
 .SS "param"
 .IX Subsection "param"
-.Vb 3
-\&  my @names       = $req\->param;
-\&  my $value       = $req\->param(\*(Aqfoo\*(Aq);
-\&  my ($foo, $bar) = $req\->param([\*(Aqfoo\*(Aq, \*(Aqbar\*(Aq]);
+.Vb 1
+\&  my $value = $req\->param(\*(Aqfoo\*(Aq);
 .Ve
 .PP
 Access \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`POST\*(C'\fR parameters extracted from the query string and
-\&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body.
-If there are multiple values sharing the same name, and you want to access
-more than just the last one, you can use \*(L"every_param\*(R". Note that this
-method caches all data, so it should not be called before the entire request
-body has been received. Parts of the request body need to be loaded into
-memory to parse \f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is not
-excessively large, there's a 10MB limit by default.
+\&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body. If
+there are multiple values sharing the same name, and you want to access more
+than just the last one, you can use \*(L"every_param\*(R". Note that this method
+caches all data, so it should not be called before the entire request body has
+been received. Parts of the request body need to be loaded into memory to parse
+\&\f(CW\*(C`POST\*(C'\fR parameters, so you have to make sure it is not excessively large,
+there's a 16MB limit by default.
 .SS "params"
 .IX Subsection "params"
 .Vb 1
@@ -321,15 +324,15 @@ excessively large, there's a 10MB limit by default.
 .PP
 All \f(CW\*(C`GET\*(C'\fR and \f(CW\*(C`POST\*(C'\fR parameters extracted from the query string and
 \&\f(CW\*(C`application/x\-www\-form\-urlencoded\*(C'\fR or \f(CW\*(C`multipart/form\-data\*(C'\fR message body,
-usually a Mojo::Parameters object. Note that this method caches all data,
-so it should not be called before the entire request body has been received.
-Parts of the request body need to be loaded into memory to parse \f(CW\*(C`POST\*(C'\fR
-parameters, so you have to make sure it is not excessively large, there's a
-10MB limit by default.
+usually a Mojo::Parameters object. Note that this method caches all data, so
+it should not be called before the entire request body has been received. Parts
+of the request body need to be loaded into memory to parse \f(CW\*(C`POST\*(C'\fR parameters,
+so you have to make sure it is not excessively large, there's a 16MB limit by
+default.
 .PP
 .Vb 2
-\&  # Get parameter value
-\&  say $req\->params\->param(\*(Aqfoo\*(Aq);
+\&  # Get parameter names and values
+\&  my $hash = $req\->params\->to_hash;
 .Ve
 .SS "parse"
 .IX Subsection "parse"

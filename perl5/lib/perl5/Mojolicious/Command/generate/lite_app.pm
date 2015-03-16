@@ -1,7 +1,7 @@
 package Mojolicious::Command::generate::lite_app;
 use Mojo::Base 'Mojolicious::Command';
 
-has description => 'Generate Mojolicious::Lite application.';
+has description => 'Generate Mojolicious::Lite application';
 has usage => sub { shift->extract_usage };
 
 sub run {
@@ -12,36 +12,6 @@ sub run {
 }
 
 1;
-__DATA__
-
-@@ liteapp
-#!/usr/bin/env perl
-use Mojolicious::Lite;
-
-# Documentation browser under "/perldoc"
-plugin 'PODRenderer';
-
-get '/' => sub {
-  my $c = shift;
-  $c->render('index');
-};
-
-app->start;
-<% %>__DATA__
-
-<% %>@@ index.html.ep
-%% layout 'default';
-%% title 'Welcome';
-Welcome to the Mojolicious real-time web framework!
-
-<% %>@@ layouts/default.html.ep
-<!DOCTYPE html>
-<html>
-  <head><title><%%= title %></title></head>
-  <body><%%= content %></body>
-</html>
-
-__END__
 
 =encoding utf8
 
@@ -72,14 +42,14 @@ L<Mojolicious::Command> and implements the following new ones.
 =head2 description
 
   my $description = $app->description;
-  $app            = $app->description('Foo!');
+  $app            = $app->description('Foo');
 
 Short description of this command, used for the command list.
 
 =head2 usage
 
   my $usage = $app->usage;
-  $app      = $app->usage('Foo!');
+  $app      = $app->usage('Foo');
 
 Usage information for this command, used for the help screen.
 
@@ -99,3 +69,32 @@ Run this command.
 L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
 
 =cut
+
+__DATA__
+
+@@ liteapp
+#!/usr/bin/env perl
+use Mojolicious::Lite;
+
+# Documentation browser under "/perldoc"
+plugin 'PODRenderer';
+
+get '/' => sub {
+  my $c = shift;
+  $c->render(template => 'index');
+};
+
+app->start;
+<% %>__DATA__
+
+<% %>@@ index.html.ep
+%% layout 'default';
+%% title 'Welcome';
+Welcome to the Mojolicious real-time web framework!
+
+<% %>@@ layouts/default.html.ep
+<!DOCTYPE html>
+<html>
+  <head><title><%%= title %></title></head>
+  <body><%%= content %></body>
+</html>

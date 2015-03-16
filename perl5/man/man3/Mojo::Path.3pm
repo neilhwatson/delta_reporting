@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Mojo::Path 3"
-.TH Mojo::Path 3 "2014-09-08" "perl v5.20.1" "User Contributed Perl Documentation"
+.TH Mojo::Path 3 "2015-02-24" "perl v5.20.1" "User Contributed Perl Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -184,7 +184,8 @@ following new ones.
 \&  $path = $path\->canonicalize;
 .Ve
 .PP
-Canonicalize path.
+Canonicalize path by resolving \f(CW\*(C`.\*(C'\fR and \f(CW\*(C`..\*(C'\fR, in addition \f(CW\*(C`...\*(C'\fR will be
+treated as \f(CW\*(C`.\*(C'\fR to protect from path traversal attacks.
 .PP
 .Vb 2
 \&  # "/foo/baz"
@@ -192,6 +193,9 @@ Canonicalize path.
 \&
 \&  # "/../baz"
 \&  Mojo::Path\->new(\*(Aq/foo/../bar/../../baz\*(Aq)\->canonicalize;
+\&
+\&  # "/foo/bar"
+\&  Mojo::Path\->new(\*(Aq/foo/.../bar\*(Aq)\->canonicalize;
 .Ve
 .SS "clone"
 .IX Subsection "clone"
@@ -228,12 +232,20 @@ Check if path contains given prefix.
 .PP
 Path has a leading slash. Note that this method will normalize the path and
 that \f(CW%2F\fR will be treated as \f(CW\*(C`/\*(C'\fR for security reasons.
+.PP
+.Vb 2
+\&  # "/foo/bar"
+\&  Mojo::Path\->new(\*(Aqfoo/bar\*(Aq)\->leading_slash(1);
+\&
+\&  # "foo/bar"
+\&  Mojo::Path\->new(\*(Aq/foo/bar\*(Aq)\->leading_slash(0);
+.Ve
 .SS "merge"
 .IX Subsection "merge"
 .Vb 3
 \&  $path = $path\->merge(\*(Aq/foo/bar\*(Aq);
 \&  $path = $path\->merge(\*(Aqfoo/bar\*(Aq);
-\&  $path = $path\->merge(Mojo::Path\->new(\*(Aqfoo/bar\*(Aq));
+\&  $path = $path\->merge(Mojo::Path\->new);
 .Ve
 .PP
 Merge paths. Note that this method will normalize both paths if necessary and
@@ -343,6 +355,14 @@ Turn path into a string.
 .PP
 Path has a trailing slash. Note that this method will normalize the path and
 that \f(CW%2F\fR will be treated as \f(CW\*(C`/\*(C'\fR for security reasons.
+.PP
+.Vb 2
+\&  # "/foo/bar/"
+\&  Mojo::Path\->new(\*(Aq/foo/bar\*(Aq)\->trailing_slash(1);
+\&
+\&  # "/foo/bar"
+\&  Mojo::Path\->new(\*(Aq/foo/bar/\*(Aq)\->trailing_slash(0);
+.Ve
 .SH "OPERATORS"
 .IX Header "OPERATORS"
 Mojo::Path overloads the following operators.
