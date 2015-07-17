@@ -168,8 +168,8 @@ sub run
       output      => $query_params{output},
       report_type => $report_type
    );
-	$~ = $fh;
-	$^ = $fh. "_TOP";
+	local $~ = $fh;
+	local $^ = $fh. "_TOP";
 
    #
    # Generate output
@@ -205,7 +205,6 @@ sub usage
    say $self->extract_usage;
 }
 
-1;
 
 ##########################
 # POD
@@ -409,3 +408,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 =cut
+
+1;
+

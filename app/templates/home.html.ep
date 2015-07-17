@@ -49,9 +49,9 @@
          <div id="collapseOne" class="panel-collapse collapse out">
             <div class="panel-body">
                <ul>
-                  <li>Host counts are from the past <%= $config->{inventory_limit} %> minutes.</li>
+                  <li>Host counts are from the past <%= $inventory_limit %> minutes.</li>
                   <li>Missing hosts not seen in 24 hours.</li>
-                  <li>Promise counts are from the past <%= $config->{inventory_limit} %> minutes.</li>
+                  <li>Promise counts are from the past <%= $inventory_limit %> minutes.</li>
                </ul>
             </div> <!-- panel-body -->
          </div> <!-- collapseOne -->

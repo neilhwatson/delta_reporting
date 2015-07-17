@@ -19,7 +19,7 @@ sub run
       usage();
    }
    $dq->table_cleanup;
-
+   return;
 }
 
 sub usage
@@ -35,6 +35,7 @@ Deletes records older than days defined in DeltaR.conf.
 Reduces duplicate records older than day defined in DeltaR.conf to just one per day.
 
 END
+   return;
 }
 
 1;

@@ -19,40 +19,38 @@ our $logger;
 
 sub new 
 {
-   my $self = shift;
-   my %args = @_;
-   $record_limit    = $args{'record_limit'};
-   $agent_table     = $args{'agent_table'};
-   $promise_counts  = $args{'promise_counts'};
-   $inventory_table = $args{'inventory_table'};
-   $inventory_limit = $args{'inventory_limit'};
-   $delete_age      = $args{'delete_age'};
-   $reduce_age      = $args{'reduce_age'};
-   $dbh             = $args{'dbh'};
-   $logger          = $args{'logger'};
+   my ( $class, $args ) = @_;
+   $record_limit    = $args->{'record_limit'};
+   $agent_table     = $args->{'agent_table'};
+   $promise_counts  = $args->{'promise_counts'};
+   $inventory_table = $args->{'inventory_table'};
+   $inventory_limit = $args->{'inventory_limit'};
+   $delete_age      = $args->{'delete_age'};
+   $reduce_age      = $args->{'reduce_age'};
+   $dbh             = $args->{'dbh'};
+   $logger          = $args->{'logger'};
 
-   bless{} => __PACKAGE__;
+   my $self = bless $args, $class;
+   return $self;
 };
 
 sub sql_prepare_and_execute
 {
-   my %args = ( 
-      return      => 'none',
-      bind_params => [],
-      @_
-   );
-   my $self = $args{self};
+   my ( $self, $args ) = @_;
+   my $return      = exists $args->{return}      ? $args->{return}      : 'none';
+   my $bind_params = exists $args->{bind_params} ? $args->{bind_params} : [];
+   my $query = $args->{query};
    my $data;
 
    my $caller = ( caller(1) )[3]; # Calling subroutine
 
-   my $sth = $dbh->prepare( $args{query} )
+   my $sth = $dbh->prepare( $query )
       or $logger->error_die( "SQL prepare error: [$dbh->errstr], caller: [$caller]" );
 
-   my $bind_parms_length = scalar( @{ $args{bind_params} } );
+   my $bind_parms_length = scalar( @{ $bind_params } );
    if ( $bind_parms_length > 0 )
    {
-      for my $param_list ( @{ $args{bind_params} } )
+      for my $param_list ( @{ $bind_params } )
       {
          my $exception;
          $data = try
@@ -66,7 +64,7 @@ sub sql_prepare_and_execute
          if ( $exception )
          {
             $logger->error_warn( "Exception [$exception], SQL error [$dbh->errstr]" );
-            $logger->error_die(  "Caller [$caller], query [$args{query}]" );
+            $logger->error_die(  "Caller [$caller], query [$query]" );
          }
       }
    }
@@ -84,10 +82,10 @@ sub sql_prepare_and_execute
       if ( $exception )
       {
          $logger->error_warn( "Exception [$exception], SQL error [$dbh->errstr]" );
-         $logger->error_die(  "Caller [$caller], query [$args{query}]" );
+         $logger->error_die(  "Caller [$caller], query [$query]" );
       }
    }
-   if ( $args{return} eq 'fetchall_arrayref' )
+   if ( $return eq 'fetchall_arrayref' )
    {
       $data = $sth->fetchall_arrayref();
    }
@@ -107,7 +105,7 @@ sub table_cleanup
 
    for my $q ( @query )
    {
-      sql_prepare_and_execute( query  => $q,);
+      sql_prepare_and_execute( $self, { query  => $q,});
    }
    return;
 }
@@ -120,7 +118,7 @@ sub delete_records
       $dbh->quote_identifier( $agent_table ),
       $dbh->quote( "$delete_age days" );
 
-   return sql_prepare_and_execute( query  => $query,);
+   return sql_prepare_and_execute( $self, { query  => $query,});
 }
 
 sub reduce_records
@@ -156,7 +154,7 @@ END
 
    for my $q ( @query )
    {
-      sql_prepare_and_execute( query  => $q,);
+      sql_prepare_and_execute( $self, { query  => $q,});
    }
 
    return;
@@ -169,11 +167,11 @@ sub count_records
    my @bind_params;
    push @bind_params, [ $agent_table ];
 
-   my $record_count = sql_prepare_and_execute(
+   my $record_count = sql_prepare_and_execute( $self, {
       query       => $query,
       bind_params => \@bind_params,
       return      => 'fetchall_arrayref',
-   );
+   });
    return $record_count->[0][0];
 }
 
@@ -197,17 +195,16 @@ END
    my @bind_params;
    push @bind_params, [ $record_limit, $record_limit ];
    
-   return sql_prepare_and_execute(
+   return sql_prepare_and_execute( $self, {
       query       => $query,
       bind_params => \@bind_params,
       return      => 'fetchall_arrayref',
-   );
+   });
 }
 
 sub query_recent_promise_counts
 {
-   my $self     = shift;
-   my $interval = shift;
+   my ( $self, $interval ) = @_;
    my $query = sprintf <<END,
 SELECT promise_outcome, count( promise_outcome ) FROM
 (
@@ -221,16 +218,15 @@ END
    $dbh->quote_identifier( $agent_table ),
    $dbh->quote( "$interval minute" );
 
-   return sql_prepare_and_execute(
+   return sql_prepare_and_execute( $self, {
       query       => $query,
       return      => 'fetchall_arrayref',
-   );
+   });
 }
 
 sub query_inventory
 {
-   my $self = shift;
-   my $class = shift;
+   my ( $self, $class ) = @_;
    my ( $x, @bind_params );
 
    my $inventory_query = sprintf <<END,
@@ -249,10 +245,10 @@ END
       my $class_query = sprintf "SELECT class FROM %s", 
          $dbh->quote_identifier( $inventory_table );
 
-      my $class_arrayref = sql_prepare_and_execute(
+      my $class_arrayref = sql_prepare_and_execute( $self, {
          query  => $class_query,
          return => 'fetchall_arrayref',
-      );
+      });
       
       # Build returned hard classes into final inventory query.
       for my $row ( @ {$class_arrayref } )
@@ -281,11 +277,11 @@ GROUP BY class
 ORDER BY class
 END
 
-   return sql_prepare_and_execute(
+   return sql_prepare_and_execute( $self, {
       query       => $inventory_query,
       bind_params => \@bind_params,
       return      => 'fetchall_arrayref',
-   );
+   });
 };
 
 sub query_promises
@@ -339,18 +335,17 @@ END
       push @{ $bind_params[0] }, ( @{ $timestamp{bind_params} }, $record_limit );
    }
 
-   return sql_prepare_and_execute(
+   return sql_prepare_and_execute( $self, {
       query       => $query,
       bind_params => \@bind_params,
       return      => 'fetchall_arrayref',
-   );
+   });
 }
 
 sub insert_promise_counts
 # This is not used in production, but in testing to insert sample historical data.
 {
-   my $self        = shift;
-   my $bind_params = shift;
+   my ( $self, $bind_params ) = @_;
    my $return      = 1;
    
    my $query = sprintf <<END,
@@ -359,10 +354,10 @@ VALUES ( ?, ?, ?, ?, ? )
 END
       $dbh->quote_identifier( $promise_counts );
 
-   return sql_prepare_and_execute(
+   return sql_prepare_and_execute( $self, {
       query       => $query,
       bind_params => $bind_params,
-   );
+   });
 }
 
 sub insert_yesterdays_promise_counts
@@ -389,25 +384,24 @@ END
       $dbh->quote_identifier( $agent_table ),
       $dbh->quote_identifier( $promise_counts );
 
-   return sql_prepare_and_execute( query => $query );
+   return sql_prepare_and_execute( $self, { query => $query });
 }
 
 sub query_promise_count
 {
-   my $self   = shift;
-   my @fields = @_;
+   my ( $self, $fields ) = @_;
 
    my $query = "SELECT datestamp";
-   for my $field ( @fields )
+   for my $field ( @{ $fields} )
    {
       $query .= sprintf ', %s', $dbh->quote_identifier( $field );
    }
    $query .= sprintf ' FROM %s', $dbh->quote_identifier( $promise_counts ); 
 
-   return sql_prepare_and_execute(
+   return sql_prepare_and_execute $self, ({
       query       => $query,
       return      => 'fetchall_arrayref',
-   );
+   });
 }
 
 sub query_classes
@@ -454,25 +448,26 @@ END
       push @{ $bind_params[0] }, ( @{ $timestamp{bind_params} }, $record_limit );
    }
 
-   return sql_prepare_and_execute(
+   return sql_prepare_and_execute( $self, {
       query       => $query,
       bind_params => \@bind_params,
       return      => 'fetchall_arrayref',
-   );
+   });
 }
 
 sub query_latest_record
 {
+   my $self = shift;
    my $query = sprintf <<END,
 SELECT timestamp FROM %s
 ORDER BY timestamp desc LIMIT 1
 END
    $dbh->quote_identifier( $agent_table );
 
-   my $data = sql_prepare_and_execute(
+   my $data = sql_prepare_and_execute( $self, {
       query       => $query,
       return      => 'fetchall_arrayref',
-   );
+   });
    return $data->[0][0];
 }
 
@@ -543,7 +538,7 @@ sub drop_tables
       my $query = sprintf "DROP TABLE IF EXISTS %s CASCADE",
          $dbh->quote_identifier( $table );
 
-      $return = sql_prepare_and_execute( self => $self, query => $query );
+      $return = sql_prepare_and_execute( $self, { query => $query });
    }
    return $return;
 }
@@ -655,16 +650,16 @@ END
       $dbh->quote_identifier( $inventory_table );
    push @queries, $query;
 
-   for $query ( @queries )
+   for my $q ( @queries )
    {
-      sql_prepare_and_execute( self => $self, query => $query );
+      sql_prepare_and_execute( $self, { query => $q });
    }
+   return;
 }
 
 sub insert_client_log
 {
-   my $self = shift;
-   my $client_log = shift;
+   my ( $self, $client_log ) = @_;
    my @bind_params;
    my %record;
    my $query = sprintf <<END,
@@ -688,77 +683,75 @@ END
    $dbh->quote_identifier( $agent_table ),
    $dbh->quote_identifier( $agent_table );
 
-   my $fh;
-   if ( open( $fh, "<", "$client_log" ) )
-   {
-      undef %record;
-      if ( $client_log =~ m:([^/]+)\.log$: )
-      {
-         $record{ip_address} = $1;
-         $record{hostname} = get_ptr( $record{ip_address} );
-      }
-
-      $record{policy_server} = hostname_long();
-      
-      while (<$fh>)
-      {
-         for my $k ( qw/ timestamp class promise_handle promiser
-            promise_outcome promisee / )
-         {
-            $record{$k} = '';
-         }
-
-         chomp;
-         (
-            $record{timestamp},
-            $record{class},
-            $record{promise_handle},
-            $record{promiser},
-            $record{promise_outcome},
-            $record{promisee}
-         )  = split /\s*;;\s*/;
-
-         my $errors = validate_load_inputs( \%record );
-         if ( $#{ $errors } > 0 ){
-            for my $err ( @{ $errors } )
-            {
-               $logger->error_warn( "validation error [$err], skipping record" )
-            }
-            next;
-         };
-
-         push @bind_params,  [
-            $record{class},
-            $record{timestamp},
-            $record{hostname},
-            $record{ip_address},
-            $record{promise_handle},
-            $record{promiser},
-            $record{promise_outcome},
-            $record{promisee},
-            $record{policy_server},
-            $record{class},
-            $record{timestamp},
-            $record{hostname},
-            $record{ip_address},
-            $record{promise_handle},
-            $record{promiser},
-            $record{promise_outcome},
-            $record{promisee},
-            $record{policy_server},
-         ];
-      }
-   }
-   else
-   {
+   open( my $fh, "<", "$client_log" ) or do {
       $logger->error_warn( "Could not open file [$client_log]" );
       return 0;
-   }
+   };
+   my @lines = <$fh>;
    close $fh;
+
+   if ( $client_log =~ m:([^/]+)\.log$: )
+   {
+      $record{ip_address} = $1;
+      $record{hostname} = get_ptr( $record{ip_address} );
+   }
+
+   $record{policy_server} = hostname_long();
+   
+   for my $l ( @lines )
+   {
+      for my $k ( qw/ timestamp class promise_handle promiser
+         promise_outcome promisee / )
+      {
+         $record{$k} = '';
+      }
+
+      chomp $l;
+      (
+         $record{timestamp},
+         $record{class},
+         $record{promise_handle},
+         $record{promiser},
+         $record{promise_outcome},
+         $record{promisee}
+      )  = split /\s*;;\s*/, $l;
+
+      my $errors = validate_load_inputs( \%record );
+      if ( $#{ $errors } > 0 ){
+         for my $err ( @{ $errors } )
+         {
+            $logger->error_warn( "validation error [$err], skipping record" )
+         }
+         next;
+      };
+
+      push @bind_params,  [
+         $record{class},
+         $record{timestamp},
+         $record{hostname},
+         $record{ip_address},
+         $record{promise_handle},
+         $record{promiser},
+         $record{promise_outcome},
+         $record{promisee},
+         $record{policy_server},
+         $record{class},
+         $record{timestamp},
+         $record{hostname},
+         $record{ip_address},
+         $record{promise_handle},
+         $record{promiser},
+         $record{promise_outcome},
+         $record{promisee},
+         $record{policy_server},
+      ];
+   }
    sql_prepare_and_execute(
-      query       => $query,
-      bind_params => \@bind_params,
-   );
+      $self, 
+      {
+         query       => $query,
+         bind_params => \@bind_params,
+   });
    return 1;
 }
 
@@ -771,28 +764,24 @@ sub validate_load_inputs
       timestamp       => '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[-+]{1}\d{4}$',
    );
    
-   my $errors = test_for_invalid_data(
+   my $errors = test_for_invalid_data({
       valid_inputs      => \%valid_inputs,
       max_record_length => 125,
       inputs            => $record
-   );
+   });
    return $errors;
 }
 
 sub validate_form_inputs
 {
-   my $self         = shift;
-   my $query_params = shift; 
-   my $errors       = test_for_invalid_data( inputs => $query_params );
+   my ( $self, $query_params ) = @_; 
+   my $errors = test_for_invalid_data({ inputs => $query_params });
    return $errors;
 }
 
 sub test_for_invalid_data
 {
-   my %params = (
-      max_record_length => 24,
-      @_
-   );
+   my ( $params ) = @_;
 
    my %default_valid_inputs = (
       class           => '^[%\w]+$',
@@ -809,16 +798,16 @@ sub test_for_invalid_data
       latest_record   => '0|1',
    );
 
-   # Merge paramter valid inputs into defaults
-   for my $k ( keys %{ $params{valid_inputs} } )
+   # Merge parameter valid inputs into defaults. Use to allow incoming params
+   # to override the default_valid_inputs.
+   for my $k ( keys %{ $params->{valid_inputs} } )
    {
-      $default_valid_inputs{$k} = $params{valid_inputs}->{$k};
+      $default_valid_inputs{$k} = $params->{valid_inputs}->{$k};
    }
-
-   my $inputs            = $params{inputs};
-   my $max_record_length = $params{max_record_length};
    my $valid_inputs      = \%default_valid_inputs;
-
+   my $inputs            = $params->{inputs};
+   my $max_record_length = exists $params->{max_record_length} ?
+      $params->{max_record_length} : 24;
    my @errors;
 
    for my $p ( keys %{ $inputs } )

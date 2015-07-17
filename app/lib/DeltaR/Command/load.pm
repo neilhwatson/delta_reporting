@@ -34,6 +34,7 @@ load [file]
 Load agent log into Delta Reporting database.
 
 END
+   return;
 }
 
 1;

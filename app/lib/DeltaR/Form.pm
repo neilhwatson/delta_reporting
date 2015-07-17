@@ -12,6 +12,7 @@ sub class_or_promise
       timestamp    => $timestamp,
       gmt_offset   => $gmt_offset
    );
+   return;
 }
 
 1;

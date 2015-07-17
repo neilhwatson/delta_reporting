@@ -14,6 +14,7 @@ sub missing
       columns     => [ 'Hostname', 'IP Address', 'Policy server' ],
       template    => 'report/rtable',
    );
+   return;
 }
 
 sub inventory
@@ -28,6 +29,7 @@ sub inventory
       columns     => [ 'Class','Count' ],
       template    => 'report/rtable',
    );
+   return;
 }
 
 sub classes
@@ -77,6 +79,7 @@ sub classes
       columns  => [ 'Class','Timestamp','Hostname','IP Address','Policy Server' ],
       template => 'report/rtable',
    );
+   return;
 }
 
 sub promises
@@ -130,6 +133,7 @@ sub promises
          'Timestamp', 'Hostname','IP Address','Policy Server' ],
       template => 'report/rtable',
    );
+   return;
 }
 
 1;

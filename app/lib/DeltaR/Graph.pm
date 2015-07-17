@@ -10,7 +10,7 @@ sub trend
 {
    my $self           = shift;
    my $trend          = $self->param('promise_outcome');
-   my $rows           = $self->app->dr->query_promise_count( 'hosts', $trend );
+   my $rows           = $self->app->dr->query_promise_count([ 'hosts', $trend ]);
    $trend             = 'not kept' if ( $trend eq 'notkept' );
    ( my $column_title = $trend  ) =~ s/\b(\w)/\u$1/g;
    my @columns        = ( 'Date', 'Hosts', $column_title );
@@ -39,6 +39,7 @@ sub trend
       promise_stats => $promise_stats,
       columns       => \@columns 
    );
+   return;
 }
 
 sub percent_promise_summary
@@ -46,7 +47,7 @@ sub percent_promise_summary
    my $self    = shift;
    my @columns = ( 'Date', 'Hosts', 'Kept', 'Repaired', 'Not kept' );
    my $dq      = $self->app->dr;
-   my $rows    = $dq->query_promise_count( 'hosts', 'kept', 'repaired', 'notkept' );
+   my $rows    = $dq->query_promise_count([ qw/hosts kept repaired notkept/ ]);
 
    my $host_series = nvd3_2column_timeseries(
       key      => "Hosts",
@@ -67,6 +68,7 @@ sub percent_promise_summary
       host_series    => $json_host_series,
       columns        => \@columns 
    );
+   return;
 }
 
 sub nvd3_2column_timeseries

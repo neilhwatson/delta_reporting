@@ -38,8 +38,6 @@ sub startup
    if ( -e 'DeltaR.conf' ) {
       $config = $self->plugin('config', file => 'DeltaR.conf' );
    }
-   my $record_limit = $config->{record_limit};
-   my $inventory_limit = $config->{inventory_limit};
 
    $self->secrets( @{ $config->{secrets} } );
 
@@ -65,7 +63,7 @@ sub startup
    $self->helper( dr => sub
    {
       my $self = shift;
-      my $dq = DeltaR::Query->new( 
+      my $dq = DeltaR::Query->new({
          logger          => $self->logger(),
          agent_table     => $config->{agent_table},
          promise_counts  => $config->{promise_counts},
@@ -73,19 +71,19 @@ sub startup
          inventory_limit => $config->{inventory_limit},
          delete_age      => $config->{delete_age},
          reduce_age      => $config->{reduce_age},
-         record_limit    => $record_limit,
+         record_limit    => $config->{record_limit},
          dbh             => $self->dbh(
             db_user => $config->{db_user},
             db_pass => $config->{db_pass},
          ),
-      );
+      });
       return $dq;
    });
 
    $self->helper( dw => sub
    {
       my $self = shift;
-      my $dq = DeltaR::Query->new( 
+      my $dq = DeltaR::Query->new({
          logger          => $self->logger(),
          agent_table     => $config->{agent_table},
          promise_counts  => $config->{promise_counts},
@@ -93,12 +91,12 @@ sub startup
          inventory_limit => $config->{inventory_limit},
          delete_age      => $config->{delete_age},
          reduce_age      => $config->{reduce_age},
-         record_limit    => $record_limit,
+         record_limit    => $config->{record_limit},
          dbh             => $self->dbh(
             db_user => $config->{db_wuser},
             db_pass => $config->{db_wpass},
          ),
-      );
+      });
       return $dq;
    });
 
@@ -146,7 +144,7 @@ sub startup
       my $active_missing_json = encode_json( \@active_missing  );
 
       # Get latest counts of promise outcomes and convert to json
-      my $promise_count = $self->dr->query_recent_promise_counts( $inventory_limit );
+      my $promise_count = $self->dr->query_recent_promise_counts( $config->{inventory_limit} );
       # Default values, because no values returned is not zero.
       my @promise_count = (
          {
@@ -182,6 +180,7 @@ sub startup
          latest_time    => $latest_time,
          active_missing => $active_missing_json,
          promise_count  => $promise_count_json,
+         inventory_limit => $config->{inventory_limit},
       );
    } => 'home' );
 
@@ -203,18 +202,20 @@ sub startup
    } => '/database_initialized');
    $r->get( '/database_initialized' => 'database_initialized' );
 
-   $r->get( '/form/promises')->to('form#class_or_promise', template => 'form/promises', record_limit => $record_limit );
-   $r->get( '/form/classes' )->to('form#class_or_promise', template => 'form/classes', record_limit => $record_limit );
+   $r->get( '/form/promises')->to('form#class_or_promise', template => 'form/promises', record_limit => $config->{record_limit} );
+   $r->get( '/form/classes' )->to('form#class_or_promise', template => 'form/classes', record_limit => $config->{record_limit} );
 
-   $r->post('/report/classes' )->to('report#classes',   record_limit => $record_limit );
-   $r->post('/report/promises')->to('report#promises',  record_limit => $record_limit );
+   $r->post('/report/classes' )->to('report#classes',   record_limit => $config->{record_limit} );
+   $r->post('/report/promises')->to('report#promises',  record_limit => $config->{record_limit} );
 
-   $r->get('/report/missing'  )->to('report#missing',   record_limit => $record_limit );
-   $r->get('/report/inventory')->to('report#inventory', record_limit => $record_limit );
+   $r->get('/report/missing'  )->to('report#missing',   record_limit => $config->{record_limit} );
+   $r->get('/report/inventory')->to('report#inventory', record_limit => $config->{record_limit} );
 
    $r->get( '/trend/:promise_outcome' )->to( 'graph#trend' );
 
    $r->get('/report/pps')->to('graph#percent_promise_summary');
+
+   return;
 }
 1;
 

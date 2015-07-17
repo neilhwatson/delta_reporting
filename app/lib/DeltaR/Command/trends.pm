@@ -15,6 +15,7 @@ sub run
    {
       $dq->insert_yesterdays_promise_counts;
    }
+   return;
 }
 
 sub usage
@@ -26,6 +27,7 @@ trends
 Populates trending table.
 
 END
+   return;
 }
 
 1;
