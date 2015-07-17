@@ -74,7 +74,7 @@
    </dl>
 
 <script type="text/javascript">
-   var host_data = <%== $active_missing %>;
+   var host_data = <%== $hostcount %>;
 
    var promise_data = <%== $promise_count %>;
 

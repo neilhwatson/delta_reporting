@@ -7,6 +7,8 @@ use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
 use Try::Tiny;
 
+# TODO can probably dumb these for $self-->{dbh}
+# TODO change args to arg to reduce code.
 our $dbh;
 our $record_limit;
 our $agent_table;

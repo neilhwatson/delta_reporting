@@ -2,6 +2,7 @@ package DeltaR;
 
 use Mojo::Base qw( Mojolicious );
 use DeltaR::Query;
+use DeltaR::Dashboard;
 use Mojo::JSON 'encode_json';
 use Log::Log4perl;
 use DBI;
@@ -11,28 +12,30 @@ sub startup
    my $self = shift;
 
 # Config
-   my $config;
+   my $config = {
 
-   $config->{db_name}         = 'delta_reporting';
-   $config->{db_user}         = "deltar_ro";
-   $config->{db_pass}         = "";
-   $config->{db_wuser}        = "deltar_rw";
-   $config->{db_wpass}        = "";
-   $config->{db_host}         = "localhost";
-   $config->{secrets}         = [ 'secret passphrase', 'old secret passphrase' ];
-   $config->{record_limit}    = 1000; # Limit the number of records returned by a query.
-   $config->{agent_table}     = "agent_log";
-   $config->{promise_counts}  = "promise_counts";
-   $config->{inventory_table} = "inventory_table";
-   $config->{inventory_limit} = 20; # mintes to look backwards for inventory query
-   $config->{client_log_dir}  = "/var/cfengine/delta_reporting/log/client_logs";
-   $config->{delete_age}      = 90; # (days) Delete records older than this.
-   $config->{reduce_age}      = 10; # (days) Reduce duplicate records older than this to one per day
-   $config->{hypnotoad}       = {
-      proxy          => 1,
-      production     => 1,
-      listen         => [ 'http://localhost:8080' ],
+   gdb_name         => 'delta_reporting',
+   gdb_user         => "deltar_ro",
+   gdb_pass         => "",
+   gdb_wuser        => "deltar_rw",
+   gdb_wpass        => "",
+   gdb_host         => "localhost",
+   gsecrets         => [ 'secret passphrase', 'old secret passphrase' ],
+   grecord_limit    => 1000, # Limit the number of records returned by a query.
+   gagent_table     => "agent_log",
+   gpromise_counts  => "promise_counts",
+   ginventory_table => "inventory_table",
+   ginventory_limit => 20, # mintes to look backwards for inventory query
+   gclient_log_dir  => "/var/cfengine/delta_reporting/log/client_logs",
+   gdelete_age      => 90, # (days) Delete records older than this.
+   greduce_age      => 10, # (days) Reduce duplicate records older than this to one per day
+   ghypnotoad       => {
+      proxy      => 1,
+      production => 1,
+      listen     => [ 'http://localhost:8080' ],
+      }
    };
+
    $self->defaults( small_title => '' );
 
    if ( -e 'DeltaR.conf' ) {
@@ -111,6 +114,14 @@ sub startup
       return $logger;
    });
 
+## Dashboard help
+   $self->helper( dash => sub
+   {
+      my $self = shift;
+      my $dash = DeltaR::Dashboard->new({ dr => $self->dr });
+      return $dash
+   });
+
 ## Routes
    my $r = $self->routes;
 
@@ -118,68 +129,20 @@ sub startup
    {
       my $self = shift;
 
-      # Get datestamp for latest log entry
-      my $latest = $self->dr->query_latest_record();
-      my ( $latest_date, $latest_time ) = split /\s/, $latest;
+      my ( $latest_date, $latest_time ) =
+         split /\s/, $self->dr->query_latest_record();
 
-      # Get active host count
-      my $active = $self->dr->query_inventory( 'cfengine' );
-      $active    = $active->[0][1];
+      my $hostcount = $self->dash->hostcount();
 
-      # Get missing host count
-      my $missing = $self->dr->query_missing();
-      $missing    = @{$missing};
-
-      # Combine missing and active host counts as JSON
-      my @active_missing = (
-         {
-            label => "Active",
-            value => $active
-         },
-         {
-            label => "Missing",
-            value => $missing
-         }
-      );
-      my $active_missing_json = encode_json( \@active_missing  );
-
-      # Get latest counts of promise outcomes and convert to json
-      my $promise_count = $self->dr->query_recent_promise_counts( $config->{inventory_limit} );
-      # Default values, because no values returned is not zero.
-      my @promise_count = (
-         {
-            label => 'kept',
-            value => 0
-         },
-         {
-            label => 'notkept',
-            value => 0
-         },
-         {
-            label => 'repaired',
-            value => 0
-         }
-      );
-      OUTER: for my $i  ( @{ $promise_count } )
-      {
-         for my $d ( @promise_count )
-         {
-            if ( $i->[0] eq $d->{label} )
-            {
-               $d->{value} = $i->[1];
-               next OUTER;
-            }
-         }
-      }
-      my $promise_count_json = encode_json( \@promise_count );
-
-      # TODO home template 'include' widgets.
+      my $promisecount = $self->dash->promisecount({
+            from => $config->{inventory_limit}
+      });
 
       $self->stash(
          latest_date    => $latest_date,
          latest_time    => $latest_time,
-         active_missing => $active_missing_json,
-         promise_count  => $promise_count_json,
+         hostcount      => $hostcount,
+         promise_count  => $promisecount,
          inventory_limit => $config->{inventory_limit},
       );
    } => 'home' );
@@ -200,6 +163,7 @@ sub startup
       my $self = shift;
       $self->dw->create_tables;
    } => '/database_initialized');
+
    $r->get( '/database_initialized' => 'database_initialized' );
 
    $r->get( '/form/promises')->to('form#class_or_promise', template => 'form/promises', record_limit => $config->{record_limit} );
