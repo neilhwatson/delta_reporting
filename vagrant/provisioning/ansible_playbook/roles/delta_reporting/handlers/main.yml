@@ -1,0 +1,6 @@
+---
+- name: restart delta_reporting
+  service: name=delta_reporting state=restarted
+
+- name: cfengine update
+  shell: cf-agent -K -f update.cf

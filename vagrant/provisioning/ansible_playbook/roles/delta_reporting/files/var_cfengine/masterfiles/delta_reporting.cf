@@ -1,0 +1,144 @@
+# Delta Reporting is a central server compliance log that uses CFEngine.
+# 
+# Copyright (C) 2013 Evolve Thinking http://evolvethinking.com
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+bundle agent deltarep_prelogging( ref )
+{
+   meta:
+      "Purpose" string => "Create dirs to hold logs";
+
+   vars:
+      "logdir"           string => "${efl_c.logdir}";
+      "client_log_final" string => "${logdir}/final";
+      "client_logs_dir"  string => "${logdir}/client_logs";
+      "promise_log"      string => "${efl_c.promise_log}";
+
+   files:
+      "${logdir}/." -> { "deltarep Evolve Thinking" }
+         handle => "deltarep_prelogging_files_create_dir",
+         create => 'true',
+         perms  => m( "644"  );
+
+      "${client_log_final}" -> { "deltarep Evolve Thinking" }
+         handle  => "deltarep_prelogging_files_tidy_final_log",
+         comment => "Cleanup logs",
+         action  => if_elapsed( "25" ),
+         delete  => tidy;
+
+      "${promise_log}" -> { "deltarep Evolve Thinking" }
+         handle        => "deltarep_prelogging_files_promise_log",
+         create        => "true",
+         classes       => if_notkept( "delete_promise_log" ),
+         edit_defaults => dr_empty,
+         edit_line     => append_if_no_line( "BEGIN ${efl_c.udate}" );
+
+      delete_promise_log::
+         "${promise_log}" -> { "deltarep Evolve Thinking" }
+            handle  => "deltarep_prelogging_files_delete_promise_log",
+            comment => "Delete log if edit_line promise fails",
+            delete  => tidy;
+
+      am_policy_hub::
+         "${client_logs_dir}/." -> { "deltarep Evolve Thinking" }
+				handle => "deltarep_prelogging_files_create_client_logs_dir",
+				create => 'true',
+				perms  => m( "644"  );
+
+         "${client_logs_dir}" -> { "deltarep Evolve Thinking" }
+            handle       => "deltarep_prelogging_files_tidy_client_logs",
+            depth_search => recurse( "inf"),
+            action       => if_elapsed( "60" ),
+            file_select  => plain,
+            delete       => tidy;
+}
+
+bundle agent deltarep_postlogging( ref )
+{
+   vars:
+      "logdir"            string => "${efl_c.logdir}";
+      "class_log"         string => "${logdir}/classes";
+      "classes"            slist => classesmatching( ".*" );
+      "classes_log_lines"  slist => {
+         "BEGIN ${efl_c.udate}",
+         "@{classes}"
+      };
+
+   files:
+      "${class_log}"
+         handle        => "deltarep_postlogging_files_class_log",
+         create        => 'true',
+         classes       => if_notkept( "delete_class_log" ),
+         edit_defaults => dr_empty,
+         edit_line     => insert_lines( @{classes_log_lines} );
+
+      delete_class_log::
+         "${class_log}"
+            handle  => "deltarep_postlogging_files_delete_class_log",
+            comment => "Delete class log if edit_line failes",
+            delete  => tidy;
+
+   commands:
+      "/opt/delta_reporting/bin/dhlogmaker"
+         depends_on => { "deltarep_postlogging_files_class_log" },
+         comment    => "Make final log",
+         contain    => silent;
+}
+
+bundle agent deltarep_client_get ( ref )
+{
+    vars:
+         "download_dir" string => "${deltarep_prelogging.client_logs_dir}";
+# Work around because last seen does not include policy hub.
+         'lastseen'      slist => { hostsseen( "2", "lastseen", "address" ) };
+         'clients'       slist => { "${sys.policy_hub}", "@{lastseen}" };
+
+
+
+    methods:
+       "deltarep"
+         usebundle => bg_deltarep_get ( "${download_dir}", "${clients}" ),
+         comment   => "Background for parallel processing",
+         action    => bg( "5", "5" );
+}
+
+bundle agent bg_deltarep_get( download_dir, clients )
+{
+   vars:
+      "final_log" string => "${deltarep_prelogging.client_log_final}";
+
+   files:
+      "$(download_dir)/${clients}.log" -> { "deltarep" }
+         comment     => "Download client logs",
+         handle      => "deltarep_client_get_files_final",
+         classes     => if_repaired("insert_deltarep_data_for_${clients}"),
+         perms       => m( "644" ),
+         copy_from   => remote_dcp( "${final_log}", "$(clients)");
+
+   commands:
+   "/opt/delta_reporting/app/script/load '${download_dir}/${clients}.log'" -> { "deltarep" }
+         comment    => "Insert data into database",
+         handle     => "deltarep_client_get_commands_insert",
+         contain    => silent,
+         ifvarclass => canonify( "insert_deltarep_data_for_${clients}" );
+}
+
+body edit_defaults dr_empty
+{
+   empty_file_before_editing => "true";
+   edit_backup               => "false";
+   max_file_size             => "2M";
+}
+

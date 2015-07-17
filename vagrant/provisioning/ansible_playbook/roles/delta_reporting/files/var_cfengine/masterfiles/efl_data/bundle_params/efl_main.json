@@ -1,0 +1,18 @@
+[
+  {
+    "class": "any",
+    "promiser": "set classes",
+    "bundle": "efl_class_classmatch",
+    "ifelapsed": "1",
+    "parameter": "${sys.inputdir}/efl_data/classes/efl_classmatch.json",
+    "promisee": "test"
+  },
+  {
+    "class": "any",
+    "promiser": "running commands",
+    "bundle": "efl_command",
+    "ifelapsed": "1",
+    "parameter": "${sys.inputdir}/efl_data/bundle_params/efl_command.json",
+    "promisee": "test"
+  }
+]

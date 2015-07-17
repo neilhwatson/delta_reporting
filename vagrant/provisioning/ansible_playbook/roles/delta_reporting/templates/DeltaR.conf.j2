@@ -1,0 +1,43 @@
+# Delta Reporting is a central server compliance log that uses CFEngine.
+# 
+# Copyright (C) 2013 Evolve Thinking http://evolvethinking.com
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+{
+   db_name         => "delta_reporting",
+   db_user         => "deltar_ro",
+   db_pass         => "deltar",
+   db_wuser        => "deltar_rw",
+   db_wpass        => "deltar",
+   db_host         => "localhost",
+
+# Change these, and rotate out old ones.
+   secrets         => [ 'deltar', '' ],
+
+   record_limit    => 1000, # Limit the number of records returned by a query.
+   agent_table     => "agent_log",
+   promise_counts  => "promise_counts",
+   inventory_table => "inventory_table",
+   inventory_limit => 20, # mintes to look backwards for inventory query
+   client_log_dir  => "/var/cfengine/delta_reporting/log/client_logs",
+   delete_age      => 60, # (days) Delete records older than this.
+   reduce_age      => 7, # (days) Reduce duplicate records older than this to one per day
+
+   hypnotoad       => {
+      #proxy          => 1,
+      production     => 1,
+      listen         => [ 'http://{{ ansible_eth0.ipv4.address }}:8080' ],
+   },
+};

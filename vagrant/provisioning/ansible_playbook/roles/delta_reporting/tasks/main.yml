@@ -1,0 +1,127 @@
+---
+###############################################################################
+#
+# CFEngine
+#
+###############################################################################
+
+#- name: ensure cfengine gpg key is present
+#  apt_key: url=http://cfengine.com/pub/gpg.key state=present
+#
+#- name: ensure cfengine community repo is present
+#  apt_repository: repo="deb http://cfengine.com/pub/apt/packages stable main"
+#    state=present update-cache=yes
+
+# Need to use version 3.7 cause latest EFL lib uses functions only available
+# in version 3.7.
+- name: download cfengine-community version 3.7
+  shell: wget -O cfengine-community_3.7.0b1-1_amd64.deb https://s3.amazonaws.com/cfengine.package-repos/community_binaries/cfengine-community_3.7.0b1-1_amd64.deb
+  args:
+    chdir: /tmp
+    create: cfengine-community_3.7.0b1-1_amd64.deb
+
+- name: ensure cfengine-community is present
+  apt: deb=/tmp/cfengine-community_3.7.0b1-1_amd64.deb
+
+- name: bootstrap cfengine
+  shell: /var/cfengine/bin/cf-agent -B {{ ansible_eth0.ipv4.address }}
+    creates=/var/cfengine/policy_server.dat
+
+- name: copy masterfiles
+  copy: dest=/var/cfengine src=var_cfengine/
+  notify:
+    - cfengine update
+
+###############################################################################
+#
+# Delta Reporting
+#
+###############################################################################
+
+- name: ensure required packages for delta reporting are installed
+  apt: name={{ item }} state=present install_recommends=no update_cache=yes
+    cache_valid_time=3600
+  with_items:
+    - postgresql-9.1
+    - libpq-dev
+    - cpanminus
+    - python-psycopg2
+    - git-core
+    - make
+    - build-essential
+
+# Params::Validate doesn't ship with deltar but is required.
+# And we need Sys::Syslog > 0.27 that one that comes with deltar is 0.24.
+- name: ensure delta reporting perl dependencies
+  cpanm: name={{ item }} notest=yes
+  with_items:
+    - POSIX
+    - Getopt::Long
+    - Time::Local
+    - Test::More
+    - Test::Exception
+    - Net::DNS
+    - Sys::Hostname::Long
+    - DBI
+    - DBD::Pg
+    - Params::Validate
+    - SAPER/Sys-Syslog-0.33.tar.gz
+    - PEVANS/Socket-2.020.tar.gz  # Wheezy ships with 1.94 but need >= 1.94
+
+- name: ensure database users are present
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user: name={{ item }} state=present password=deltar
+  with_items:
+    - deltar_rw
+    - deltar_ro
+
+- name: ensure database delta_reporting exists
+  sudo: yes
+  sudo_user: postgres
+  postgresql_db: name=delta_reporting encoding="UTF-8" state=present
+    owner=deltar_rw
+
+- name: ensure proper privileges for database user deltar_ro
+  sudo: yes
+  sudo_user: postgres
+  postgresql_privs: db=delta_reporting privs=SELECT type=table
+    objs=ALL_IN_SCHEMA role=deltar_ro state=present
+
+- name: remove /opt/delta_reporting prior to git clone
+  file: path=/opt/delta_reporting state=absent
+
+- name: clone delta reporting repo to /opt/delta_reporting
+  git: dest=/opt/delta_reporting
+    repo=https://github.com/evolvethinking/delta_reporting
+
+- name: ensure proper configuration file DeltaR.conf
+  template: src=DeltaR.conf.j2 dest=/opt/delta_reporting/app/DeltaR.conf
+
+- name: copy bin/delta_reporting script to /etc/init.d
+  shell: cp /opt/delta_reporting/bin/delta_reporting /etc/init.d/.
+
+- name: ensure /etc/init.d/delta_reporting is executable
+  file: path=/etc/init.d/delta_reporting mode="0755"
+
+- name: ensure user deltar exists
+  user: name=deltar home=/opt/delta_reporting shell=/bin/false state=present
+
+- name: ensure deltar is owner of /opt/delta_reporting
+  file: path=/opt/delta_reporting state=directory owner=deltar
+    group=deltar recurse=yes
+
+# This is done by delta reporting and the elf lib.
+#    - name: ensure directory /var/cfengine/delta_reporting/log exists
+#      file: path=/var/cfengine/delta_reporting/log state=directory
+
+- name: ensure service delta_reporting is started
+  service: name=delta_reporting state=started
+
+- name: ensure cfengine tools directory exists
+  file: path=/var/cfengine/tools state=directory
+
+- name: copy /opt/delta_reporting/bin/dhlogmaker to /var/cfengine/tools
+  shell: cp /opt/delta_reporting/bin/dhlogmaker /var/cfengine/tools/.
+
+- debug: msg="Visit following link http://localhost:8080/initialize_database"
