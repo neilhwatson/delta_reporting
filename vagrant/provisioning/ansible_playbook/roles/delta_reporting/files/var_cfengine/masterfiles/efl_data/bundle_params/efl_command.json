@@ -1,0 +1,10 @@
+[
+  {
+    "class": "vagrant",
+    "command": "/bin/echo am_vm_host > /tmp/am_vm_host",
+    "useshell": "noshell",
+    "module": "no",
+    "ifelapsed": "1",
+    "promisee": "test"
+  }
+]
