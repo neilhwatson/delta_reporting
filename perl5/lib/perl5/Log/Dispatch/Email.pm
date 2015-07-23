@@ -1,12 +1,15 @@
 package Log::Dispatch::Email;
-$Log::Dispatch::Email::VERSION = '2.42';
+
 use strict;
 use warnings;
+
+our $VERSION = '2.45';
 
 use Log::Dispatch::Output;
 
 use base qw( Log::Dispatch::Output );
 
+use Devel::GlobalDestruction qw( in_global_destruction );
 use Params::Validate qw(validate SCALAR ARRAYREF BOOLEAN);
 Params::Validate::validation_options( allow_extra => 1 );
 
@@ -84,7 +87,20 @@ sub flush {
 sub DESTROY {
     my $self = shift;
 
-    $self->flush;
+    if (   in_global_destruction()
+        && $self->{buffered}
+        && @{ $self->{buffer} } ) {
+
+        my $name  = $self->name();
+        my $class = ref $self;
+        my $message
+            = "Log messages for the $name output (a $class object) remain unsent but the program is terminating.\n";
+        $message .= "The messages are:\n";
+        $message .= "  $_\n" for @{ $self->{buffer} };
+    }
+    else {
+        $self->flush();
+    }
 }
 
 1;
@@ -95,15 +111,13 @@ __END__
 
 =pod
 
-=encoding UTF-8
-
 =head1 NAME
 
 Log::Dispatch::Email - Base class for objects that send log messages via email
 
 =head1 VERSION
 
-version 2.42
+version 2.45
 
 =head1 SYNOPSIS
 
@@ -184,7 +198,7 @@ Dave Rolsky <autarch@urth.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2014 by Dave Rolsky.
+This software is Copyright (c) 2015 by Dave Rolsky.
 
 This is free software, licensed under:
 

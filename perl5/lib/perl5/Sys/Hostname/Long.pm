@@ -11,7 +11,7 @@ use Sys::Hostname;
 # Use perl < 5.6 compatible methods for now, change to 'our' soon.
 use vars qw(@EXPORT $VERSION $hostlong %dispatch $lastdispatch);
 @EXPORT  = qw/ hostname_long /;
-$VERSION = '1.4';
+$VERSION = '1.5';
 
 %dispatch = (
 
@@ -39,13 +39,13 @@ $VERSION = '1.4';
 		'exec' => sub {
 			return eval q{
 				use Win32::TieRegistry ( TiedHash => '%RegistryHash' );
-				$RegistryHash{'LMachine'}{'System'}{'CurrentControlSet'}{'Services'}{'VxD'}{'MSTCP'}{'Domain'}; 
+				$RegistryHash{'LMachine'}{'System'}{'CurrentControlSet'}{'Services'}{'VxD'}{'MSTCP'}{'Domain'};
 			};
 		},
 	},
 
 	'uname' => {
-		'title' => 'POSIX::unae',
+		'title' => 'POSIX::uname',
 		'description' => '',
 		'exec' => sub {
 			return eval {
@@ -63,7 +63,7 @@ $VERSION = '1.4';
 		'exec' => sub {
 			return eval q{
 				use Win32::TieRegistry ( TiedHash => '%RegistryHash' );
-				$RegistryHash{'LMachine'}{'System'}{'CurrentControlSet'}{'Services'}{'VxD'}{'MSTCP'}{'Domain'}; 
+				$RegistryHash{'LMachine'}{'System'}{'CurrentControlSet'}{'Services'}{'VxD'}{'MSTCP'}{'Domain'};
 			};
 		},
 	},
@@ -73,13 +73,16 @@ $VERSION = '1.4';
 		'description' => '',
 		'exec' => sub {
 			# Skip for Solaris, and only run as non-root
+			# Skip for darwin (Mac OS X), RT#28894
 			my $tmp;
-			if ($< == 0) {
-				$tmp = `su nobody -c "hostname --fqdn"`;
-			} else {
-				$tmp = `hostname --fqdn`;
+			if ( $^O ne 'darwin' ) {
+				if ($< == 0) {
+					$tmp = `su nobody -c "hostname --fqdn"`;
+				} else {
+					$tmp = `hostname --fqdn`;
+				}
+				$tmp =~ tr/\0\r\n//d;
 			}
-			$tmp =~ tr/\0\r\n//d;
 			return $tmp;
 		},
 	},
@@ -162,10 +165,10 @@ sub hostname_long {
 
 	unless ($hostlong =~ m|.*\..*|) {
 		if ($^O eq 'MacOS') {
-			# http://bumppo.net/lists/macperl/1999/03/msg00282.html 
+			# http://bumppo.net/lists/macperl/1999/03/msg00282.html
 			#	suggests that it will work (checking localhost) on both
-			#	Mac and Windows. 
-			#	Personally this makes no sense what so ever as 
+			#	Mac and Windows.
+			#	Personally this makes no sense what so ever as
 			$hostlong = dispatcher('gethostbyname');
 
 		} elsif ($^O eq 'IRIX') {	# XXX Patter match string !
@@ -185,7 +188,7 @@ sub hostname_long {
 
 		} elsif ($^O eq 'solaris') {
 			$hostlong = dispatcher('exec_hostname_domainname');
- 
+
 		} else {
 			$hostlong = dispatcher('exec_hostname_fqdn');
 		}
@@ -258,11 +261,11 @@ This is the original list of platforms tested.
 	FreeBSD		FreeBSD				OK
 
 A new list has now been compiled of all the operating systems so that I can
-individually keep informaiton on their success.
+individually keep information on their success.
 
 THIS IS IN NEED OF AN UPDATE AFTER NEXT RELEASE.
 
-=over 4 
+=over 4
 
 =item Acorn - Not yet tested
 
@@ -316,7 +319,7 @@ THIS IS IN NEED OF AN UPDATE AFTER NEXT RELEASE.
 
 =item JPerl - Not yet tested
 
-=item Linux 
+=item Linux
 
 =over 8
 
@@ -476,7 +479,7 @@ THIS IS IN NEED OF AN UPDATE AFTER NEXT RELEASE.
 
 =head2 Unix
 
-Most unix systems have trouble working out the fully quallified domain name as
+Most unix systems have trouble working out the fully qualified domain name as
 it to be configured somewhere in the system correctly. For example in most
 linux systems (debian, ?) the fully qualified name should be the first entry
 next to the ip number in /etc/hosts
@@ -509,11 +512,14 @@ Solaris
 
 =head1 AUTHOR
 
-Scott Penrose E<lt>F<scottp@dd.com.au>E<gt>
+Originally by Scott Penrose E<lt>F<scottp@dd.com.au>E<gt>
+
+Contributions: Michiel Beijen E<lt>F<michiel.beijen@gmail.com>E<gt>
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001,2004,2005 Scott Penrose. All rights reserved.
+Copyright (c) 2001,2004,2005,2015 Scott Penrose. All rights reserved.
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 

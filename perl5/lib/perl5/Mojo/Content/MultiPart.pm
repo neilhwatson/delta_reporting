@@ -7,10 +7,8 @@ has parts => sub { [] };
 
 sub body_contains {
   my ($self, $chunk) = @_;
-  for my $part (@{$self->parts}) {
-    return 1 if index($part->build_headers, $chunk) >= 0;
-    return 1 if $part->body_contains($chunk);
-  }
+  ($_->headers_contain($chunk) or $_->body_contains($chunk)) and return 1
+    for @{$self->parts};
   return undef;
 }
 
@@ -280,13 +278,15 @@ Clone content if possible, otherwise return C<undef>.
 
   my $bytes = $multi->get_body_chunk(0);
 
-Get a chunk of content starting from a specific position.
+Get a chunk of content starting from a specific position. Note that it might
+not be possible to get the same chunk twice if content was generated
+dynamically.
 
 =head2 is_multipart
 
-  my $true = $multi->is_multipart;
+  my $bool = $multi->is_multipart;
 
-True.
+True, this is a L<Mojo::Content::MultiPart> object.
 
 =head2 new
 

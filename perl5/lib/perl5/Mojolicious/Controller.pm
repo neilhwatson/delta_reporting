@@ -16,7 +16,7 @@ has match =>
 
 # Reserved stash values
 my %RESERVED = map { $_ => 1 } (
-  qw(action app cb controller data extends format handler json layout),
+  qw(action app cb controller data extends format handler inline json layout),
   qw(namespace path status template text variant)
 );
 
@@ -107,7 +107,8 @@ sub finish {
 
   # WebSocket
   my $tx = $self->tx;
-  $tx->finish(@_) and return $self if $tx->is_websocket;
+  $tx->finish(@_) and return $tx->is_established ? $self : $self->rendered(101)
+    if $tx->is_websocket;
 
   # Chunked stream
   return @_ ? $self->write_chunk(@_)->write_chunk('') : $self->write_chunk('')
@@ -137,7 +138,7 @@ sub helpers { $_[0]->app->renderer->get_helper('')->($_[0]) }
 sub on {
   my ($self, $name, $cb) = @_;
   my $tx = $self->tx;
-  $self->rendered(101) if $tx->is_websocket;
+  $self->rendered(101) if $tx->is_websocket && !$tx->is_established;
   return $tx->on($name => sub { shift; $self->$cb(@_) });
 }
 
@@ -167,16 +168,14 @@ sub render {
   my $plugins = $app->plugins->emit_hook(before_render => $self, $args);
   my $maybe   = delete $args->{'mojo.maybe'};
 
-  # Render
   my $ts = $args->{'mojo.to_string'};
   my ($output, $format) = $app->renderer->render($self, $args);
-  return defined $output ? Mojo::ByteStream->new($output) : undef if $ts;
 
-  # Maybe
+  # Maybe no 404
+  return defined $output ? Mojo::ByteStream->new($output) : undef if $ts;
   return $maybe ? undef : !$self->helpers->reply->not_found
     unless defined $output;
 
-  # Prepare response
   $plugins->emit_hook(after_render => $self, \$output, $format);
   my $headers = $self->res->body($output)->headers;
   $headers->content_type($app->types->type($format) || 'text/plain')
@@ -253,7 +252,7 @@ sub send {
   Carp::croak 'No WebSocket connection to send message to'
     unless $tx->is_websocket;
   $tx->send($msg, $cb ? sub { shift; $self->$cb(@_) } : ());
-  return $self;
+  return $tx->is_established ? $self : $self->rendered(101);
 }
 
 sub session {
@@ -342,6 +341,7 @@ sub validation {
   my $header = $req->headers->header('X-CSRF-Token');
   my $hash   = $req->params->to_hash;
   $hash->{csrf_token} //= $header if $token && $header;
+  $hash->{$_} = $req->every_upload($_) for map { $_->name } @{$req->uploads};
   my $validation = $self->app->validator->validation->input($hash);
   return $stash->{'mojo.validation'} = $validation->csrf_token($token);
 }
@@ -469,6 +469,9 @@ the last one, you can use L</"every_cookie">.
   # Create response cookie with domain and expiration date
   $c->cookie(user => 'sri', {domain => 'example.com', expires => time + 60});
 
+  # Create secure response cookie
+  $c->cookie(secret => 'I <3 Mojolicious', {secure => 1, httponly => 1});
+
 =head2 every_cookie
 
   my $values = $c->every_cookie('foo');
@@ -506,7 +509,9 @@ sharing the same name as an array reference.
   $c = $c->finish(1003 => 'Cannot accept data!');
   $c = $c->finish('Bye!');
 
-Close WebSocket connection or long poll stream gracefully.
+Close WebSocket connection or long poll stream gracefully. This method will
+automatically respond to WebSocket handshake requests with a C<101> response
+status, to establish the WebSocket connection.
 
 =head2 flash
 
@@ -539,9 +544,9 @@ L<Mojolicious::Plugin::DefaultHelpers> and L<Mojolicious::Plugin::TagHelpers>.
   my $cb = $c->on(finish => sub {...});
 
 Subscribe to events of L</"tx">, which is usually a L<Mojo::Transaction::HTTP>
-or L<Mojo::Transaction::WebSocket> object. Note that this method will
-automatically respond to WebSocket handshake requests with a C<101> response
-status.
+or L<Mojo::Transaction::WebSocket> object. This method will automatically
+respond to WebSocket handshake requests with a C<101> response status, to
+establish the WebSocket connection.
 
   # Do something after the transaction has been finished
   $c->on(finish => sub {
@@ -711,9 +716,6 @@ using a C<200> response code.
   $c->res->body('Hello World!');
   $c->rendered(200);
 
-  # Accept WebSocket handshake without subscribing to an event
-  $c->rendered(101);
-
 =head2 req
 
   my $req = $c->req;
@@ -789,7 +791,9 @@ L<Mojolicious::Plugin::DefaultHelpers/"accepts">.
   $c = $c->send($chars => sub {...});
 
 Send message or frame non-blocking via WebSocket, the optional drain callback
-will be invoked once all data has been written.
+will be invoked once all data has been written. This method will automatically
+respond to WebSocket handshake requests with a C<101> response status, to
+establish the WebSocket connection.
 
   # Send "Text" message
   $c->send('I ♥ Mojolicious!');
@@ -866,9 +870,9 @@ Non-persistent data storage and exchange for the current request, application
 wide default values can be set with L<Mojolicious/"defaults">. Some stash
 values have a special meaning and are reserved, the full list is currently
 C<action>, C<app>, C<cb>, C<controller>, C<data>, C<extends>, C<format>,
-C<handler>, C<json>, C<layout>, C<namespace>, C<path>, C<status>, C<template>,
-C<text> and C<variant>. Note that all stash values with a C<mojo.*> prefix are
-reserved for internal use.
+C<handler>, C<inline>, C<json>, C<layout>, C<namespace>, C<path>, C<status>,
+C<template>, C<text> and C<variant>. Note that all stash values with a
+C<mojo.*> prefix are reserved for internal use.
 
   # Remove value
   my $foo = delete $c->stash->{foo};
@@ -893,6 +897,9 @@ Generate a portable L<Mojo::URL> object with base for a path, URL or route.
   # "http://127.0.0.1:3000/index.html" if application was started with Morbo
   $c->url_for('/index.html')->to_abs;
 
+  # "https://127.0.0.1:443/index.html" if application was started with Morbo
+  $c->url_for('/index.html')->to_abs->scheme('https')->port(443);
+
   # "/index.html?foo=bar" if application is deployed under "/"
   $c->url_for('/index.html')->query(foo => 'bar');
 
@@ -910,31 +917,40 @@ to inherit query parameters from the current request.
   my $validation = $c->validation;
 
 Get L<Mojolicious::Validator::Validation> object for current request to
-validate C<GET> and C<POST> parameters extracted from the query string and
-C<application/x-www-form-urlencoded> or C<multipart/form-data> message body.
-Parts of the request body need to be loaded into memory to parse C<POST>
-parameters, so you have to make sure it is not excessively large, there's a
-16MB limit by default.
+validate file uploads as well as C<GET> and C<POST> parameters extracted from
+the query string and C<application/x-www-form-urlencoded> or
+C<multipart/form-data> message body. Parts of the request body need to be loaded
+into memory to parse C<POST> parameters, so you have to make sure it is not
+excessively large, there's a 16MB limit by default.
 
+  # Validate GET/POST parameter
   my $validation = $c->validation;
   $validation->required('title')->size(3, 50);
   my $title = $validation->param('title');
 
+  # Validate file upload
+  my $validation = $c->validation;
+  $validation->required('tarball')->upload->size(1, 1048576);
+  my $tarball = $validation->param('tarball');
+
 =head2 write
 
   $c = $c->write;
+  $c = $c->write('');
   $c = $c->write($bytes);
   $c = $c->write(sub {...});
   $c = $c->write($bytes => sub {...});
 
 Write dynamic content non-blocking, the optional drain callback will be invoked
-once all data has been written.
+once all data has been written. Calling this method without a chunk of data
+will finalize the response headers and allow for dynamic content to be written
+later.
 
   # Keep connection alive (with Content-Length header)
   $c->res->headers->content_length(6);
   $c->write('Hel' => sub {
     my $c = shift;
-    $c->write('lo!')
+    $c->write('lo!');
   });
 
   # Close connection when finished (without Content-Length header)
@@ -946,6 +962,24 @@ once all data has been written.
     });
   });
 
+You can call L</"finish"> or write an empty chunk of data at any time to end
+the stream.
+
+  HTTP/1.1 200 OK
+  Connection: keep-alive
+  Date: Sat, 13 Sep 2014 16:48:29 GMT
+  Content-Length: 6
+  Server: Mojolicious (Perl)
+
+  Hello!
+
+  HTTP/1.1 200 OK
+  Connection: close
+  Date: Sat, 13 Sep 2014 16:48:29 GMT
+  Server: Mojolicious (Perl)
+
+  Hello!
+
 For Comet (long polling) you might also want to increase the inactivity timeout
 with L<Mojolicious::Plugin::DefaultHelpers/"inactivity_timeout">, which usually
 defaults to C<15> seconds.
@@ -956,28 +990,38 @@ defaults to C<15> seconds.
 =head2 write_chunk
 
   $c = $c->write_chunk;
+  $c = $c->write_chunk('');
   $c = $c->write_chunk($bytes);
   $c = $c->write_chunk(sub {...});
   $c = $c->write_chunk($bytes => sub {...});
 
 Write dynamic content non-blocking with C<chunked> transfer encoding, the
-optional drain callback will be invoked once all data has been written.
+optional drain callback will be invoked once all data has been written. Calling
+this method without a chunk of data will finalize the response headers and
+allow for dynamic content to be written later.
 
   # Make sure previous chunk has been written before continuing
-  $c->write_chunk('He' => sub {
+  $c->write_chunk('H' => sub {
     my $c = shift;
-    $c->write_chunk('ll' => sub {
+    $c->write_chunk('ell' => sub {
       my $c = shift;
       $c->finish('o!');
     });
   });
 
-You can call L</"finish"> at any time to end the stream.
+You can call L</"finish"> or write an empty chunk of data at any time to end
+the stream.
 
-  2
-  He
-  2
-  ll
+  HTTP/1.1 200 OK
+  Connection: keep-alive
+  Date: Sat, 13 Sep 2014 16:48:29 GMT
+  Transfer-Encoding: chunked
+  Server: Mojolicious (Perl)
+
+  1
+  H
+  3
+  ell
   2
   o!
   0

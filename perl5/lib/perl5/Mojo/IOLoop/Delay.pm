@@ -3,11 +3,9 @@ use Mojo::Base 'Mojo::EventEmitter';
 
 use Mojo::IOLoop;
 use Mojo::Util;
-use Hash::Util::FieldHash 'fieldhash';
 
-has ioloop => sub { Mojo::IOLoop->singleton };
-
-fieldhash my %REMAINING;
+has ioloop    => sub { Mojo::IOLoop->singleton };
+has remaining => sub { [] };
 
 sub begin {
   my ($self, $offset, $len) = @_;
@@ -19,13 +17,6 @@ sub begin {
 sub data { Mojo::Util::_stash(data => @_) }
 
 sub pass { $_[0]->begin->(@_) }
-
-sub remaining {
-  my $self = shift;
-  return $REMAINING{$self} //= [] unless @_;
-  $REMAINING{$self} = shift;
-  return $self;
-}
 
 sub steps {
   my $self = shift->remaining([@_]);
@@ -130,8 +121,8 @@ Mojo::IOLoop::Delay - Manage callbacks and control the flow of events
 =head1 DESCRIPTION
 
 L<Mojo::IOLoop::Delay> manages callbacks and controls the flow of events for
-L<Mojo::IOLoop>, which can help you avoid deep nested closures and memory leaks
-that often result from continuation-passing style.
+L<Mojo::IOLoop>, which can help you avoid deep nested closures that often
+result from continuation-passing style.
 
 =head1 EVENTS
 
@@ -167,6 +158,13 @@ L<Mojo::IOLoop::Delay> implements the following attributes.
   $delay   = $delay->ioloop(Mojo::IOLoop->new);
 
 Event loop object to control, defaults to the global L<Mojo::IOLoop> singleton.
+
+=head2 remaining
+
+  my $remaining = $delay->remaining;
+  $delay        = $delay->remaining([]);
+
+Remaining L</"steps"> in chain.
 
 =head1 METHODS
 
@@ -248,14 +246,6 @@ to the next step.
   # Longer version
   $delay->begin(0)->(@args);
 
-=head2 remaining
-
-  my $remaining = $delay->remaining;
-  $delay        = $delay->remaining([]);
-
-Remaining L</"steps"> in chain, stored outside the object to protect from
-circular references.
-
 =head2 steps
 
   $delay = $delay->steps(sub {...}, sub {...});
@@ -263,8 +253,8 @@ circular references.
 Sequentialize multiple events, every time the active event counter reaches zero
 a callback will run, the first one automatically runs during the next reactor
 tick unless it is delayed by incrementing the active event counter. This chain
-will continue until there are no more callbacks, a callback does not increment
-the active event counter or an exception gets thrown in a callback.
+will continue until there are no L</"remaining"> callbacks, a callback does not
+increment the active event counter or an exception gets thrown in a callback.
 
 =head2 wait
 

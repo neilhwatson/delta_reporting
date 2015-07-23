@@ -72,7 +72,7 @@ start characters. For all templates L<strict>, L<warnings>, L<utf8> and Perl
   <%== Perl expression, replaced with result %>
   <%# Comment, useful for debugging %>
   <%% Replaced with "<%", useful for generating templates %>
-  % Perl code line, treated as "<% line =%>"
+  % Perl code line, treated as "<% line =%>" (explained later)
   %= Perl expression line, treated as "<%= line %>"
   %== Perl expression line, treated as "<%== line %>"
   %# Comment line, useful for debugging
@@ -129,7 +129,7 @@ Whitespace characters around tags can be trimmed by adding an additional equal
 sign to the end of a tag.
 
   <% for (1 .. 3) { %>
-    <%= 'trim all whitespace characters around this expression' =%>
+    <%= 'Trim all whitespace characters around this expression' =%>
   <% } %>
 
 Newline characters can be escaped with a backslash.
@@ -243,7 +243,7 @@ correct name actually exists and falls back to the generic one otherwise.
 
 =head2 Rendering inline templates
 
-Some renderers such as C<ep> allow templates to be passed inline.
+Some renderers such as C<ep> allow templates to be passed C<inline>.
 
   $c->render(inline => 'The result is <%= 1 + 1 %>.');
 
@@ -310,31 +310,35 @@ These mappings can be easily extended or changed with L<Mojolicious/"types">.
 Any of the native Perl data types can be passed to templates as references
 through the L<Mojolicious::Controller/"stash">.
 
-  $c->stash(author     => 'Sebastian');
-  $c->stash(frameworks => [qw(Catalyst Mojolicious)]);
-  $c->stash(examples   => {convos => 'an IRC app'});
+  $c->stash(description => 'web framework');
+  $c->stash(frameworks  => [qw(Catalyst Mojolicious)]);
+  $c->stash(spinoffs    => {minion => 'job queue'});
 
-  %= $author
+  %= $description
   %= $frameworks->[1]
-  %= $examples->{convos}
+  %= $spinoffs->{minion}
 
 Since everything is just Perl normal control structures just work.
 
   % for my $framework (@$frameworks) {
-    <%= $framework %> was written by <%= $author %>.
+    <%= $framework %> is a <%= $description %>.
   % }
 
-  % if (my $description = $examples->{convos}) {
-    Convos is a <%= $description %>.
+  % if (my $description = $spinoffs->{minion}) {
+    Minion is a <%= $description %>.
   % }
 
 For templates that might get rendered in different ways and where you're not
 sure if a stash value will actually be set, you can just use the helper
 L<Mojolicious::Plugin::DefaultHelpers/"stash">.
 
-  % if (my $examples = stash 'examples') {
-    Convos is <%= $examples->{convos} %>.
+  % if (my $spinoffs = stash 'spinoffs') {
+    Minion is a <%= $spinoffs->{minion} %>.
   % }
+
+Just be aware that too many optional stash values will make templates less
+cacheable, which can reduce performance. So passing an C<undef> value to the
+stash, instead of making it optional, is always preferable.
 
 =head2 Helpers
 
@@ -439,10 +443,10 @@ L<Mojolicious::Plugin::DefaultHelpers/"accepts">.
 
 By now you've probably already encountered the built-in 404 (Not Found) and 500
 (Server Error) pages, that get rendered automatically when you make a mistake.
-Those are fallbacks for when your own exception handling fails, but especially
-during development they can also be a great help, you can render them manually
-with the helpers L<Mojolicious::Plugin::DefaultHelpers/"reply-E<gt>exception">
-and L<Mojolicious::Plugin::DefaultHelpers/"reply-E<gt>not_found">.
+Those are fallbacks for when your own exception handling fails, which can be
+especially helpful during development. You can also render them manually with
+the helpers L<Mojolicious::Plugin::DefaultHelpers/"reply-E<gt>exception"> and
+L<Mojolicious::Plugin::DefaultHelpers/"reply-E<gt>not_found">.
 
   use Mojolicious::Lite;
   use Scalar::Util 'looks_like_number';
@@ -587,7 +591,7 @@ value).
 
   my $html = $c->render_to_string('reminder', layout => 'mail');
 
-=head2 Including additional templates
+=head2 Include templates
 
 Like most helpers L<Mojolicious::Plugin::DefaultHelpers/"include"> is just a
 shortcut to make your life a little easier.
@@ -829,6 +833,52 @@ template with named blocks that child templates can override.
 
 This chain could go on and on to allow a very high level of template reuse.
 
+=head2 Forms
+
+To build HTML forms more efficiently you can use tag helpers like
+L<Mojolicious::Plugin::TagHelpers/"form_for">, which can automatically select a
+request method for you if a route name is provided. And since most browsers
+only allow forms to be submitted with C<GET> and C<POST>, but not request
+methods like C<PUT> or C<DELETE>, they are spoofed with an C<_method> query
+parameter.
+
+  use Mojolicious::Lite;
+
+  get '/' => 'form';
+
+  # PUT  /nothing
+  # POST /nothing?_method=PUT
+  put '/nothing' => sub {
+    my $c = shift;
+
+    # Prevent double form submission with redirect
+    my $value = $c->param('whatever');
+    $c->flash(confirmation => "We did nothing with your value ($value).");
+    $c->redirect_to('form');
+  };
+
+  app->start;
+  __DATA__
+
+  @@ form.html.ep
+  <!DOCTYPE html>
+  <html>
+    <body>
+      % if (my $confirmation = flash 'confirmation') {
+        <p><%= $confirmation %></p>
+      % }
+      %= form_for nothing => begin
+        %= text_field whatever => 'I ♥ Mojolicious!'
+        %= submit_button
+      % end
+    </body>
+  </html>
+
+The methods L<Mojolicious::Controller/"flash"> and
+L<Mojolicious::Controller/"redirect_to"> are often used together to prevent
+double form submission, allowing users to receive a confirmation message that
+will vanish if they decide to reload the page they've been redirected to.
+
 =head2 Form validation
 
 You can use L<Mojolicious::Controller/"validation"> to validate C<GET> and
@@ -930,7 +980,7 @@ L<Mojolicious::Validator::Validation/"error">.
     # Render form again if validation failed
     return $c->render('form') if $validation->has_error;
 
-    # Prevent double submit with redirect
+    # Prevent double form submission with redirect
     $c->flash(number => $validation->param('number'));
     $c->redirect_to('form');
   };
@@ -957,10 +1007,6 @@ L<Mojolicious::Validator::Validation/"error">.
       % end
     </body>
   </html>
-
-The methods L<Mojolicious::Controller/"flash"> and
-L<Mojolicious::Controller/"redirect_to"> are often used together to prevent
-double form submission.
 
 =head2 Cross-site request forgery
 
@@ -1082,8 +1128,8 @@ applications, plugins make that very simple.
 
   1;
 
-The C<register> method will be called when you load the plugin and to add your
-helper to the application you can use L<Mojolicious/"helper">.
+The C<register> method will be called when you load the plugin. And to add your
+helper to the application, you can use L<Mojolicious/"helper">.
 
   use Mojolicious::Lite;
 
@@ -1249,8 +1295,8 @@ speed up preloading of referenced images and stylesheets.
   app->start;
 
 The optional drain callback ensures that all previous chunks have been written
-before processing continues. An empty chunk or call to
-L<Mojolicious::Controller/"finish"> marks the end of the stream.
+before processing continues. To end the stream you can call
+L<Mojolicious::Controller/"finish"> or write an empty chunk of data.
 
   HTTP/1.1 200 OK
   Connection: keep-alive

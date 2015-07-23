@@ -6,21 +6,13 @@ has 'tree';
 my $ESCAPE_RE = qr/\\[^0-9a-fA-F]|\\[0-9a-fA-F]{1,6}/;
 my $ATTR_RE   = qr/
   \[
-  ((?:$ESCAPE_RE|[\w\-])+)           # Key
+  ((?:$ESCAPE_RE|[\w\-])+)                              # Key
   (?:
-    (\W)?=                           # Operator
-    (?:"((?:\\"|[^"])*)"|([^\]]+?))  # Value
-    (?:\s+(i))?                      # Case-sensitivity
+    (\W)?=                                              # Operator
+    (?:"((?:\\"|[^"])*)"|'((?:\\'|[^'])*)'|([^\]]+?))   # Value
+    (?:\s+(i))?                                         # Case-sensitivity
   )?
   \]
-/x;
-my $PSEUDO_CLASS_RE = qr/(?::([\w\-]+)(?:\(((?:\([^)]+\)|[^)])+)\))?)/;
-my $TOKEN_RE        = qr/
-  (\s*,\s*)?                            # Separator
-  ((?:[^[\\:\s,>+~]|$ESCAPE_RE\s?)+)?   # Element
-  ($PSEUDO_CLASS_RE*)?                  # Pseudoclass
-  ((?:$ATTR_RE)*)?                      # Attributes
-  (?:\s*([>+~]))?                       # Combinator
 /x;
 
 sub matches {
@@ -79,44 +71,42 @@ sub _combinator {
 sub _compile {
   my $css = "$_[0]";
 
-  my $pattern = [[]];
-  while ($css =~ /$TOKEN_RE/go) {
-    my ($separator, $element, $pc, $attrs, $combinator)
-      = ($1, $2 // '', $3, $6, $12);
+  my $group = [[]];
+  while (my $selectors = $group->[-1]) {
+    push @$selectors, [] unless @$selectors && ref $selectors->[-1];
+    my $last = $selectors->[-1];
 
-    next unless $separator || $element || $pc || $attrs || $combinator;
-
-    # New selector
-    push @$pattern, [] if $separator;
-    my $part = $pattern->[-1];
-
-    # Empty combinator
-    push @$part, ' ' if $part->[-1] && ref $part->[-1];
-
-    # Tag
-    push @$part, my $selector = [];
-    push @$selector, ['tag', _name($1)]
-      if $element =~ s/^((?:\\\.|\\\#|[^.#])+)// && $1 ne '*';
-
-    # Class or ID
-    while ($element =~ /(?:([.#])((?:\\[.\#]|[^\#.])+))/g) {
-      my ($name, $op) = $1 eq '.' ? ('class', '~') : ('id', '');
-      push @$selector, ['attr', _name($name), _value($op, $2)];
-    }
-
-    # Pseudo classes (":not" contains more selectors)
-    push @$selector, ['pc', lc $1, $1 eq 'not' ? _compile($2) : _equation($2)]
-      while $pc =~ /$PSEUDO_CLASS_RE/go;
-
-    # Attributes
-    push @$selector, ['attr', _name($1), _value($2 // '', $3 // $4, $5)]
-      while $attrs =~ /$ATTR_RE/go;
+    # Separator
+    if ($css =~ /\G\s*,\s*/gc) { push @$group, [] }
 
     # Combinator
-    push @$part, $combinator if $combinator;
+    elsif ($css =~ /\G\s*([ >+~])\s*/gc) { push @$selectors, $1 }
+
+    # Class or ID
+    elsif ($css =~ /\G([.#])((?:$ESCAPE_RE\s|\\.|[^,.#:[ >~+])+)/gco) {
+      my ($name, $op) = $1 eq '.' ? ('class', '~') : ('id', '');
+      push @$last, ['attr', _name($name), _value($op, $2)];
+    }
+
+    # Attributes
+    elsif ($css =~ /\G$ATTR_RE/gco) {
+      push @$last, ['attr', _name($1), _value($2 // '', $3 // $4 // $5, $6)];
+    }
+
+    # Pseudo-class (":not" contains more selectors)
+    elsif ($css =~ /\G:([\w\-]+)(?:\(((?:\([^)]+\)|[^)])+)\))?/gcs) {
+      push @$last, ['pc', lc $1, $1 eq 'not' ? _compile($2) : _equation($2)];
+    }
+
+    # Tag
+    elsif ($css =~ /\G((?:$ESCAPE_RE\s|\\.|[^,.#:[ >~+])+)/gco) {
+      push @$last, ['tag', _name($1)] unless $1 eq '*';
+    }
+
+    else {last}
   }
 
-  return $pattern;
+  return $group;
 }
 
 sub _empty { $_[0][0] eq 'comment' || $_[0][0] eq 'pi' }
@@ -141,8 +131,8 @@ sub _equation {
 }
 
 sub _match {
-  my ($pattern, $current, $tree) = @_;
-  _combinator([reverse @$_], $current, $tree, 0) and return 1 for @$pattern;
+  my ($group, $current, $tree) = @_;
+  _combinator([reverse @$_], $current, $tree, 0) and return 1 for @$group;
   return undef;
 }
 
@@ -201,7 +191,7 @@ sub _pc {
 }
 
 sub _select {
-  my ($one, $tree, $pattern) = @_;
+  my ($one, $tree, $group) = @_;
 
   my @results;
   my @queue = @$tree[($tree->[0] eq 'root' ? 1 : 4) .. $#$tree];
@@ -209,7 +199,7 @@ sub _select {
     next unless $current->[0] eq 'tag';
 
     unshift @queue, @$current[4 .. $#$current];
-    next unless _match($pattern, $current, $tree);
+    next unless _match($group, $current, $tree);
     $one ? return $current : push @results, $current;
   }
 
@@ -228,7 +218,7 @@ sub _selector {
     # Attribute
     elsif ($type eq 'attr') { return undef unless _attr(@$s[1, 2], $current) }
 
-    # Pseudo class
+    # Pseudo-class
     elsif ($type eq 'pc') { return undef unless _pc(@$s[1, 2], $current) }
   }
 

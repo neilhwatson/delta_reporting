@@ -62,12 +62,7 @@ sub client {
       $self->$cb(undef, $stream);
     }
   );
-  $client->on(
-    error => sub {
-      $self->_remove($id);
-      $self->$cb(pop, undef);
-    }
-  );
+  $client->on(error => sub { $self->_remove($id); $self->$cb(pop, undef) });
   $client->connect(@_);
 
   return $id;
@@ -415,9 +410,9 @@ L<Mojo::IOLoop::Client/"connect">.
   my $delay = $loop->delay(sub {...}, sub {...});
 
 Build L<Mojo::IOLoop::Delay> object to manage callbacks and control the flow of
-events for this event loop, which can help you avoid deep nested closures and
-memory leaks that often result from continuation-passing style. Callbacks will
-be passed along to L<Mojo::IOLoop::Delay/"steps">.
+events for this event loop, which can help you avoid deep nested closures that
+often result from continuation-passing style. Callbacks will be passed along to
+L<Mojo::IOLoop::Delay/"steps">.
 
   # Synchronize multiple events
   my $delay = Mojo::IOLoop->delay(sub { say 'BOOM!' });
@@ -481,8 +476,8 @@ Check if event loop is running.
   my $undef = Mojo::IOLoop->next_tick(sub {...});
   my $undef = $loop->next_tick(sub {...});
 
-Invoke callback as soon as possible, but not before returning, always returns
-C<undef>.
+Invoke callback as soon as possible, but not before returning or other
+callbacks that have been registered with this method, always returns C<undef>.
 
   # Perform operation on next reactor tick
   Mojo::IOLoop->next_tick(sub {

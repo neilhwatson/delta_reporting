@@ -28,7 +28,7 @@ my %MESSAGES = (
   304 => 'Not Modified',
   305 => 'Use Proxy',
   307 => 'Temporary Redirect',
-  308 => 'Permanent Redirect',                 # RFC 7238
+  308 => 'Permanent Redirect',                 # RFC 7538
   400 => 'Bad Request',
   401 => 'Unauthorized',
   402 => 'Payment Required',
@@ -117,14 +117,7 @@ sub fix_headers {
 
 sub get_start_line_chunk {
   my ($self, $offset) = @_;
-
-  unless (defined $self->{start_buffer}) {
-    my $code = $self->code    || 404;
-    my $msg  = $self->message || $self->default_message;
-    $self->{start_buffer} = "HTTP/@{[$self->version]} $code $msg\x0d\x0a";
-  }
-
-  $self->emit(progress => 'start_line', $offset);
+  $self->_start_line->emit(progress => 'start_line', $offset);
   return substr $self->{start_buffer}, $offset, 131072;
 }
 
@@ -138,6 +131,19 @@ sub is_status_class {
   my ($self, $class) = @_;
   return undef unless my $code = $self->code;
   return $code >= $class && $code < ($class + 100);
+}
+
+sub start_line_size { length shift->_start_line->{start_buffer} }
+
+sub _start_line {
+  my $self = shift;
+
+  return $self if defined $self->{start_buffer};
+  my $code = $self->code    || 404;
+  my $msg  = $self->message || $self->default_message;
+  $self->{start_buffer} = "HTTP/@{[$self->version]} $code $msg\x0d\x0a";
+
+  return $self;
 }
 
 1;
@@ -238,7 +244,8 @@ Make sure response has all required headers.
 
   my $bytes = $res->get_start_line_chunk($offset);
 
-Get a chunk of status-line data starting from a specific position.
+Get a chunk of status-line data starting from a specific position. Note that
+this method finalizes the response.
 
 =head2 is_empty
 
@@ -251,6 +258,12 @@ Check if this is a C<1xx>, C<204> or C<304> response.
   my $bool = $res->is_status_class(200);
 
 Check response status class.
+
+=head2 start_line_size
+
+  my $size = $req->start_line_size;
+
+Size of the status-line in bytes. Note that this method finalizes the response.
 
 =head1 SEE ALSO
 

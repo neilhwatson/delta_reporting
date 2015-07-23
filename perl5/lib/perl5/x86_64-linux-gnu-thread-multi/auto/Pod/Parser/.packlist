@@ -1,0 +1,14 @@
+/home/neil/perl5/bin/podselect
+/home/neil/perl5/lib/perl5/Pod/Find.pm
+/home/neil/perl5/lib/perl5/Pod/InputObjects.pm
+/home/neil/perl5/lib/perl5/Pod/ParseUtils.pm
+/home/neil/perl5/lib/perl5/Pod/Parser.pm
+/home/neil/perl5/lib/perl5/Pod/PlainText.pm
+/home/neil/perl5/lib/perl5/Pod/Select.pm
+/home/neil/perl5/man/man1/podselect.1p
+/home/neil/perl5/man/man3/Pod::Find.3pm
+/home/neil/perl5/man/man3/Pod::InputObjects.3pm
+/home/neil/perl5/man/man3/Pod::ParseUtils.3pm
+/home/neil/perl5/man/man3/Pod::Parser.3pm
+/home/neil/perl5/man/man3/Pod::PlainText.3pm
+/home/neil/perl5/man/man3/Pod::Select.3pm

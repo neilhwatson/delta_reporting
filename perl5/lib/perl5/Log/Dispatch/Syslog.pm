@@ -1,7 +1,9 @@
 package Log::Dispatch::Syslog;
-$Log::Dispatch::Syslog::VERSION = '2.42';
+
 use strict;
 use warnings;
+
+our $VERSION = '2.45';
 
 use Log::Dispatch::Output;
 
@@ -75,16 +77,17 @@ sub _init {
     ];
 }
 
-my $thread_lock;
+my $thread_lock : shared = 0;
+
 sub log_message {
     my $self = shift;
     my %p    = @_;
 
     my $pri = $self->_level_as_number( $p{level} );
 
-    eval {
-        threads::shared::lock($thread_lock) if $self->{lock};
+    lock($thread_lock) if $self->{lock};
 
+    eval {
         if ( defined $self->{socket} ) {
             Sys::Syslog::setlogsock(
                 ref $self->{socket} && reftype( $self->{socket} ) eq 'ARRAY'
@@ -113,15 +116,13 @@ __END__
 
 =pod
 
-=encoding UTF-8
-
 =head1 NAME
 
 Log::Dispatch::Syslog - Object for logging to system log.
 
 =head1 VERSION
 
-version 2.42
+version 2.45
 
 =head1 SYNOPSIS
 
@@ -210,7 +211,7 @@ Dave Rolsky <autarch@urth.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2014 by Dave Rolsky.
+This software is Copyright (c) 2015 by Dave Rolsky.
 
 This is free software, licensed under:
 

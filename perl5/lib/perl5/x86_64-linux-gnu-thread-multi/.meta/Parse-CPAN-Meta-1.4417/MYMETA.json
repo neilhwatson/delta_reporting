@@ -1,0 +1,116 @@
+{
+   "abstract" : "Parse META.yml and META.json CPAN metadata files",
+   "author" : [
+      "Adam Kennedy <adamk@cpan.org>",
+      "David Golden <dagolden@cpan.org>"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "Dist::Zilla version 5.037, CPAN::Meta::Converter version 2.150001, CPAN::Meta::Converter version 2.120351",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Parse-CPAN-Meta",
+   "no_index" : {
+      "directory" : [
+         "t",
+         "xt",
+         "examples",
+         "corpus"
+      ],
+      "package" : [
+         "DB"
+      ]
+   },
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+         }
+      },
+      "develop" : {
+         "requires" : {
+            "Dist::Zilla" : "5",
+            "Dist::Zilla::Plugin::DualLife" : "0",
+            "Dist::Zilla::Plugin::Encoding" : "0",
+            "Dist::Zilla::Plugin::MakeMaker" : "0",
+            "Dist::Zilla::Plugin::MakeMaker::Highlander" : "0.003",
+            "Dist::Zilla::Plugin::Prereqs" : "0",
+            "Dist::Zilla::PluginBundle::DAGOLDEN" : "0.072",
+            "File::Spec" : "0",
+            "File::Temp" : "0",
+            "IO::Handle" : "0",
+            "IPC::Open3" : "0",
+            "Pod::Coverage::TrustPod" : "0",
+            "Test::CPAN::Meta" : "0",
+            "Test::More" : "0",
+            "Test::Pod" : "1.41",
+            "Test::Pod::Coverage" : "1.08",
+            "Test::Spelling" : "0.12",
+            "Test::Version" : "1"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "CPAN::Meta::YAML" : "0.011",
+            "Carp" : "0",
+            "Encode" : "0",
+            "Exporter" : "0",
+            "File::Spec" : "0.80",
+            "JSON::PP" : "2.27200",
+            "perl" : "5.008001",
+            "strict" : "0"
+         }
+      },
+      "test" : {
+         "recommends" : {
+            "CPAN::Meta" : "2.120900"
+         },
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0",
+            "File::Spec" : "0.80",
+            "File::Spec::Functions" : "0",
+            "Test::More" : "0.47",
+            "lib" : "0",
+            "vars" : "0",
+            "warnings" : "0"
+         }
+      }
+   },
+   "provides" : {
+      "Parse::CPAN::Meta" : {
+         "file" : "lib/Parse/CPAN/Meta.pm",
+         "version" : "1.4417"
+      }
+   },
+   "release_status" : "stable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/Perl-Toolchain-Gang/Parse-CPAN-Meta/issues"
+      },
+      "homepage" : "https://github.com/Perl-Toolchain-Gang/Parse-CPAN-Meta",
+      "repository" : {
+         "type" : "git",
+         "url" : "https://github.com/Perl-Toolchain-Gang/Parse-CPAN-Meta.git",
+         "web" : "https://github.com/Perl-Toolchain-Gang/Parse-CPAN-Meta"
+      }
+   },
+   "version" : "1.4417",
+   "x_authority" : "cpan:ADAMK",
+   "x_contributors" : [
+      "Graham Knop <haarg@haarg.org>",
+      "Joshua ben Jore <jjore@cpan.org>",
+      "Karen Etheridge <ether@cpan.org>",
+      "Neil Bowers <neil@bowers.com>",
+      "Ricardo Signes <rjbs@cpan.org>",
+      "Steffen Mueller <smueller@cpan.org>"
+   ]
+}

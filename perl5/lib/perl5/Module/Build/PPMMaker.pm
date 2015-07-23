@@ -1,10 +1,10 @@
 package Module::Build::PPMMaker;
 
 use strict;
+use warnings;
 use Config;
-use vars qw($VERSION);
 
-$VERSION = '0.4205';
+our $VERSION = '0.4214';
 $VERSION = eval $VERSION;
 
 # This code is mostly borrowed from ExtUtils::MM_Unix 6.10_03, with a

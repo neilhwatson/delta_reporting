@@ -1,7 +1,9 @@
 package Log::Dispatch::Output;
-$Log::Dispatch::Output::VERSION = '2.42';
+
 use strict;
 use warnings;
+
+our $VERSION = '2.45';
 
 use Log::Dispatch;
 
@@ -166,9 +168,10 @@ sub _unique_name {
 }
 
 sub _add_newline_callback {
-    my %p = @_;
 
-    return $p{message} . "\n";
+    # This weird construct is an optimization since this might be called a lot
+    # - see https://github.com/autarch/Log-Dispatch/pull/7
+    +{@_}->{message} . "\n";
 }
 
 1;
@@ -179,15 +182,13 @@ __END__
 
 =pod
 
-=encoding UTF-8
-
 =head1 NAME
 
 Log::Dispatch::Output - Base class for all Log::Dispatch::* objects
 
 =head1 VERSION
 
-version 2.42
+version 2.45
 
 =head1 SYNOPSIS
 
@@ -305,7 +306,7 @@ Dave Rolsky <autarch@urth.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2014 by Dave Rolsky.
+This software is Copyright (c) 2015 by Dave Rolsky.
 
 This is free software, licensed under:
 

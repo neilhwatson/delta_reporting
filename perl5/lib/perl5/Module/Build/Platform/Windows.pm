@@ -1,8 +1,8 @@
 package Module::Build::Platform::Windows;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.4205';
+use warnings;
+our $VERSION = '0.4214';
 $VERSION = eval $VERSION;
 
 use Config;
@@ -11,8 +11,7 @@ use File::Spec;
 
 use Module::Build::Base;
 
-use vars qw(@ISA);
-@ISA = qw(Module::Build::Base);
+our @ISA = qw(Module::Build::Base);
 
 
 sub manpage_separator {
@@ -209,7 +208,7 @@ sub split_like_shell {
 
   (my $self, local $_) = @_;
 
-  return @$_ if defined() && UNIVERSAL::isa($_, 'ARRAY');
+  return @$_ if defined() && ref() eq 'ARRAY';
 
   my @argv;
   return @argv unless defined() && length();

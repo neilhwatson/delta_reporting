@@ -1,0 +1,1 @@
+{"pathname":"R/RJ/RJBS/Time-Piece-1.30.tar.gz","version":"1.30","provides":{"Time::Piece":{"file":"Piece.pm","version":"1.30"},"Time::Seconds":{"version":"1.30","file":"Seconds.pm"}},"dist":"Time-Piece-1.30","name":"Time::Piece","target":"Time::Piece"}

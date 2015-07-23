@@ -8,8 +8,7 @@ use Mojo::Util 'md5_sum';
 use POSIX;
 use Scalar::Util 'blessed';
 
-has app => sub { shift->build_app('Mojo::HelloWorld') };
-has [qw(group user)];
+has app           => sub { shift->build_app('Mojo::HelloWorld') };
 has reverse_proxy => sub { $ENV{MOJO_REVERSE_PROXY} };
 
 sub build_app {
@@ -51,9 +50,10 @@ sub load_app {
     local $ENV{MOJO_EXE};
 
     # Try to load application from script into sandbox
-    my $app = eval "package Mojo::Server::Sandbox::@{[md5_sum $path]};"
-      . 'return do($path) || die($@ || $!);';
-    die qq{Can't load application from file "$path": $@} if !$app && $@;
+    delete $INC{$path};
+    my $app = eval
+      "package Mojo::Server::Sandbox::@{[md5_sum $path]}; require \$path";
+    die qq{Can't load application from file "$path": $@} if $@;
     die qq{File "$path" did not return an application object.\n}
       unless blessed $app && $app->isa('Mojo');
     $self->app($app);
@@ -70,29 +70,6 @@ sub new {
 }
 
 sub run { croak 'Method "run" not implemented by subclass' }
-
-sub setuidgid {
-  my $self = shift;
-
-  # Group (make sure secondary groups are reassigned too)
-  if (my $group = $self->group) {
-    $self->_error(qq{Group "$group" does not exist})
-      unless defined(my $gid = getgrnam $group);
-    $self->_error(qq{Can't switch to group "$group": $!})
-      unless ($( = $) = "$gid $gid") && $) eq "$gid $gid" && $( eq "$gid $gid";
-  }
-
-  # User
-  return $self unless my $user = $self->user;
-  $self->_error(qq{User "$user" does not exist})
-    unless defined(my $uid = getpwnam $user);
-  $self->_error(qq{Can't switch to user "$user": $!})
-    unless POSIX::setuid($uid);
-
-  return $self;
-}
-
-sub _error { $_[0]->app->log->error($_[1]) and croak $_[1] }
 
 1;
 
@@ -158,13 +135,6 @@ L<Mojo::Server> implements the following attributes.
 
 Application this server handles, defaults to a L<Mojo::HelloWorld> object.
 
-=head2 group
-
-  my $group = $server->group;
-  $server   = $server->group('users');
-
-Group for server process.
-
 =head2 reverse_proxy
 
   my $bool = $server->reverse_proxy;
@@ -172,13 +142,6 @@ Group for server process.
 
 This server operates behind a reverse proxy, defaults to the value of the
 C<MOJO_REVERSE_PROXY> environment variable.
-
-=head2 user
-
-  my $user = $server->user;
-  $server  = $server->user('web');
-
-User for the server process.
 
 =head1 METHODS
 
@@ -225,12 +188,6 @@ with default request handling.
   $server->run;
 
 Run server. Meant to be overloaded in a subclass.
-
-=head2 setuidgid
-
-  $server = $server->setuidgid;
-
-Set L</"user"> and L</"group"> for process.
 
 =head1 SEE ALSO
 

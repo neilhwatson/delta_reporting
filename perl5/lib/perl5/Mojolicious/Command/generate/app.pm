@@ -33,9 +33,6 @@ EOF
   # Test
   $self->render_to_rel_file('test', "$name/t/basic.t", $class);
 
-  # Log directory
-  $self->create_rel_dir("$name/log");
-
   # Static file
   $self->render_to_rel_file('static', "$name/public/index.html");
 
@@ -195,4 +192,6 @@ done_testing();
 This page was generated from the template "templates/example/welcome.html.ep"
 and the layout "templates/layouts/default.html.ep",
 <%%= link_to 'click here' => url_for %> to reload the page or
-<%%= link_to 'here' => '/index.html' %> to move forward to a static page.
+<%%= link_to 'here' => '/index.html' %> to move forward to a static page. To
+learn more, you can also browse through the documentation
+<%%= link_to 'here' => '/perldoc' %>.

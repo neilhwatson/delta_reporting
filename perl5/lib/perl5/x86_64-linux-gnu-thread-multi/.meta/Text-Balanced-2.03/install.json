@@ -1,0 +1,1 @@
+{"name":"Text::Balanced","target":"Text::Balanced","dist":"Text-Balanced-2.03","version":"2.03","pathname":"S/SH/SHAY/Text-Balanced-2.03.tar.gz","provides":{"Text::Balanced::ErrorMsg":{"file":"lib/Text/Balanced.pm","version":"2.03"},"Text::Balanced":{"version":"2.03","file":"lib/Text/Balanced.pm"},"Text::Balanced::Extractor":{"file":"lib/Text/Balanced.pm","version":"2.03"}}}

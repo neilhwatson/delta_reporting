@@ -236,6 +236,14 @@ but content will not be sent with the response even if it is present.
   # HEAD /test -> {controller => 'bar', action => 'test'}
   $r->get('/test')->to(controller => 'bar', action => 'test');
 
+You can also use the C<_method> query parameter to override the request method,
+this can be very useful when submitting forms with browsers that only support
+C<GET> and C<POST>.
+
+  # PUT  /stuff             -> {controller => 'baz', action => 'stuff'}
+  # POST /stuff?_method=PUT -> {controller => 'baz', action => 'stuff'}
+  $r->put('/stuff')->to(controller => 'baz', action => 'stuff');
+
 =head2 IRIs
 
 IRIs are handled transparently, that means paths are guaranteed to be unescaped
@@ -364,7 +372,8 @@ route with all its children.
   $r->get('/bye')
     ->to(namespace => 'MyApp::MyController::Foo::Bar', action => 'bye');
 
-The C<controller> is always appended to this C<namespace> if available.
+The C<controller> is always converted from C<snake_case> to C<CamelCase> with
+L<Mojo::Util/"camelize">, and then appended to this C<namespace>.
 
   # /bye -> MyApp::MyController::Foo::Bar->bye
   $r->get('/bye')->to('foo-bar#bye', namespace => 'MyApp::MyController');
@@ -373,7 +382,9 @@ The C<controller> is always appended to this C<namespace> if available.
   $r->get('/hey')->to('Foo::Bar#hey', namespace => 'MyApp::MyController');
 
 You can also change the default namespaces for all routes in the application
-with the router attribute L<Mojolicious::Routes/"namespaces">.
+with the router attribute L<Mojolicious::Routes/"namespaces">, which usually
+defaults to a namespace based on the application class (C<MyApp::Controller>),
+as well as the bare application class (C<MyApp>).
 
   $r->namespaces(['MyApp::MyController']);
 
@@ -413,9 +424,9 @@ L<Mojolicious::Controller/"url_for"> for this.
   # Generate URL "http://127.0.0.1:3000/foo/jan" for route "baz"
   my $url = $c->url_for('baz', user => 'jan')->to_abs;
 
-Nameless routes get an automatically generated one assigned that is simply
-equal to the route itself without non-word characters, custom names have a
-higher precedence though.
+You can assign a name with L<Mojolicious::Routes::Route/"name">, or let the
+router generate one automatically, which would be equal to the route itself
+without non-word characters, custom names have a higher precedence though.
 
   # /foo/bar ("foobar")
   $r->get('/foo/bar')->to('test#stuff');
@@ -661,6 +672,28 @@ placeholder.
     $c->render(text => "/$whatever did not match.", status => 404);
   });
 
+=head2 Conditions
+
+Conditions such as C<headers>, C<agent> and C<host> from
+L<Mojolicious::Plugin::HeaderCondition> can be applied to any route with the
+method L<Mojolicious::Routes::Route/"over">, and allow even more powerful route
+constructs.
+
+  # / (Origin: http://mojolicio.us)
+  $r->get('/')->over(headers => {Origin => qr/mojolicio\.us/})->to('foo#bar');
+
+  # / (Firefox)
+  $r->get('/')->over(agent => qr/Firefox/)->to('browser-test#firefox');
+
+  # / (Internet Explorer)
+  $r->get('/')->over(agent => qr/Internet Explorer/)->to('browser-test#ie');
+
+  # http://mojolicio.us/perldoc
+  $r->get('/perldoc')->over(host => 'mojolicio.us')->to('perldoc#index');
+
+Just be aware that conditions are too complex for the routing cache, which
+normally speeds up recurring requests, and can therefore reduce performance.
+
 =head2 Hooks
 
 Hooks operate outside the routing system and allow you to extend the framework
@@ -705,13 +738,6 @@ Post-processing the response to add or remove headers is a very common use.
   });
 
 Same for pre-processing the request.
-
-  # Allow "_method" query parameter to override request method
-  $app->hook(before_dispatch => sub {
-    my $c = shift;
-    return unless my $method = $c->req->url->query->param('_method');
-    $c->req->method($method);
-  });
 
   # Choose template variant based on request headers
   $app->hook(before_dispatch => sub {
@@ -771,29 +797,41 @@ to make route generation more expressive.
   $r->add_shortcut(resource => sub {
     my ($r, $name) = @_;
 
-    # Generate "/$name" route
+    # Prefix for resource
     my $resource = $r->any("/$name")->to("$name#");
 
-    # Handle POST requests
-    $resource->post->to('#create')->name("create_$name");
+    # Render a list of resources
+    $resource->get->to('#index')->name($name);
 
-    # Handle GET requests
-    $resource->get->to('#show')->name("show_$name");
+    # Render a form to create a new resource (submitted to "store")
+    $resource->get('/create')->to('#create')->name("create_$name");
 
-    # Handle OPTIONS requests
-    $resource->options(sub {
-      my $c = shift;
-      $c->res->headers->allow('POST, GET, OPTIONS');
-      $c->render(data => '', status => 204);
-    });
+    # Store newly created resource (submitted by "create")
+    $resource->post->to('#store')->name("store_$name");
+
+    # Render a specific resource
+    $resource->get('/:id')->to('#show')->name("show_$name");
+
+    # Render a form to edit a resource (submitted to "update")
+    $resource->get('/:id/edit')->to('#edit')->name("edit_$name");
+
+    # Store updated resource (submitted by "edit")
+    $resource->put('/:id')->to('#update')->name("update_$name");
+
+    # Remove a resource
+    $resource->delete('/:id')->to('#remove')->name("remove_$name");
 
     return $resource;
   });
 
-  # POST    /user -> {controller => 'user', action => 'create'}
-  # GET     /user -> {controller => 'user', action => 'show'}
-  # OPTIONS /user -> {cb => sub {...}}
-  $r->resource('user');
+  # GET /users         -> {controller => 'users', action => 'index'}
+  # GET /users/create  -> {controller => 'users', action => 'create'}
+  # POST /users        -> {controller => 'users', action => 'store'}
+  # GET /users/23      -> {controller => 'users', action => 'show', id => 23}
+  # GET /users/23/edit -> {controller => 'users', action => 'edit', id => 23}
+  # PUT /users/23      -> {controller => 'users', action => 'update', id => 23}
+  # DELETE /users/23   -> {controller => 'users', action => 'remove', id => 23}
+  $r->resource('users');
 
 =head2 Rearranging routes
 
@@ -812,36 +850,28 @@ L<Mojolicious::Routes::Route/"remove">.
 Especially for rearranging routes created by plugins this can be very useful,
 to find routes by their name you can use L<Mojolicious::Routes::Route/"find">.
 
-=head2 Conditions
+=head2 Adding conditions
 
-Sometimes you might need a little more power, for example to check the
-C<User-Agent> header in multiple routes. This is where conditions come into
-play, they are basically router plugins and need to return a true value for the
-route to match.
+You can also add your own conditions with the method
+L<Mojolicious::Routes/"add_condition">. All conditions are basically router
+plugins that run every time a new request arrives, and which need to return a
+true value for the route to match.
 
-  # Simple "User-Agent" condition
+  # A condition that randomly allows a route to match
   $r->add_condition(
-    agent => sub {
-      my ($route, $c, $captures, $pattern) = @_;
+    random => sub {
+      my ($route, $c, $captures, $num) = @_;
 
-      # User supplied regular expression
-      return undef unless $pattern && ref $pattern eq 'Regexp';
+      # Loser
+      return undef unless int rand $num;
 
-      # Match "User-Agent" header and return true on success
-      my $agent = $c->req->headers->user_agent;
-      return 1 if $agent && $agent =~ $pattern;
-
-      # No success
-      return undef;
+      # Winner
+      return 1;
     }
   );
 
-  # /firefox_only (Firefox) -> {controller => 'foo', action => 'bar'}
-  $r->get('/firefox_only')->over(agent => qr/Firefox/)->to('foo#bar');
-
-The method L<Mojolicious::Routes/"add_condition"> registers the new condition
-in the router, while L<Mojolicious::Routes::Route/"over"> actually applies it
-to the route.
+  # /maybe (25% chance)
+  $r->get('/maybe')->over(random => 4)->to('foo#bar');
 
 =head2 Condition plugins
 
@@ -890,11 +920,30 @@ applications.
 
   1;
 
-=head2 Embedding applications
+=head2 Mount applications
 
-You can easily embed whole applications simply by using them instead of a
-controller. This allows for example the use of the L<Mojolicious::Lite> domain
-specific language in normal L<Mojolicious> controllers.
+The easiest way to embed one application into another is
+L<Mojolicious::Plugin::Mount>, which allows you to mount whole self-contained
+applications under a domain and/or prefix.
+
+  use Mojolicious::Lite;
+
+  # Whole application mounted under "/prefix"
+  plugin Mount => {'/prefix' => '/home/sri/myapp.pl'};
+
+  # Mount application with subdomain
+  plugin Mount => {'test.example.com' => '/home/sri/myapp2.pl'};
+
+  # Normal route
+  get '/' => sub { shift->render(text => 'Hello World!') };
+
+  app->start;
+
+=head2 Embed applications
+
+For a litte more power you can also embed applications by using them instead of
+a controller. This allows for example the use of the L<Mojolicious::Lite>
+domain specific language in normal L<Mojolicious> controllers.
 
   # Controller
   package MyApp::Controller::Bar;
@@ -932,26 +981,9 @@ containing a C<handler> method accepting L<Mojolicious::Controller> objects.
 
   1;
 
-You can also just use L<Mojolicious::Plugin::Mount> to mount whole
-self-contained applications under a domain and/or prefix.
-
-  use Mojolicious::Lite;
-
-  # Whole application mounted under "/prefix"
-  plugin Mount => {'/prefix' => '/home/sri/myapp.pl'};
-
-  # Mount application with subdomain
-  plugin Mount => {'test.example.com' => '/home/sri/myapp2.pl'};
-
-  # Normal route
-  get '/' => sub { shift->render(text => 'Hello World!') };
-
-  app->start;
-
 =head2 Application plugins
 
-Embedding L<Mojolicious> applications is easy, but it gets even easier if you
-package the whole thing as a self-contained reusable plugin.
+You can even package applications as self-contained reusable plugins.
 
   # Plugin
   package Mojolicious::Plugin::MyEmbeddedApp;

@@ -39,15 +39,18 @@ sub new
 sub sql_prepare_and_execute
 {
    my ( $self, $args ) = @_;
-   my $return      = exists $args->{return}      ? $args->{return}      : 'none';
-   my $bind_params = exists $args->{bind_params} ? $args->{bind_params} : [];
-   my $query = $args->{query};
+   my $return      = exists $args->{return}      ? $args->{return}
+                   : 'none';
+   my $bind_params = exists $args->{bind_params} ? $args->{bind_params}
+                   : [];
+   my $query       = $args->{query};
    my $data;
 
    my $caller = ( caller(1) )[3]; # Calling subroutine
 
    my $sth = $dbh->prepare( $query )
-      or $logger->error_die( "SQL prepare error: [$dbh->errstr], caller: [$caller]" );
+      or $logger->error_die(
+         "SQL prepare error: [$dbh->errstr], caller: [$caller]" );
 
    my $bind_parms_length = scalar( @{ $bind_params } );
    if ( $bind_parms_length > 0 )
@@ -65,7 +68,8 @@ sub sql_prepare_and_execute
          };
          if ( $exception )
          {
-            $logger->error_warn( "Exception [$exception], SQL error [$dbh->errstr]" );
+            $logger->error_warn(
+               "Exception [$exception], SQL error [$dbh->errstr]" );
             $logger->error_die(  "Caller [$caller], query [$query]" );
          }
       }
@@ -83,7 +87,8 @@ sub sql_prepare_and_execute
       };
       if ( $exception )
       {
-         $logger->error_warn( "Exception [$exception], SQL error [$dbh->errstr]" );
+         $logger->error_warn(
+            "Exception [$exception], SQL error [$dbh->errstr]" );
          $logger->error_die(  "Caller [$caller], query [$query]" );
       }
    }

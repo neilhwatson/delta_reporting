@@ -2,42 +2,41 @@ package  DeltaR::Dashboard;
 
 use Mojo::JSON 'encode_json';
 
-sub new
-{
+our $dbh;
+
+sub new {
    my ( $class, $arg ) = @_;
-   my $self = bless $arg, $class;
-   return $self;
+   $dbh = $arg->{dbh};
+   return bless $arg, $class
 }
 
-sub hostcount 
-{
+use Data::Dumper;
+sub hostcount {
    my ( $self ) = @_;
 
-   my $active = $self->{dr}->query_inventory( 'cfengine' );
-   $active    = $active->[0][1];
+   my $class_members_ref = $dbh->query_inventory( 'cfengine' );
+   $active_hosts = $class_members_ref->[0][1];
 
-   my $missing = @{ $self->{dr}->query_missing() };
+   my $missing_hosts = @{ $dbh->query_missing() };
 
    # Combine missing and active host counts as JSON
    my @hostcount = (
       {
          label => "Active",
-         value => $active
+         value => $active_hosts
       },
       {
          label => "Missing",
-         value => $missing
+         value => $missing_hosts
       }
    );
-   my $hostcount_json = encode_json( \@hostcount );
-   return $hostcount_json;
+   return encode_json( \@hostcount );
 }
 
-sub promisecount
-{
+sub promisecount {
    my ( $self, $arg ) = @_;
 
-      my @promise_count = (
+      my @promise_counts = (
          {
             label => 'kept',
             value => 0
@@ -52,22 +51,21 @@ sub promisecount
          }
       );
 
-      my $promise_count =
-         $self->{dr}->query_recent_promise_counts( $arg->{from} );
+      my $promise_counts_ref
+         = $dbh->query_recent_promise_counts( $arg->{newer_than} );
 
-      OUTER: for my $i  ( @{ $promise_count } )
+      NEXT_LABEL: for my $next_label ( @{ $promise_counts_ref } )
       {
-         for my $d ( @promise_count )
+         for my $next_promise_count ( @promise_counts )
          {
-            if ( $i->[0] eq $d->{label} )
+            if ( $next_label->[0] eq $next_promise_count->{label} )
             {
-               $d->{value} = $i->[1];
-               next OUTER;
+               $next_promise_count->{value} = $next_label->[1];
+               next NEXT_LABEL;
             }
          }
       }
-      my $promisecount_json = encode_json( \@promise_count );
-      return $promisecount_json;
+      return encode_json( \@promise_counts );
 }
 
 1;

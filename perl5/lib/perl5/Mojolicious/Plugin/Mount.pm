@@ -31,7 +31,7 @@ Mojolicious::Plugin::Mount - Application mount plugin
 =head1 SYNOPSIS
 
   # Mojolicious
-  my $route = $self->plugin(Mount => {'/prefix' => '/home/sri/myapp.pl'});
+  my $route = $app->plugin(Mount => {'/prefix' => '/home/sri/myapp.pl'});
 
   # Mojolicious::Lite
   my $route = plugin Mount => {'/prefix' => '/home/sri/myapp.pl'};
@@ -72,7 +72,8 @@ and implements the following new ones.
 
   my $route = $plugin->register(Mojolicious->new, {'/foo' => '/some/app.pl'});
 
-Mount L<Mojolicious> application.
+Mount L<Mojolicious> application and return the generated route, which is
+usually a L<Mojolicious::Routes::Route> object.
 
 =head1 SEE ALSO
 

@@ -28,10 +28,6 @@ use constant {
   PC_INITIAL_N    => 128
 };
 
-# Will be shipping with Perl 5.22
-my $NAME
-  = eval { require Sub::Util; Sub::Util->can('set_subname') } || sub { $_[1] };
-
 # To generate a new HTML entity table run this command
 # perl examples/entities.pl
 my %ENTITIES;
@@ -125,12 +121,8 @@ sub html_unescape {
 sub md5_bytes { md5 @_ }
 sub md5_sum   { md5_hex @_ }
 
-sub monkey_patch {
-  my ($class, %patch) = @_;
-  no strict 'refs';
-  no warnings 'redefine';
-  *{"${class}::$_"} = $NAME->("${class}::$_", $patch{$_}) for keys %patch;
-}
+# Declared in Mojo::Base to avoid circular require problems
+sub monkey_patch { Mojo::Base::_monkey_patch(@_) }
 
 # Direct translation of RFC 3492
 sub punycode_decode {
@@ -183,8 +175,8 @@ sub punycode_encode {
   my @input = map {ord} split '', $output;
   my @chars = sort grep { $_ >= PC_INITIAL_N } @input;
   $output =~ s/[^\x00-\x7f]+//gs;
-  my $h = my $b = length $output;
-  $output .= "\x2d" if $b > 0;
+  my $h = my $basic = length $output;
+  $output .= "\x2d" if $basic > 0;
 
   for my $m (@chars) {
     next if $m < $n;
@@ -209,7 +201,7 @@ sub punycode_encode {
         }
 
         $output .= chr $q + ($q < 26 ? 0x61 : 0x30 - 26);
-        $bias = _adapt($delta, $h + 1, $h == $b);
+        $bias = _adapt($delta, $h + 1, $h == $basic);
         $delta = 0;
         $h++;
       }
@@ -229,10 +221,10 @@ sub quote {
 }
 
 sub secure_compare {
-  my ($a, $b) = @_;
-  return undef if length $a != length $b;
+  my ($one, $two) = @_;
+  return undef if length $one != length $two;
   my $r = 0;
-  $r |= ord(substr $a, $_) ^ ord(substr $b, $_) for 0 .. length($a) - 1;
+  $r |= ord(substr $one, $_) ^ ord(substr $two, $_) for 0 .. length($one) - 1;
   return $r == 0;
 }
 
@@ -385,34 +377,34 @@ sub _encoding {
 
 # Supported on Perl 5.14+
 sub _global_destruction {
-  defined(${^GLOBAL_PHASE}) && ${^GLOBAL_PHASE} eq 'DESTRUCT';
+  defined ${^GLOBAL_PHASE} && ${^GLOBAL_PHASE} eq 'DESTRUCT';
 }
 
 sub _header {
   my ($str, $cookie) = @_;
 
-  my (@tree, @token);
-  while ($str =~ s/^[,;\s]*([^=;, ]+)\s*//) {
-    push @token, $1, undef;
-    my $expires = $cookie && @token > 2 && lc $1 eq 'expires';
+  my (@tree, @part);
+  while ($str =~ /\G[,;\s]*([^=;, ]+)\s*/gc) {
+    push @part, $1, undef;
+    my $expires = $cookie && @part > 2 && lc $1 eq 'expires';
 
     # Special "expires" value
-    if ($expires && $str =~ s/^=\s*$EXPIRES_RE//o) { $token[-1] = $1 }
+    if ($expires && $str =~ /\G=\s*$EXPIRES_RE/gco) { $part[-1] = $1 }
 
     # Quoted value
-    elsif ($str =~ s/^=\s*("(?:\\\\|\\"|[^"])*")//) { $token[-1] = unquote $1 }
+    elsif ($str =~ /\G=\s*("(?:\\\\|\\"|[^"])*")/gc) { $part[-1] = unquote $1 }
 
     # Unquoted value
-    elsif ($str =~ s/^=\s*([^;, ]*)//) { $token[-1] = $1 }
+    elsif ($str =~ /\G=\s*([^;, ]*)/gc) { $part[-1] = $1 }
 
     # Separator
-    next unless $str =~ s/^[;\s]*,\s*//;
-    push @tree, [@token];
-    @token = ();
+    next unless $str =~ /\G[;\s]*,\s*/gc;
+    push @tree, [@part];
+    @part = ();
   }
 
-  # Take care of final token
-  return [@token ? (@tree, \@token) : @tree];
+  # Take care of final part
+  return [@part ? (@tree, \@part) : @tree];
 }
 
 sub _options {
@@ -783,7 +775,7 @@ L<RFC 3986|http://tools.ietf.org/html/rfc3986>, the pattern used defaults to
 C<^A-Za-z0-9\-._~>.
 
   # "foo%3Bbar"
-  url_unescape 'foo;bar';
+  url_escape 'foo;bar';
 
 =head2 url_unescape
 

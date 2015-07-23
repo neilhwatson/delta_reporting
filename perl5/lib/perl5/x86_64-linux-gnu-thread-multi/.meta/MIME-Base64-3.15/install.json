@@ -1,0 +1,1 @@
+{"provides":{"MIME::Base64":{"file":"Base64.pm","version":"3.15"},"MIME::QuotedPrint":{"version":"3.13","file":"QuotedPrint.pm"}},"pathname":"G/GA/GAAS/MIME-Base64-3.15.tar.gz","version":"3.15","dist":"MIME-Base64-3.15","target":"MIME::Base64","name":"MIME::Base64"}

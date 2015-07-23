@@ -1,6 +1,7 @@
 package Mojo::Reactor::EV;
 use Mojo::Base 'Mojo::Reactor::Poll';
 
+use Carp 'croak';
 use EV 4.0;
 
 my $EV;
@@ -9,7 +10,10 @@ sub CLONE { die "EV does not work with ithreads.\n" }
 
 sub DESTROY { undef $EV }
 
-sub again { shift->{timers}{shift()}{watcher}->again }
+sub again {
+  croak 'Timer not active' unless my $timer = shift->{timers}{shift()};
+  $timer->{watcher}->again;
+}
 
 sub is_running { !!EV::depth }
 
@@ -29,21 +33,24 @@ sub timer { shift->_timer(0, @_) }
 sub watch {
   my ($self, $handle, $read, $write) = @_;
 
+  my $fd = fileno $handle;
+  croak 'I/O watcher not active' unless my $io = $self->{io}{$fd};
+
   my $mode = 0;
   $mode |= EV::READ  if $read;
   $mode |= EV::WRITE if $write;
 
-  my $fd = fileno $handle;
-  if ($mode == 0) { delete $self->{io}{$fd}{watcher} }
-  elsif (my $w = $self->{io}{$fd}{watcher}) { $w->events($mode) }
+  if ($mode == 0) { delete $io->{watcher} }
+  elsif (my $w = $io->{watcher}) { $w->events($mode) }
   else {
     my $cb = sub {
       my ($w, $revents) = @_;
-      $self->_sandbox('Read', $self->{io}{$fd}{cb}, 0) if EV::READ & $revents;
-      $self->_sandbox('Write', $self->{io}{$fd}{cb}, 1)
+      $self->_try('I/O watcher', $self->{io}{$fd}{cb}, 0)
+        if EV::READ & $revents;
+      $self->_try('I/O watcher', $self->{io}{$fd}{cb}, 1)
         if EV::WRITE & $revents && $self->{io}{$fd};
     };
-    $self->{io}{$fd}{watcher} = EV::io($fd, $mode, $cb);
+    $io->{watcher} = EV::io($fd, $mode, $cb);
   }
 
   return $self;
@@ -56,7 +63,7 @@ sub _timer {
   my $id      = $self->_id;
   my $wrapper = sub {
     delete $self->{timers}{$id} unless $recurring;
-    $self->_sandbox("Timer $id", $cb);
+    $self->_try('Timer', $cb);
   };
   EV::now_update() if $after > 0;
   $self->{timers}{$id}{watcher} = EV::timer($after, $after, $wrapper);
@@ -121,7 +128,7 @@ implements the following new ones.
 
   $reactor->again($id);
 
-Restart active timer.
+Restart timer. Note that this method requires an active timer.
 
 =head2 is_running
 
@@ -142,6 +149,11 @@ Construct a new L<Mojo::Reactor::EV> object.
 Run reactor until an event occurs or no events are being watched anymore. Note
 that this method can recurse back into the reactor, so you need to be careful.
 
+  # Don't block longer than 0.5 seconds
+  my $id = $reactor->timer(0.5 => sub {});
+  $reactor->one_tick;
+  $reactor->remove($id);
+
 =head2 recurring
 
   my $id = $reactor->recurring(0.25 => sub {...});
@@ -155,6 +167,9 @@ amount of time in seconds.
 
 Start watching for I/O and timer events, this will block until L</"stop"> is
 called or no events are being watched anymore.
+
+  # Start reactor only if it is not running already
+  $reactor->start unless $reactor->is_running;
 
 =head2 stop
 
@@ -175,6 +190,18 @@ seconds.
 
 Change I/O events to watch handle for with true and false values. Note that
 this method requires an active I/O watcher.
+
+  # Watch only for readable events
+  $reactor->watch($handle, 1, 0);
+
+  # Watch only for writable events
+  $reactor->watch($handle, 0, 1);
+
+  # Watch for readable and writable events
+  $reactor->watch($handle, 1, 1);
+
+  # Pause watching for events
+  $reactor->watch($handle, 0, 0);
 
 =head1 SEE ALSO
 

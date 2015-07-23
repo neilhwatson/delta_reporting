@@ -71,7 +71,7 @@ sub match {
   else               { $path = $req->url->path->to_route }
 
   # Method (HEAD will be treated as GET)
-  my $method = uc $req->method;
+  my $method = uc($req->url->query->clone->param('_method') || $req->method);
   $method = 'GET' if $method eq 'HEAD';
 
   # Check cache
@@ -265,7 +265,7 @@ C<attr>, C<has>, C<new> and C<tap>.
 =head2 namespaces
 
   my $namespaces = $r->namespaces;
-  $r             = $r->namespaces(['Foo::Bar::Controller']);
+  $r             = $r->namespaces(['MyApp::Controller', 'MyApp']);
 
 Namespaces to load controllers from.
 

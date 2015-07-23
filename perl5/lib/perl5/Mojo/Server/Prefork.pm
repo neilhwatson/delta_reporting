@@ -145,11 +145,8 @@ sub _spawn {
   return $self->emit(spawn => $pid)->{pool}{$pid} = {time => steady_time}
     if $pid;
 
-  # Change user/group
-  $self->cleanup(0)->setuidgid;
-
   # Heartbeat messages
-  my $loop     = $self->ioloop;
+  my $loop     = $self->cleanup(0)->ioloop;
   my $finished = 0;
   $loop->on(finish => sub { $finished = 1 });
   weaken $self;
@@ -390,7 +387,7 @@ being forced, defaults to C<20>.
 
 =head2 heartbeat_interval
 
-  my $interval = $prefork->heartbeat_intrval;
+  my $interval = $prefork->heartbeat_interval;
   $prefork     = $prefork->heartbeat_interval(3);
 
 Heartbeat interval in seconds, defaults to C<5>.
@@ -416,7 +413,8 @@ L<Mojo::IOLoop/"multi_accept">.
   my $file = $prefork->pid_file;
   $prefork = $prefork->pid_file('/tmp/prefork.pid');
 
-Full path of process id file, defaults to a random temporary path.
+Full path of process id file, defaults to C<prefork.pid> in a temporary
+directory.
 
 =head2 workers
 

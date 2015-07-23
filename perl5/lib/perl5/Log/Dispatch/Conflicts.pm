@@ -4,42 +4,30 @@ package # hide from PAUSE
 use strict;
 use warnings;
 
+# this module was generated with Dist::Zilla::Plugin::Conflicts 0.17
+
 use Dist::CheckConflicts
     -dist      => 'Log::Dispatch',
     -conflicts => {
         'Log::Dispatch::File::Stamped' => '0.10',
     },
+    -also => [ qw(
+        Carp
+        Devel::GlobalDestruction
+        Dist::CheckConflicts
+        Fcntl
+        Module::Runtime
+        Params::Validate
+        Scalar::Util
+        Sys::Syslog
+        base
+        strict
+        warnings
+    ) ],
 
 ;
 
 1;
 
 # ABSTRACT: Provide information on conflicts for Log::Dispatch
-
-__END__
-
-=pod
-
-=encoding UTF-8
-
-=head1 NAME
-
-Log::Dispatch::Conflicts - Provide information on conflicts for Log::Dispatch
-
-=head1 VERSION
-
-version 2.42
-
-=head1 AUTHOR
-
-Dave Rolsky <autarch@urth.org>
-
-=head1 COPYRIGHT AND LICENSE
-
-This software is Copyright (c) 2014 by Dave Rolsky.
-
-This is free software, licensed under:
-
-  The Artistic License 2.0 (GPL Compatible)
-
-=cut
+# Dist::Zilla: -PodWeaver

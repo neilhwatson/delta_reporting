@@ -1,6 +1,7 @@
 package Mojo::Server::Daemon;
 use Mojo::Base 'Mojo::Server';
 
+use Carp 'croak';
 use Mojo::IOLoop;
 use Mojo::URL;
 use Mojo::Util 'term_escape';
@@ -30,7 +31,7 @@ sub run {
   my $loop = $self->ioloop;
   my $int = $loop->recurring(1 => sub { });
   local $SIG{INT} = local $SIG{TERM} = sub { $loop->stop };
-  $self->start->setuidgid->ioloop->start;
+  $self->start->ioloop->start;
   $loop->remove($int);
 }
 
@@ -123,6 +124,7 @@ sub _finish {
     if ($ws->res->code == 101) {
       weaken $self;
       $ws->on(resume => sub { $self->_write($id) });
+      $ws->server_open;
     }
 
     # Failed upgrade
@@ -145,7 +147,10 @@ sub _finish {
 sub _listen {
   my ($self, $listen) = @_;
 
-  my $url     = Mojo::URL->new($listen);
+  my $url   = Mojo::URL->new($listen);
+  my $proto = $url->protocol;
+  croak qq{Invalid listen location "$listen"} unless $proto =~ /^https?$/;
+
   my $query   = $url->query;
   my $options = {
     address => $url->host,
@@ -157,7 +162,7 @@ sub _listen {
   my $verify = $query->param('verify');
   $options->{tls_verify} = hex $verify if defined $verify;
   delete $options->{address} if $options->{address} eq '*';
-  my $tls = $options->{tls} = $url->protocol eq 'https';
+  my $tls = $options->{tls} = $proto eq 'https';
 
   weaken $self;
   push @{$self->acceptors}, $self->ioloop->server(

@@ -43,7 +43,7 @@ has types     => sub { Mojolicious::Types->new };
 has validator => sub { Mojolicious::Validator->new };
 
 our $CODENAME = 'Clinking Beer Mugs';
-our $VERSION  = '6.02';
+our $VERSION  = '6.14';
 
 sub AUTOLOAD {
   my $self = shift;
@@ -391,7 +391,8 @@ L<Mojolicious::Commands> object.
   $app      = $app->controller_class('Mojolicious::Controller');
 
 Class to be used for the default controller, defaults to
-L<Mojolicious::Controller>.
+L<Mojolicious::Controller>. Note that this class needs to have already been
+loaded before the first request arrives.
 
 =head2 mode
 
@@ -458,7 +459,7 @@ startup method to define the url endpoints for your application.
 =head2 secrets
 
   my $secrets = $app->secrets;
-  $app        = $app->secrets(['passw0rd']);
+  $app        = $app->secrets([$bytes]);
 
 Secret passphrases used for signed cookies and the like, defaults to the
 L</"moniker"> of this application, which is not very secure, so you should
@@ -515,7 +516,7 @@ L<Mojolicious::Types> object.
   my $validator = $app->validator;
   $app          = $app->validator(Mojolicious::Validator->new);
 
-Validate parameters, defaults to a L<Mojolicious::Validator> object.
+Validate values, defaults to a L<Mojolicious::Validator> object.
 
   # Add validation check
   $app->validator->add_check(foo => sub {
@@ -712,27 +713,27 @@ have been used in the past.
 
 6.0, C<Clinking Beer Mugs> (U+1F37B)
 
-5.0, C<Tiger Face> (u1F42F)
+5.0, C<Tiger Face> (U+1F42F)
 
-4.0, C<Top Hat> (u1F3A9)
+4.0, C<Top Hat> (U+1F3A9)
 
-3.0, C<Rainbow> (u1F308)
+3.0, C<Rainbow> (U+1F308)
 
-2.0, C<Leaf Fluttering In Wind> (u1F343)
+2.0, C<Leaf Fluttering In Wind> (U+1F343)
 
-1.4, C<Smiling Face With Sunglasses> (u1F60E)
+1.4, C<Smiling Face With Sunglasses> (U+1F60E)
 
-1.3, C<Tropical Drink> (u1F379)
+1.3, C<Tropical Drink> (U+1F379)
 
-1.1, C<Smiling Cat Face With Heart-Shaped Eyes> (u1F63B)
+1.1, C<Smiling Cat Face With Heart-Shaped Eyes> (U+1F63B)
 
-1.0, C<Snowflake> (u2744)
+1.0, C<Snowflake> (U+2744)
 
-0.999930, C<Hot Beverage> (u2615)
+0.999930, C<Hot Beverage> (U+2615)
 
-0.999927, C<Comet> (u2604)
+0.999927, C<Comet> (U+2604)
 
-0.999920, C<Snowman> (u2603)
+0.999920, C<Snowman> (U+2603)
 
 =head1 SPONSORS
 
@@ -750,6 +751,8 @@ Current members of the core team in alphabetical order:
 =over 2
 
 Abhijit Menon-Sen, C<ams@cpan.org>
+
+Dan Book, C<dbook@cpan.org>
 
 Glen Hinkle, C<tempire@cpan.org>
 
@@ -791,6 +794,8 @@ Andrew Fresh
 
 Andrey Khozov
 
+Andrey Kuzmin
+
 Andy Grundman
 
 Aristotle Pagaltzis
@@ -828,8 +833,6 @@ Christian Hansen
 chromatic
 
 Curt Tilmes
-
-Dan Book
 
 Daniel Kimsey
 
@@ -913,6 +916,8 @@ Mark Stosberg
 
 Marty Tennison
 
+Matt S Trout
+
 Matthew Lineen
 
 Maksym Komar
@@ -961,6 +966,8 @@ Rafal Pocztarski
 
 Randal Schwartz
 
+Richard Elberger
+
 Rick Delaney
 
 Robert Hicks
@@ -991,6 +998,8 @@ Steffen Ullrich
 
 Stephane Este-Gracias
 
+Steve Atkins
+
 Tatsuhiko Miyagawa
 
 Terrence Brannon
@@ -1018,6 +1027,8 @@ Yaroslav Korshak
 Yuki Kimoto
 
 Zak B. Elep
+
+Zoffix Znet
 
 =back
 

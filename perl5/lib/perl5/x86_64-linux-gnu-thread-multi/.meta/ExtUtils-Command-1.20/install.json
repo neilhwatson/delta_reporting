@@ -1,0 +1,1 @@
+{"pathname":"B/BI/BINGOS/ExtUtils-Command-1.20.tar.gz","version":"1.20","provides":{"TieOut":{"file":"t/lib/TieOut.pm"},"ExtUtils::Command":{"file":"lib/ExtUtils/Command.pm","version":"1.20"}},"name":"ExtUtils::Command","target":"ExtUtils::Command","dist":"ExtUtils-Command-1.20"}

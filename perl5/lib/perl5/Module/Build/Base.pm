@@ -2,13 +2,12 @@
 # vim:ts=8:sw=2:et:sta:sts=2
 package Module::Build::Base;
 
+use 5.006;
 use strict;
-use vars qw($VERSION);
 use warnings;
 
-$VERSION = '0.4205';
+our $VERSION = '0.4214';
 $VERSION = eval $VERSION;
-BEGIN { require 5.006001 }
 
 use Carp;
 use Cwd ();
@@ -21,10 +20,10 @@ use File::Compare ();
 use Module::Build::Dumper ();
 use Text::ParseWords ();
 
-use Module::Build::ModuleInfo;
+use Module::Metadata;
 use Module::Build::Notes;
 use Module::Build::Config;
-use Module::Build::Version;
+use version;
 
 
 #################### Constructors ###########################
@@ -86,7 +85,7 @@ sub resume {
   # Module::Build->new_from_context() and the correct class to use is
   # actually a *subclass* of Module::Build, we may need to load that
   # subclass here and re-delegate the resume() method to it.
-  unless ( UNIVERSAL::isa($package, $self->build_class) ) {
+  unless ( $package->isa($self->build_class) ) {
     my $build_class = $self->build_class;
     my $config_dir = $self->config_dir || '_build';
     my $build_lib = File::Spec->catdir( $config_dir, 'lib' );
@@ -1098,7 +1097,7 @@ sub _guess_module_name {
   my $p = $self->{properties};
   return if $p->{module_name};
   if ( $p->{dist_version_from} && -e $p->{dist_version_from} ) {
-    my $mi = Module::Build::ModuleInfo->new_from_file($self->dist_version_from);
+    my $mi = Module::Metadata->new_from_file($self->dist_version_from);
     $p->{module_name} = $mi->name;
   }
   else {
@@ -1193,7 +1192,7 @@ sub dist_version {
 
   if ( my $dist_version_from = $self->dist_version_from ) {
     my $version_from = File::Spec->catfile( split( qr{/}, $dist_version_from ) );
-    my $pm_info = Module::Build::ModuleInfo->new_from_file( $version_from )
+    my $pm_info = Module::Metadata->new_from_file( $version_from )
       or die "Can't find file $version_from to determine version";
     #$p->{$me} is undef here
     $p->{$me} = $self->normalize_version( $pm_info->version() );
@@ -1212,7 +1211,7 @@ sub dist_version {
 sub _is_dev_version {
   my ($self) = @_;
   my $dist_version = $self->dist_version;
-  my $version_obj = eval { Module::Build::Version->new( $dist_version ) };
+  my $version_obj = eval { version->new( $dist_version ) };
   # assume it's normal if the version string is fatal -- in this case
   # the author might be doing something weird so should play along and
   # assume they'll specify all necessary behavior
@@ -1240,11 +1239,11 @@ sub _pod_parse {
 }
 
 sub version_from_file { # Method provided for backwards compatibility
-  return Module::Build::ModuleInfo->new_from_file($_[1])->version();
+  return Module::Metadata->new_from_file($_[1])->version();
 }
 
 sub find_module_by_name { # Method provided for backwards compatibility
-  return Module::Build::ModuleInfo->find_module_by_name(@_[1,2]);
+  return Module::Metadata->find_module_by_name(@_[1,2]);
 }
 
 {
@@ -1683,7 +1682,7 @@ sub check_installed_status {
     # Don't try to load if it's already loaded
 
   } else {
-    my $pm_info = Module::Build::ModuleInfo->new_from_module( $modname );
+    my $pm_info = Module::Metadata->new_from_module( $modname );
     unless (defined( $pm_info )) {
       @status{ qw(have message) } = ('<none>', "$modname is not installed");
       return \%status;
@@ -1720,8 +1719,8 @@ sub check_installed_status {
 sub compare_versions {
   my $self = shift;
   my ($v1, $op, $v2) = @_;
-  $v1 = Module::Build::Version->new($v1)
-    unless UNIVERSAL::isa($v1,'Module::Build::Version');
+  $v1 = version->new($v1)
+    unless eval { $v1->isa('version') };
 
   my $eval_str = "\$v1 $op \$v2";
   my $result   = eval $eval_str;
@@ -1804,7 +1803,7 @@ sub print_build_script {
   my $config_requires;
   if ( -f $self->metafile ) {
     my $meta = eval { $self->read_metafile( $self->metafile ) };
-    $config_requires = $meta && $meta->{configure_requires}{'Module::Build'};
+    $config_requires = $meta && $meta->{prereqs}{configure}{requires}{'Module::Build'};
   }
   $config_requires ||= 0;
 
@@ -2062,8 +2061,8 @@ sub unparse_args {
   my ($self, $args) = @_;
   my @out;
   while (my ($k, $v) = each %$args) {
-    push @out, (UNIVERSAL::isa($v, 'HASH')  ? map {+"--$k", "$_=$v->{$_}"} keys %$v :
-                UNIVERSAL::isa($v, 'ARRAY') ? map {+"--$k", $_} @$v :
+    push @out, (ref $v eq 'HASH'  ? map {+"--$k", "$_=$v->{$_}"} keys %$v :
+                ref $v eq 'ARRAY' ? map {+"--$k", $_} @$v :
                 ("--$k", $v));
   }
   return @out;
@@ -2107,7 +2106,7 @@ sub _translate_option {
   return $opt;
 }
 
-my %singular_argument = map { ($_ => 1) } qw/install_base prefix destdir installdir verbose quiet uninst debug sign/;
+my %singular_argument = map { ($_ => 1) } qw/install_base prefix destdir installdirs verbose quiet uninst debug sign/;
 
 sub _read_arg {
   my ($self, $args, $key, $val) = @_;
@@ -2783,7 +2782,7 @@ sub ACTION_testdb {
 sub ACTION_testcover {
   my ($self) = @_;
 
-  unless (Module::Build::ModuleInfo->find_module_by_name('Devel::Cover')) {
+  unless (Module::Metadata->find_module_by_name('Devel::Cover')) {
     warn("Cannot run testcover action unless Devel::Cover is installed.\n");
     return;
   }
@@ -2971,12 +2970,12 @@ sub find_PL_files {
   if (my $files = $self->{properties}{PL_files}) {
     # 'PL_files' is given as a Unix file spec, so we localize_file_path().
 
-    if (UNIVERSAL::isa($files, 'ARRAY')) {
+    if (ref $files eq 'ARRAY') {
       return { map {$_, [/^(.*)\.PL$/]}
                map $self->localize_file_path($_),
                @$files };
 
-    } elsif (UNIVERSAL::isa($files, 'HASH')) {
+    } elsif (ref $files eq 'HASH') {
       my %out;
       while (my ($file, $to) = each %$files) {
         $out{ $self->localize_file_path($file) } = [ map $self->localize_file_path($_),
@@ -3017,7 +3016,7 @@ sub find_test_files {
   my $p = $self->{properties};
 
   if (my $files = $p->{test_files}) {
-    $files = [keys %$files] if UNIVERSAL::isa($files, 'HASH');
+    $files = [keys %$files] if ref $files eq 'HASH';
     $files = [map { -d $_ ? $self->expand_test_dir($_) : $_ }
               map glob,
               $self->split_like_shell($files)];
@@ -3524,7 +3523,7 @@ sub ACTION_diff {
       my @parts = File::Spec->splitdir($file);
       @parts = @parts[@localparts .. $#parts]; # Get rid of blib/lib or similar
 
-      my $installed = Module::Build::ModuleInfo->find_module_by_name(
+      my $installed = Module::Metadata->find_module_by_name(
                         join('::', @parts), \@myINC );
       if (not $installed) {
         print "Only in lib: $file\n";
@@ -4063,6 +4062,9 @@ sub ACTION_disttest {
   $self->_do_in_dir
     ( $self->dist_dir,
       sub {
+        local $ENV{AUTHOR_TESTING}  = 1;
+        local $ENV{RELEASE_TESTING} = 1;
+
         # XXX could be different names for scripts
 
         $self->run_perl_script('Build.PL') # XXX Should this be run w/ --nouse-rcfile
@@ -4360,8 +4362,8 @@ sub script_files {
     next unless $_;
 
     # Always coerce into a hash
-    return $_ if UNIVERSAL::isa($_, 'HASH');
-    return $_ = { map {$_,1} @$_ } if UNIVERSAL::isa($_, 'ARRAY');
+    return $_ if ref $_ eq 'HASH';
+    return $_ = { map {$_,1} @$_ } if ref $_ eq 'ARRAY';
 
     die "'script_files' must be a hashref, arrayref, or string" if ref();
 
@@ -4438,10 +4440,11 @@ BEGIN { *scripts = \&script_files; }
 sub _software_license_class {
   my ($self, $license) = @_;
   if ($self->valid_licenses->{$license} && eval { require Software::LicenseUtils; Software::LicenseUtils->VERSION(0.103009) }) {
-    my ($class) = Software::LicenseUtils->guess_license_from_meta_key($license, 1);
-	eval "require $class";
-	#die $class;
-	return $class;
+    my @classes = Software::LicenseUtils->guess_license_from_meta_key($license, 1);
+    if (@classes == 1) {
+      eval "require $classes[0]";
+      return $classes[0];
+    }
   }
   LICENSE: for my $l ( $self->valid_licenses->{ $license }, $license ) {
     next unless defined $l;
@@ -4563,28 +4566,13 @@ sub _get_meta_object {
   return $meta;
 }
 
-# We return a version 1.4 structure for backwards compatibility
 sub read_metafile {
   my $self = shift;
   my ($metafile) = @_;
 
   return unless $self->try_require("CPAN::Meta", "2.110420");
   my $meta = CPAN::Meta->load_file($metafile);
-  return $meta->as_struct( {version => "1.4"} );
-}
-
-# For legacy compatibility, we upconvert a 1.4 data structure, ensuring
-# validity, and then downconvert it back to save it.
-#
-# generally, this code should no longer be used
-sub write_metafile {
-  my $self = shift;
-  my ($metafile, $struct) = @_;
-
-  return unless $self->try_require("CPAN::Meta", "2.110420");
-
-  my $meta = CPAN::Meta->new( $struct );
-  return $meta->save( $metafile, { version => "1.4" } );
+  return $meta->as_struct( {version => "2.0"} );
 }
 
 sub normalize_version {
@@ -4594,8 +4582,7 @@ sub normalize_version {
   if ( $version =~ /[=<>!,]/ ) { # logic, not just version
     # take as is without modification
   }
-  elsif ( ref $version eq 'version' ||
-          ref $version eq 'Module::Build::Version' ) { # version objects
+  elsif ( ref $version eq 'version') { # version objects
     $version = $version->is_qv ? $version->normal : $version->stringify;
   }
   elsif ( $version =~ /^[^v][^.]*\.[^.]+\./ ) { # no leading v, multiple dots
@@ -4658,58 +4645,6 @@ sub _get_license {
   return ($meta_license, $meta_license_url);
 }
 
-my %keep = map { $_ => 1 } qw/keywords dynamic_config provides no_index name version abstract/;
-my %ignore = map { $_ => 1 } qw/distribution_type/;
-my %reject = map { $_ => 1 } qw/private author license requires recommends build_requires configure_requires conflicts/;
-
-sub _upconvert_resources {
-  my ($input) = @_;
-  my %output;
-  for my $key (keys %{$input}) {
-    my $out_key = $key =~ /^\p{Lu}/ ? "x_\l$key" : $key;
-    if ($key eq 'repository') {
-      my $name = $input->{$key} =~ m{ \A http s? :// .* (<! \.git ) \z }xms ? 'web' : 'url';
-      $output{$out_key} = { $name => $input->{$key} };
-    }
-    elsif ($key eq 'bugtracker') {
-      $output{$out_key} = { web => $input->{$key} }
-    }
-    else {
-      $output{$out_key} = $input->{$key};
-    }
-  }
-  return \%output
-}
-my %custom = (
-	resources => \&_upconvert_resources,
-);
-
-sub _upconvert_metapiece {
-  my ($input, $type) = @_;
-  return $input if exists $input->{'meta-spec'} && $input->{'meta-spec'}{version} == 2;
-
-  my %ret;
-  for my $key (keys %{$input}) {
-    if ($keep{$key}) {
-      $ret{$key} = $input->{$key};
-    }
-    elsif ($ignore{$key}) {
-      next;
-    }
-    elsif ($reject{$key}) {
-      croak "Can't $type $key, please use another mechanism";
-    }
-    elsif (my $converter = $custom{$key}) {
-      $ret{$key} = $converter->($input->{$key});
-    }
-    else {
-      my $out_key = $key =~ / \A x_ /xi ? $key : "x_$key";
-      $ret{$out_key} = $input->{$key};
-    }
-  }
-  return \%ret;
-}
-
 sub get_metadata {
   my ($self, %args) = @_;
 
@@ -4761,14 +4696,30 @@ sub get_metadata {
                     "Nothing to enter for 'provides' field in metafile.\n");
   }
 
-  my $meta_add = _upconvert_metapiece($self->meta_add, 'add');
-  while (my($k, $v) = each %{$meta_add} ) {
-    $metadata{$k} = $v;
+  if (my $add = $self->meta_add) {
+    if (not exists $add->{'meta-spec'} or $add->{'meta-spec'}{version} != 2) {
+      require CPAN::Meta::Converter;
+      if (CPAN::Meta::Converter->VERSION('2.141170')) {
+        $add = CPAN::Meta::Converter->new($add)->upgrade_fragment;
+        delete $add->{prereqs}; # XXX this would now overwrite all prereqs
+      }
+      else {
+        $self->log_warn("Can't meta_add without CPAN::Meta 2.141170");
+      }
+    }
+
+    while (my($k, $v) = each %{$add}) {
+      $metadata{$k} = $v;
+    }
   }
 
-  my $meta_merge = _upconvert_metapiece($self->meta_merge, 'merge');
-  while (my($k, $v) = each %{$meta_merge} ) {
-    $self->_hash_merge(\%metadata, $k, $v);
+  if (my $merge = $self->meta_merge) {
+    if (eval { require CPAN::Meta::Merge }) {
+      %metadata = %{ CPAN::Meta::Merge->new(default_version => '1.4')->merge(\%metadata, $merge) };
+    }
+    else {
+      $self->log_warn("Can't merge without CPAN::Meta::Merge");
+    }
   }
 
   return \%metadata;
@@ -4833,7 +4784,7 @@ sub find_packages_in_files {
     my @path = split( /\//, $mapped_filename );
     (my $prime_package = join( '::', @path[1..$#path] )) =~ s/\.pm$//;
 
-    my $pm_info = Module::Build::ModuleInfo->new_from_file( $file );
+    my $pm_info = Module::Metadata->new_from_file( $file );
 
     foreach my $package ( $pm_info->packages_inside ) {
       next if $package eq 'main';  # main can appear numerous times, ignore
@@ -4844,7 +4795,7 @@ sub find_packages_in_files {
 
       if ( $package eq $prime_package ) {
         if ( exists( $prime{$package} ) ) {
-          # M::B::ModuleInfo will handle this conflict
+          # Module::Metadata will handle this conflict
           die "Unexpected conflict in '$package'; multiple versions found.\n";
         } else {
           $prime{$package}{file} = $mapped_filename;
@@ -5414,14 +5365,14 @@ sub compile_xs {
   } else {
     # Ok, I give up.  Just use backticks.
 
-    my $xsubpp = Module::Build::ModuleInfo->find_module_by_name('ExtUtils::xsubpp')
+    my $xsubpp = Module::Metadata->find_module_by_name('ExtUtils::xsubpp')
       or die "Can't find ExtUtils::xsubpp in INC (@INC)";
 
     my @typemaps;
-    push @typemaps, Module::Build::ModuleInfo->find_module_by_name(
+    push @typemaps, Module::Metadata->find_module_by_name(
         'ExtUtils::typemap', \@INC
     );
-    my $lib_typemap = Module::Build::ModuleInfo->find_module_by_name(
+    my $lib_typemap = Module::Metadata->find_module_by_name(
         'typemap', [File::Basename::dirname($file), File::Spec->rel2abs('.')]
     );
     push @typemaps, $lib_typemap if $lib_typemap;
@@ -5444,7 +5395,7 @@ sub split_like_shell {
   my ($self, $string) = @_;
 
   return () unless defined($string);
-  return @$string if UNIVERSAL::isa($string, 'ARRAY');
+  return @$string if ref $string eq 'ARRAY';
   $string =~ s/^\s+|\s+$//g;
   return () unless length($string);
 

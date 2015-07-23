@@ -7,7 +7,8 @@ use File::Spec::Functions qw(catdir catfile splitdir);
 use Mojo::Exception;
 use Mojo::Util qw(b64_decode class_to_path);
 
-our @EXPORT_OK = qw(data_section file_is_binary find_modules load_class);
+our @EXPORT_OK
+  = qw(data_section file_is_binary find_modules find_packages load_class);
 
 my (%BIN, %CACHE);
 
@@ -33,16 +34,22 @@ sub find_modules {
   return sort keys %modules;
 }
 
+sub find_packages {
+  my $ns = shift;
+  no strict 'refs';
+  return sort map { /^(.+)::$/ ? "${ns}::$1" : () } keys %{"${ns}::"};
+}
+
 sub load_class {
   my $class = shift;
 
-  # Check class name
-  return 1 if !$class || $class !~ /^\w(?:[\w:']*\w)?$/;
+  # Check for a valid class name
+  return 1 if ($class || '') !~ /^\w(?:[\w:']*\w)?$/;
 
-  # Load
+  # Load if not already loaded
   return undef if $class->can('new') || eval "require $class; 1";
 
-  # Exists
+  # Does not exist
   return 1 if $@ =~ /^Can't locate \Q@{[class_to_path $class]}\E in \@INC/;
 
   # Real error
@@ -147,6 +154,12 @@ cached once they have been accessed for the first time.
   my $bool = file_is_binary 'Foo::Bar', 'test.png';
 
 Check if embedded file from the C<DATA> section of a class was Base64 encoded.
+
+=head2 find_packages
+
+  my @pkgs = find_packages 'MyApp::Namespace';
+
+Search for packages in a namespace non-recursively.
 
 =head2 find_modules
 

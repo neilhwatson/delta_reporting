@@ -13,27 +13,26 @@ sub startup
 
 # Config
    my $config = {
-
-   gdb_name         => 'delta_reporting',
-   gdb_user         => "deltar_ro",
-   gdb_pass         => "",
-   gdb_wuser        => "deltar_rw",
-   gdb_wpass        => "",
-   gdb_host         => "localhost",
-   gsecrets         => [ 'secret passphrase', 'old secret passphrase' ],
-   grecord_limit    => 1000, # Limit the number of records returned by a query.
-   gagent_table     => "agent_log",
-   gpromise_counts  => "promise_counts",
-   ginventory_table => "inventory_table",
-   ginventory_limit => 20, # mintes to look backwards for inventory query
-   gclient_log_dir  => "/var/cfengine/delta_reporting/log/client_logs",
-   gdelete_age      => 90, # (days) Delete records older than this.
-   greduce_age      => 10, # (days) Reduce duplicate records older than this to one per day
-   ghypnotoad       => {
-      proxy      => 1,
-      production => 1,
-      listen     => [ 'http://localhost:8080' ],
-      }
+      db_name         => 'delta_reporting',
+      db_user         => "deltar_ro",
+      db_pass         => "",
+      db_wuser        => "deltar_rw",
+      db_wpass        => "",
+      db_host         => "localhost",
+      secrets         => [ 'secret passphrase', 'old secret passphrase' ],
+      record_limit    => 1000, # Limit the number of records returned by a query.
+      agent_table     => "agent_log",
+      promise_counts  => "promise_counts",
+      inventory_table => "inventory_table",
+      inventory_limit => 20, # mintes to look backwards for inventory query
+      client_log_dir  => "/var/cfengine/delta_reporting/log/client_logs",
+      delete_age      => 90, # (days) Delete records older than this.
+      reduce_age      => 10, # (days) Reduce duplicate records older than this to one per day
+      hypnotoad       => {
+         proxy      => 1,
+         production => 1,
+         listen     => [ 'http://localhost:8080' ],
+         }
    };
 
    $self->defaults( small_title => '' );
@@ -49,8 +48,7 @@ sub startup
 
 ## Helpers
 
-   $self->helper( dbh => sub
-   {
+   $self->helper( dbh => sub {
       my ( $self, %args ) = @_;
       my $db_name = $config->{db_name};
       my $db_host = $config->{db_host};
@@ -63,8 +61,7 @@ sub startup
       return $dbh;
    });
 
-   $self->helper( dr => sub
-   {
+   $self->helper( dr => sub {
       my $self = shift;
       my $dq = DeltaR::Query->new({
          logger          => $self->logger(),
@@ -83,8 +80,7 @@ sub startup
       return $dq;
    });
 
-   $self->helper( dw => sub
-   {
+   $self->helper( dw => sub {
       my $self = shift;
       my $dq = DeltaR::Query->new({
          logger          => $self->logger(),
@@ -104,38 +100,34 @@ sub startup
    });
 
 ## logging helper
-   $self->helper( logger => sub
-   { 
+   $self->helper( logger => sub { 
       my $self = shift;
       Log::Log4perl::init( 'DeltaR_logging.conf' )
          or die 'Cannot open [DeltaR_logging.conf]';
       my $logger = Log::Log4perl->get_logger( $0 );
-      
       return $logger;
    });
 
-## Dashboard help
-   $self->helper( dash => sub
-   {
-      my $self = shift;
-      my $dash = DeltaR::Dashboard->new({ dr => $self->dr });
-      return $dash
+##  Dashboard helper
+   $self->helper( dashboard => sub {
+         my $self      = shift;
+         my $dashboard = DeltaR::Dashboard->new({ dbh => $self->dr });
+         return $dashboard
    });
 
 ## Routes
    my $r = $self->routes;
 
-   $r->any( '/' => sub
-   {
+   $r->any( '/' => sub {
       my $self = shift;
 
       my ( $latest_date, $latest_time ) =
          split /\s/, $self->dr->query_latest_record();
 
-      my $hostcount = $self->dash->hostcount();
+      my $hostcount = $self->dashboard->hostcount();
 
-      my $promisecount = $self->dash->promisecount({
-            from => $config->{inventory_limit}
+      my $promisecount = $self->dashboard->promisecount({
+            newer_than => $config->{inventory_limit}
       });
 
       $self->stash(
@@ -149,8 +141,7 @@ sub startup
 
    $r->any( '/help' )->to( 'help', title => 'Help' );
 
-   $r->any( '/about' => sub 
-   {
+   $r->any( '/about' => sub {
       my $self = shift;
       my $number_of_records = $self->dr->count_records;
       $self->stash(
@@ -158,22 +149,29 @@ sub startup
          number_of_records => $number_of_records );
    } => 'about');
  
-   $r->get( '/initialize_database' => sub
-   {
+   $r->get( '/initialize_database' => sub {
       my $self = shift;
       $self->dw->create_tables;
    } => '/database_initialized');
 
    $r->get( '/database_initialized' => 'database_initialized' );
 
-   $r->get( '/form/promises')->to('form#class_or_promise', template => 'form/promises', record_limit => $config->{record_limit} );
-   $r->get( '/form/classes' )->to('form#class_or_promise', template => 'form/classes', record_limit => $config->{record_limit} );
+   $r->get( '/form/promises')->to('form#class_or_promise'
+      , template     => 'form/promises'
+      , record_limit => $config->{record_limit} );
+   $r->get( '/form/classes' )->to('form#class_or_promise'
+      , template     => 'form/classes'
+      , record_limit => $config->{record_limit} );
 
-   $r->post('/report/classes' )->to('report#classes',   record_limit => $config->{record_limit} );
-   $r->post('/report/promises')->to('report#promises',  record_limit => $config->{record_limit} );
+   $r->post('/report/classes' )->to('report#classes'
+      , record_limit => $config->{record_limit} );
+   $r->post('/report/promises')->to('report#promises'
+      , record_limit => $config->{record_limit} );
 
-   $r->get('/report/missing'  )->to('report#missing',   record_limit => $config->{record_limit} );
-   $r->get('/report/inventory')->to('report#inventory', record_limit => $config->{record_limit} );
+   $r->get('/report/missing'  )->to('report#missing'
+      , record_limit => $config->{record_limit} );
+   $r->get('/report/inventory')->to('report#inventory'
+      , record_limit => $config->{record_limit} );
 
    $r->get( '/trend/:promise_outcome' )->to( 'graph#trend' );
 

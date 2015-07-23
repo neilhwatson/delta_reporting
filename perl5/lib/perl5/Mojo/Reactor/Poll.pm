@@ -1,13 +1,14 @@
 package Mojo::Reactor::Poll;
 use Mojo::Base 'Mojo::Reactor';
 
+use Carp 'croak';
 use IO::Poll qw(POLLERR POLLHUP POLLIN POLLNVAL POLLOUT POLLPRI);
 use List::Util 'min';
 use Mojo::Util qw(md5_sum steady_time);
 use Time::HiRes 'usleep';
 
 sub again {
-  my $timer = shift->{timers}{shift()};
+  croak 'Timer not active' unless my $timer = shift->{timers}{shift()};
   $timer->{time} = steady_time + $timer->{after};
 }
 
@@ -18,6 +19,13 @@ sub io {
 }
 
 sub is_running { !!shift->{running} }
+
+sub next_tick {
+  my ($self, $cb) = @_;
+  push @{$self->{next_tick}}, $cb;
+  $self->{next_timer} //= $self->timer(0 => \&_next);
+  return undef;
+}
 
 sub one_tick {
   my $self = shift;
@@ -47,10 +55,10 @@ sub one_tick {
 
           if ($mode & (POLLIN | POLLPRI | POLLNVAL | POLLHUP | POLLERR)) {
             next unless my $io = $self->{io}{$fd};
-            ++$i and $self->_sandbox('Read', $io->{cb}, 0);
+            ++$i and $self->_try('I/O watcher', $io->{cb}, 0);
           }
           next unless $mode & POLLOUT && (my $io = $self->{io}{$fd});
-          ++$i and $self->_sandbox('Write', $io->{cb}, 1);
+          ++$i and $self->_try('I/O watcher', $io->{cb}, 1);
         }
       }
     }
@@ -70,7 +78,7 @@ sub one_tick {
       # Normal timer
       else { $self->remove($id) }
 
-      ++$i and $self->_sandbox("Timer $id", $t->{cb}) if $t->{cb};
+      ++$i and $self->_try('Timer', $t->{cb}) if $t->{cb};
     }
   }
 }
@@ -83,7 +91,7 @@ sub remove {
   return !!delete $self->{io}{fileno $remove};
 }
 
-sub reset { delete @{shift()}{qw(io timers)} }
+sub reset { delete @{shift()}{qw(io next_tick next_timer timers)} }
 
 sub start {
   my $self = shift;
@@ -98,10 +106,10 @@ sub timer { shift->_timer(0, @_) }
 sub watch {
   my ($self, $handle, $read, $write) = @_;
 
-  my $mode = 0;
-  $mode |= POLLIN | POLLPRI if $read;
-  $mode |= POLLOUT if $write;
-  $self->{io}{fileno $handle}{mode} = $mode;
+  croak 'I/O watcher not active' unless my $io = $self->{io}{fileno $handle};
+  $io->{mode} = 0;
+  $io->{mode} |= POLLIN | POLLPRI if $read;
+  $io->{mode} |= POLLOUT if $write;
 
   return $self;
 }
@@ -113,9 +121,10 @@ sub _id {
   return $id;
 }
 
-sub _sandbox {
-  my ($self, $event, $cb) = (shift, shift, shift);
-  eval { $self->$cb(@_); 1 } or $self->emit(error => "$event failed: $@");
+sub _next {
+  my $self = shift;
+  delete $self->{next_timer};
+  while (my $cb = shift @{$self->{next_tick}}) { $self->$cb }
 }
 
 sub _timer {
@@ -127,6 +136,11 @@ sub _timer {
   $timer->{recurring} = $after if $recurring;
 
   return $id;
+}
+
+sub _try {
+  my ($self, $what, $cb) = (shift, shift, shift);
+  eval { $self->$cb(@_); 1 } or $self->emit(error => "$what failed: $@");
 }
 
 1;
@@ -186,7 +200,7 @@ implements the following new ones.
 
   $reactor->again($id);
 
-Restart active timer.
+Restart timer. Note that this method requires an active timer.
 
 =head2 io
 
@@ -195,11 +209,24 @@ Restart active timer.
 Watch handle for I/O events, invoking the callback whenever handle becomes
 readable or writable.
 
+  # Callback will be invoked twice if handle becomes readable and writable
+  $reactor->io($handle => sub {
+    my ($reactor, $writable) = @_;
+    say $writable ? 'Handle is writable' : 'Handle is readable';
+  });
+
 =head2 is_running
 
   my $bool = $reactor->is_running;
 
 Check if reactor is running.
+
+=head2 next_tick
+
+  my $undef = $reactor->next_tick(sub {...});
+
+Invoke callback as soon as possible, but not before returning or other
+callbacks that have been registered with this method, always returns C<undef>.
 
 =head2 one_tick
 
@@ -207,6 +234,11 @@ Check if reactor is running.
 
 Run reactor until an event occurs or no events are being watched anymore. Note
 that this method can recurse back into the reactor, so you need to be careful.
+
+  # Don't block longer than 0.5 seconds
+  my $id = $reactor->timer(0.5 => sub {});
+  $reactor->one_tick;
+  $reactor->remove($id);
 
 =head2 recurring
 
@@ -235,6 +267,9 @@ Remove all handles and timers.
 Start watching for I/O and timer events, this will block until L</"stop"> is
 called or no events are being watched anymore.
 
+  # Start reactor only if it is not running already
+  $reactor->start unless $reactor->is_running;
+
 =head2 stop
 
   $reactor->stop;
@@ -254,6 +289,18 @@ seconds.
 
 Change I/O events to watch handle for with true and false values. Note that
 this method requires an active I/O watcher.
+
+  # Watch only for readable events
+  $reactor->watch($handle, 1, 0);
+
+  # Watch only for writable events
+  $reactor->watch($handle, 0, 1);
+
+  # Watch for readable and writable events
+  $reactor->watch($handle, 1, 1);
+
+  # Pause watching for events
+  $reactor->watch($handle, 0, 0);
 
 =head1 SEE ALSO
 

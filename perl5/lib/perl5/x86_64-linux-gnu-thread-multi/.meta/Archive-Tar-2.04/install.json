@@ -1,0 +1,1 @@
+{"target":"Archive::Tar","name":"Archive::Tar","dist":"Archive-Tar-2.04","provides":{"Archive::Tar":{"file":"lib/Archive/Tar.pm","version":"2.04"},"Archive::Tar::Constant":{"version":"2.04","file":"lib/Archive/Tar/Constant.pm"},"Archive::Tar::File":{"version":"2.04","file":"lib/Archive/Tar/File.pm"}},"version":"2.04","pathname":"B/BI/BINGOS/Archive-Tar-2.04.tar.gz"}

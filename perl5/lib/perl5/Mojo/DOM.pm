@@ -47,9 +47,9 @@ sub attr {
   return $self;
 }
 
-sub children { _select($_[0]->_collect(_nodes($_[0]->tree, 1)), $_[1]) }
-
 sub child_nodes { $_[0]->_collect(_nodes($_[0]->tree)) }
+
+sub children { _select($_[0]->_collect(_nodes($_[0]->tree, 1)), $_[1]) }
 
 sub content {
   my $self = shift;
@@ -73,7 +73,7 @@ sub find { $_[0]->_collect(@{$_[0]->_css->select($_[1])}) }
 sub following { _select($_[0]->_collect(@{$_[0]->_siblings(1)->[1]}), $_[1]) }
 sub following_nodes { $_[0]->_collect(@{$_[0]->_siblings->[1]}) }
 
-sub matches { $_[0]->_css->matches($_[1]) ? $_[0] : undef }
+sub matches { shift->_css->matches(@_) }
 
 sub namespace {
   my $self = shift;
@@ -445,7 +445,7 @@ whitespace trimming is enabled by default.
 =head2 ancestors
 
   my $collection = $dom->ancestors;
-  my $collection = $dom->ancestors('div > p');
+  my $collection = $dom->ancestors('div ~ p');
 
 Find all ancestor elements of this node matching the CSS selector and return a
 L<Mojo::Collection> object containing these elements as L<Mojo::DOM> objects.
@@ -488,7 +488,7 @@ node's content.
 
 =head2 at
 
-  my $result = $dom->at('div > p');
+  my $result = $dom->at('div ~ p');
 
 Find first descendant element of this element matching the CSS selector and
 return it as a L<Mojo::DOM> object or return C<undef> if none could be found.
@@ -509,18 +509,6 @@ This element's attributes.
   # List id attributes
   say $dom->find('*')->map(attr => 'id')->compact->join("\n");
 
-=head2 children
-
-  my $collection = $dom->children;
-  my $collection = $dom->children('div > p');
-
-Find all child elements of this element matching the CSS selector and return a
-L<Mojo::Collection> object containing these elements as L<Mojo::DOM> objects.
-All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
-
-  # Show tag name of random child element
-  say $dom->children->shuffle->first->tag;
-
 =head2 child_nodes
 
   my $collection = $dom->child_nodes;
@@ -533,6 +521,18 @@ as L<Mojo::DOM> objects.
 
   # "<!-- Test -->"
   $dom->parse('<!-- Test --><b>123</b>')->child_nodes->first;
+
+=head2 children
+
+  my $collection = $dom->children;
+  my $collection = $dom->children('div ~ p');
+
+Find all child elements of this element matching the CSS selector and return a
+L<Mojo::Collection> object containing these elements as L<Mojo::DOM> objects.
+All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
+
+  # Show tag name of random child element
+  say $dom->children->shuffle->first->tag;
 
 =head2 content
 
@@ -573,9 +573,14 @@ element as L<Mojo::DOM> objects.
     ->descendant_nodes->grep(sub { $_->type eq 'comment' })
     ->map('remove')->first;
 
+  # "<p><b>test</b>test</p>"
+  $dom->parse('<p><b>123</b>456</p>')
+    ->at('p')->descendant_nodes->grep(sub { $_->type eq 'text' })
+    ->map(content => 'test')->first->root;
+
 =head2 find
 
-  my $collection = $dom->find('div > p');
+  my $collection = $dom->find('div ~ p');
 
 Find all descendant elements of this element matching the CSS selector and
 return a L<Mojo::Collection> object containing these elements as L<Mojo::DOM>
@@ -596,7 +601,7 @@ objects. All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
 =head2 following
 
   my $collection = $dom->following;
-  my $collection = $dom->following('div > p');
+  my $collection = $dom->following('div ~ p');
 
 Find all sibling elements after this node matching the CSS selector and return
 a L<Mojo::Collection> object containing these elements as L<Mojo::DOM> objects.
@@ -617,7 +622,7 @@ node as L<Mojo::DOM> objects.
 
 =head2 matches
 
-  my $bool = $dom->matches('div > p');
+  my $bool = $dom->matches('div ~ p');
 
 Check if this element matches the CSS selector. All selectors from
 L<Mojo::DOM::CSS/"SELECTORS"> are supported.
@@ -694,7 +699,7 @@ Parse HTML/XML fragment with L<Mojo::DOM::HTML>.
 =head2 preceding
 
   my $collection = $dom->preceding;
-  my $collection = $dom->preceding('div > p');
+  my $collection = $dom->preceding('div ~ p');
 
 Find all sibling elements before this node matching the CSS selector and return
 a L<Mojo::Collection> object containing these elements as L<Mojo::DOM> objects.

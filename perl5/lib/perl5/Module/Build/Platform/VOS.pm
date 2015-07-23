@@ -1,13 +1,12 @@
 package Module::Build::Platform::VOS;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.4205';
+use warnings;
+our $VERSION = '0.4214';
 $VERSION = eval $VERSION;
 use Module::Build::Base;
 
-use vars qw(@ISA);
-@ISA = qw(Module::Build::Base);
+our @ISA = qw(Module::Build::Base);
 
 
 1;

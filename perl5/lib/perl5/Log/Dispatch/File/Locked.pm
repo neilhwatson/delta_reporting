@@ -1,9 +1,11 @@
 package Log::Dispatch::File::Locked;
-$Log::Dispatch::File::Locked::VERSION = '2.42';
+
 use strict;
 use warnings;
 
 use base qw( Log::Dispatch::File );
+
+our $VERSION = '2.45';
 
 use Fcntl qw(:DEFAULT :flock);
 
@@ -30,15 +32,13 @@ __END__
 
 =pod
 
-=encoding UTF-8
-
 =head1 NAME
 
 Log::Dispatch::File::Locked - Subclass of Log::Dispatch::File to facilitate locking
 
 =head1 VERSION
 
-version 2.42
+version 2.45
 
 =head1 SYNOPSIS
 
@@ -87,7 +87,7 @@ Dave Rolsky <autarch@urth.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2014 by Dave Rolsky.
+This software is Copyright (c) 2015 by Dave Rolsky.
 
 This is free software, licensed under:
 

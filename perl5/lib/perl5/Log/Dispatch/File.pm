@@ -1,7 +1,9 @@
 package Log::Dispatch::File;
-$Log::Dispatch::File::VERSION = '2.42';
+
 use strict;
 use warnings;
+
+our $VERSION = '2.45';
 
 use Log::Dispatch::Output;
 
@@ -15,7 +17,7 @@ use Scalar::Util qw( openhandle );
 # Prevents death later on if IO::File can't export this constant.
 *O_APPEND = \&APPEND unless defined &O_APPEND;
 
-sub APPEND { 0 }
+sub APPEND {0}
 
 sub new {
     my $proto = shift;
@@ -37,8 +39,7 @@ sub _basic_init {
     $self->SUPER::_basic_init(@_);
 
     my %p = validate(
-        @_,
-        {
+        @_, {
             filename => { type => SCALAR },
             mode     => {
                 type    => SCALAR,
@@ -173,15 +174,13 @@ __END__
 
 =pod
 
-=encoding UTF-8
-
 =head1 NAME
 
 Log::Dispatch::File - Object for logging to files
 
 =head1 VERSION
 
-version 2.42
+version 2.45
 
 =head1 SYNOPSIS
 
@@ -277,7 +276,7 @@ Dave Rolsky <autarch@urth.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2014 by Dave Rolsky.
+This software is Copyright (c) 2015 by Dave Rolsky.
 
 This is free software, licensed under:
 

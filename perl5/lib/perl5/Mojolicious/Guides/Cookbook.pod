@@ -212,7 +212,7 @@ C<mod_proxy>, the configuration looks quite similar to the Nginx one above.
 =head2 Apache/CGI
 
 C<CGI> is supported out of the box and your L<Mojolicious> application will
-automatically detect that it is executed as a C<CGI> script. It's use in
+automatically detect that it is executed as a C<CGI> script. Its use in
 production environments is discouraged though, because as a result of how
 C<CGI> works, it is very slow and many web servers are making it exceptionally
 hard to configure properly.
@@ -416,8 +416,7 @@ latency backend web services.
 
 Multiple events such as concurrent requests can be easily synchronized with
 L<Mojolicious::Plugin::DefaultHelpers/"delay">, which can help you avoid deep
-nested closures and memory leaks that often result from continuation-passing
-style.
+nested closures that often result from continuation-passing style.
 
   use Mojolicious::Lite;
   use Mojo::URL;
@@ -453,7 +452,7 @@ style.
 
 =head2 Timers
 
-Another primary feature of the event loop are timers, which are created with
+Timers, another primary feature of the event loop, are created with
 L<Mojo::IOLoop/"timer"> and can for example be used to delay rendering of a
 response, and unlike C<sleep>, won't block any other requests that might be
 processed concurrently.
@@ -570,7 +569,7 @@ all of its subscribers.
 
 The WebSocket protocol offers full bi-directional low-latency communication
 channels between clients and servers. Receive messages just by subscribing to
-events such as L<Mojo::Transaction::WebSocket/"message"> with the method
+events such as L<Mojo::Transaction::WebSocket/"message"> with
 L<Mojolicious::Controller/"on"> and return them with
 L<Mojolicious::Controller/"send">.
 
@@ -614,12 +613,14 @@ L<Mojolicious::Controller/"send">.
         var ws = new WebSocket('<%= url_for('echo')->to_abs %>');
 
         // Incoming messages
-        ws.onmessage = function(event) {
+        ws.onmessage = function (event) {
           document.body.innerHTML += event.data + '<br/>';
         };
 
         // Outgoing messages
-        window.setInterval(function () { ws.send('Hello Mojo!') }, 1000);
+        ws.onopen = function (event) {
+          window.setInterval(function () { ws.send('Hello Mojo!') }, 1000);
+        };
       </script>
     </body>
   </html>
@@ -684,8 +685,9 @@ infrastructure requirements, since it reuses the HTTP protocol for transport.
     # Increase inactivity timeout for connection a bit
     $c->inactivity_timeout(300);
 
-    # Change content type
+    # Change content type and finalize response headers
     $c->res->headers->content_type('text/event-stream');
+    $c->write;
 
     # Subscribe to "message" event and forward "log" events to browser
     my $cb = $c->app->log->on(message => sub {
@@ -712,7 +714,7 @@ infrastructure requirements, since it reuses the HTTP protocol for transport.
         var events = new EventSource('<%= url_for 'events' %>');
 
         // Subscribe to "log" event
-        events.addEventListener('log', function(event) {
+        events.addEventListener('log', function (event) {
           document.body.innerHTML += event.data + '<br/>';
         }, false);
       </script>
@@ -1064,7 +1066,7 @@ Sending a streaming request is almost just as easy.
   $tx = $ua->start($tx);
 
 The drain callback passed to L<Mojo::Content/"write"> will be invoked whenever
-the entire previous chunk has actually been written.
+the entire previous chunk of data has actually been written.
 
 =head2 Non-blocking
 
@@ -1247,8 +1249,9 @@ appended with a C<.conf> extension (C<myapp.conf>).
   $ echo '{name => "my Mojolicious application"};' > myapp.conf
 
 Configuration files themselves are just Perl scripts that return a hash
-reference, all settings are available through the method L<Mojo/"config"> and
-the helper L<Mojolicious::Plugin::DefaultHelpers/"config">
+reference with configuration settings of your choice. All those settings are
+then available through the method L<Mojo/"config"> and the helper
+L<Mojolicious::Plugin::DefaultHelpers/"config">.
 
   use Mojolicious::Lite;
 
@@ -1350,7 +1353,8 @@ attributes and methods in L<Mojolicious::Command> that you can use or overload.
   secr3t
 
 And to make your commands application specific, just add a custom namespace to
-L<Mojolicious::Commands/"namespaces">.
+L<Mojolicious::Commands/"namespaces"> and use a class name like
+C<MyApp::Command::spy> instead of C<Mojolicious::Command::spy>.
 
   # Application
   package MyApp;

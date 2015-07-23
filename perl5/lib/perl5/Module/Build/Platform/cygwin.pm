@@ -1,13 +1,12 @@
 package Module::Build::Platform::cygwin;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.4205';
+use warnings;
+our $VERSION = '0.4214';
 $VERSION = eval $VERSION;
 use Module::Build::Platform::Unix;
 
-use vars qw(@ISA);
-@ISA = qw(Module::Build::Platform::Unix);
+our @ISA = qw(Module::Build::Platform::Unix);
 
 sub manpage_separator {
    '.'

@@ -8,7 +8,7 @@ sub parse {
   my ($self, $content, $file, $conf, $app) = @_;
 
   my $config = eval { from_json $self->render($content, $file, $conf, $app) };
-  die qq{Can't parse config "$file": $@} if !$config && $@;
+  die qq{Can't parse config "$file": $@} if $@;
   die qq{Invalid config "$file"} unless ref $config eq 'HASH';
 
   return $config;
@@ -41,12 +41,18 @@ Mojolicious::Plugin::JSONConfig - JSON configuration plugin
 
   # myapp.json (it's just JSON with embedded Perl)
   {
-    "foo"       : "bar",
-    "music_dir" : "<%= app->home->rel_dir('music') %>"
+    %# Just a value
+    "foo": "bar",
+
+    %# Nested data structures are fine too
+    "baz": ["♥"],
+
+    %# You have full access to the application
+    "music_dir": "<%= app->home->rel_dir('music') %>"
   }
 
   # Mojolicious
-  my $config = $self->plugin('JSONConfig');
+  my $config = $app->plugin('JSONConfig');
   say $config->{foo};
 
   # Mojolicious::Lite

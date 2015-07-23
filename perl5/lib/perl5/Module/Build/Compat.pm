@@ -1,15 +1,15 @@
 package Module::Build::Compat;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.4205';
+use warnings;
+our $VERSION = '0.4214';
 
 use File::Basename ();
 use File::Spec;
 use Config;
 use Module::Build;
-use Module::Build::ModuleInfo;
-use Module::Build::Version;
+use Module::Metadata;
+use version;
 use Data::Dumper;
 
 my %convert_installdirs = (
@@ -74,7 +74,7 @@ sub _merge_prereq {
     for my $k (keys %$p) {
       next if $k eq 'perl';
 
-      my $v_obj = eval { Module::Build::Version->new($p->{$k}) };
+      my $v_obj = eval { version->new($p->{$k}) };
       if ( ! defined $v_obj ) {
           die "A prereq of the form '$p->{$k}' for '$k' is not supported by Module::Build::Compat ( use a simpler version like '0.05' or 'v1.4.25' )\n";
       }
@@ -131,7 +131,7 @@ HERE
   # Makefile.PL
   my $requires = $build->requires;
   if ( my $minimum_perl = $requires->{perl} ) {
-    my $min_ver = Module::Build::Version->new($minimum_perl)->numify;
+    my $min_ver = version->new($minimum_perl)->numify;
     print {$fh} "require $min_ver;\n";
   }
 
@@ -259,7 +259,7 @@ sub _test_globs {
 sub subclass_dir {
   my ($self, $build) = @_;
 
-  return (Module::Build::ModuleInfo->find_module_dir_by_name(ref $build)
+  return (Module::Metadata->find_module_dir_by_name(ref $build)
 	  || File::Spec->catdir($build->config_dir, 'lib'));
 }
 

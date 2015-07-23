@@ -1,13 +1,14 @@
 package Log::Dispatch;
-# git description: v2.41-14-g89b3152
-$Log::Dispatch::VERSION = '2.42';
 
 use 5.006;
 
 use strict;
 use warnings;
 
+our $VERSION = '2.45';
+
 use base qw( Log::Dispatch::Base );
+
 use Module::Runtime qw( use_package_optimistically );
 use Params::Validate 0.15 qw(validate_with ARRAYREF CODEREF);
 use Carp ();
@@ -293,15 +294,13 @@ __END__
 
 =pod
 
-=encoding UTF-8
-
 =head1 NAME
 
 Log::Dispatch - Dispatches messages to one or more outputs
 
 =head1 VERSION
 
-version 2.42
+version 2.45
 
 =head1 SYNOPSIS
 
@@ -355,6 +354,8 @@ This makes it possible to call single method and send a message to a
 log file, via email, to the screen, and anywhere else, all with very
 little code needed on your part, once the dispatching object has been
 created.
+
+=encoding UTF-8
 
 =head1 METHODS
 
@@ -707,9 +708,45 @@ L<Log::Dispatch::Syslog>
 
 Dave Rolsky <autarch@urth.org>
 
+=head1 CONTRIBUTORS
+
+=for stopwords Karen Etheridge Olaf Alders Olivier Mengué Ross Attrill swartz@jonathan-swartzs-macbook-4.local swartz@pobox.com Whitney Jackson
+
+=over 4
+
+=item *
+
+Karen Etheridge <ether@cpan.org>
+
+=item *
+
+Olaf Alders <olaf@wundersolutions.com>
+
+=item *
+
+Olivier Mengué <dolmen@cpan.org>
+
+=item *
+
+Ross Attrill <ross.attrill@gmail.com>
+
+=item *
+
+swartz@jonathan-swartzs-macbook-4.local <swartz@jonathan-swartzs-macbook-4.local>
+
+=item *
+
+swartz@pobox.com <swartz@pobox.com>
+
+=item *
+
+Whitney Jackson <whitney.jackson@baml.com>
+
+=back
+
 =head1 COPYRIGHT AND LICENSE
 
-This software is Copyright (c) 2014 by Dave Rolsky.
+This software is Copyright (c) 2015 by Dave Rolsky.
 
 This is free software, licensed under:
 

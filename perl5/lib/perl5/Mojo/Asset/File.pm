@@ -221,9 +221,9 @@ chunk size of C<131072> bytes (128KB).
 
 =head2 is_file
 
-  my $true = $file->is_file;
+  my $bool = $file->is_file;
 
-True.
+True, this is a L<Mojo::Asset::File> object.
 
 =head2 move_to
 

@@ -20,15 +20,13 @@ has version          => '1.1';
 sub body {
   my $self = shift;
 
-  # Downgrade multipart content
+  # Get
   my $content = $self->content;
+  return $content->is_multipart ? '' : $content->asset->slurp unless @_;
+
+  # Set (multipart content needs to be downgraded)
   $content = $self->content(Mojo::Content::Single->new)->content
     if $content->is_multipart;
-
-  # Get
-  return $content->asset->slurp unless @_;
-
-  # Set
   $content->asset(Mojo::Asset::Memory->new->add_chunk(@_));
 
   return $self;
@@ -61,7 +59,7 @@ sub build_body       { shift->_build('get_body_chunk') }
 sub build_headers    { shift->_build('get_header_chunk') }
 sub build_start_line { shift->_build('get_start_line_chunk') }
 
-sub cookie { shift->_cache('cookie', 0, @_) }
+sub cookie { shift->_cache('cookies', 0, @_) }
 
 sub cookies { croak 'Method "cookies" not implemented by subclass' }
 
@@ -79,8 +77,8 @@ sub error {
   return $self->finish;
 }
 
-sub every_cookie { shift->_cache('cookie', 1, @_) }
-sub every_upload { shift->_cache('upload', 1, @_) }
+sub every_cookie { shift->_cache('cookies', 1, @_) }
+sub every_upload { shift->_cache('uploads', 1, @_) }
 
 sub extract_start_line {
   croak 'Method "extract_start_line" not implemented by subclass';
@@ -183,7 +181,9 @@ sub parse {
   return $self->emit('progress')->content->is_finished ? $self->finish : $self;
 }
 
-sub start_line_size { length shift->build_start_line }
+sub start_line_size {
+  croak 'Method "start_line_size" not implemented by subclass';
+}
 
 sub text {
   my $self    = shift;
@@ -197,7 +197,7 @@ sub to_string {
   return $self->build_start_line . $self->build_headers . $self->build_body;
 }
 
-sub upload { shift->_cache('upload', 0, @_) }
+sub upload { shift->_cache('uploads', 0, @_) }
 
 sub uploads {
   my $self = shift;
@@ -239,7 +239,6 @@ sub _cache {
   my ($self, $method, $all, $name) = @_;
 
   # Cache objects by name
-  $method .= 's';
   unless ($self->{$method}) {
     $self->{$method} = {};
     push @{$self->{$method}{$_->name}}, $_ for @{$self->$method};
@@ -302,6 +301,7 @@ Mojo::Message - HTTP message base class
   sub cookies              {...}
   sub extract_start_line   {...}
   sub get_start_line_chunk {...}
+  sub start_line_size      {...}
 
 =head1 DESCRIPTION
 
@@ -438,19 +438,19 @@ Content size in bytes.
 
   my $bytes = $msg->build_body;
 
-Render whole body.
+Render whole body with L</"get_body_chunk">.
 
 =head2 build_headers
 
   my $bytes = $msg->build_headers;
 
-Render all headers.
+Render all headers with L</"get_header_chunk">.
 
 =head2 build_start_line
 
   my $bytes = $msg->build_start_line;
 
-Render start-line.
+Render start-line with L</"get_start_line_chunk">.
 
 =head2 cookie
 
@@ -547,13 +547,16 @@ Make sure message has all required headers.
 
   my $bytes = $msg->get_body_chunk($offset);
 
-Get a chunk of body data starting from a specific position.
+Get a chunk of body data starting from a specific position. Note that it might
+not be possible to get the same chunk twice if content was generated
+dynamically.
 
 =head2 get_header_chunk
 
   my $bytes = $msg->get_header_chunk($offset);
 
-Get a chunk of header data, starting from a specific position.
+Get a chunk of header data, starting from a specific position. Note that this
+method finalizes the message.
 
 =head2 get_start_line_chunk
 
@@ -566,7 +569,7 @@ overloaded in a subclass.
 
   my $size = $msg->header_size;
 
-Size of headers in bytes.
+Size of headers in bytes. Note that this method finalizes the message.
 
 =head2 headers
 
@@ -617,7 +620,7 @@ Parse message chunk.
 
   my $size = $msg->start_line_size;
 
-Size of the start-line in bytes.
+Size of the start-line in bytes. Meant to be overloaded in a subclass.
 
 =head2 text
 
@@ -630,7 +633,9 @@ L</"default_charset">.
 
   my $str = $msg->to_string;
 
-Render whole message.
+Render whole message. Note that this method finalizes the message, and that it
+might not be possible to render the same message twice if content was generated
+dynamically.
 
 =head2 upload
 

@@ -2,10 +2,10 @@ package Mojolicious::Plugin::PODRenderer;
 use Mojo::Base 'Mojolicious::Plugin';
 
 use Mojo::Asset::File;
-use Mojo::ByteStream 'b';
+use Mojo::ByteStream;
 use Mojo::DOM;
 use Mojo::URL;
-use Mojo::Util qw(slurp unindent);
+use Mojo::Util 'slurp';
 use Pod::Simple::XHTML;
 use Pod::Simple::Search;
 
@@ -25,13 +25,18 @@ sub register {
     }
   );
 
-  $app->helper(pod_to_html => sub { shift; b(_pod_to_html(@_)) });
+  $app->helper(
+    pod_to_html => sub { shift; Mojo::ByteStream->new(_pod_to_html(@_)) });
 
   # Perldoc browser
   return undef if $conf->{no_perldoc};
   my $defaults = {module => 'Mojolicious/Guides', format => 'html'};
   return $app->routes->any(
     '/perldoc/:module' => $defaults => [module => qr/[^.]+/] => \&_perldoc);
+}
+
+sub _indentation {
+  (sort map {/^(\s+)/} @{shift()})[0];
 }
 
 sub _html {
@@ -46,7 +51,7 @@ sub _html {
 
   # Rewrite code blocks for syntax highlighting and correct indentation
   for my $e ($dom->find('pre > code')->each) {
-    $e->content(my $str = unindent $e->content);
+    my $str = $e->content;
     next if $str =~ /^\s*(?:\$|Usage:)\s+/m || $str !~ /[\$\@\%]\w|-&gt;\w/m;
     my $attrs = $e->attr;
     my $class = $attrs->{class};
@@ -96,6 +101,7 @@ sub _pod_to_html {
   my $parser = Pod::Simple::XHTML->new;
   $parser->perldoc_url_prefix('https://metacpan.org/pod/');
   $parser->$_('') for qw(html_header html_footer);
+  $parser->strip_verbatim_indent(\&_indentation);
   $parser->output_string(\(my $output));
   return $@ unless eval { $parser->parse_string_document("$pod"); 1 };
 
@@ -113,9 +119,9 @@ Mojolicious::Plugin::PODRenderer - POD renderer plugin
 =head1 SYNOPSIS
 
   # Mojolicious (with documentation browser under "/perldoc")
-  my $route = $self->plugin('PODRenderer');
-  my $route = $self->plugin(PODRenderer => {name => 'foo'});
-  my $route = $self->plugin(PODRenderer => {preprocess => 'epl'});
+  my $route = $app->plugin('PODRenderer');
+  my $route = $app->plugin(PODRenderer => {name => 'foo'});
+  my $route = $app->plugin(PODRenderer => {preprocess => 'epl'});
 
   # Mojolicious::Lite (with documentation browser under "/perldoc")
   my $route = plugin 'PODRenderer';

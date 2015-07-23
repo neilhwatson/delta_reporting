@@ -1,11 +1,12 @@
 package YAML::Dumper;
-$YAML::Dumper::VERSION = '0.90';
+
 use YAML::Mo;
 extends 'YAML::Dumper::Base';
 
 use YAML::Dumper::Base;
 use YAML::Node;
 use YAML::Types;
+use Scalar::Util qw();
 
 # Context constants
 use constant KEY       => 3;
@@ -456,6 +457,10 @@ sub _emit_str {
             $self->_emit($eb), last;
         }
         $self->_emit($sf),
+        $self->_emit_number($_[0]),
+        $self->_emit($ef), last
+          if $self->is_literal_number($_[0]);
+        $self->_emit($sf),
         $self->_emit_plain($_[0]),
         $self->_emit($ef), last
           if $self->is_valid_plain($_[0]);
@@ -474,10 +479,23 @@ sub _emit_str {
     return;
 }
 
+sub is_literal_number {
+    my $self = shift;
+    # Stolen from JSON::Tiny
+    return B::svref_2object(\$_[0])->FLAGS & (B::SVp_IOK | B::SVp_NOK)
+            && 0 + $_[0] eq $_[0];
+}
+
+sub _emit_number {
+    my $self = shift;
+    return $self->_emit_plain($_[0]);
+}
+
 # Check whether or not a scalar should be emitted as an plain scalar.
 sub is_valid_plain {
     my $self = shift;
     return 0 unless length $_[0];
+    return 0 if $self->quote_numeric_strings and Scalar::Util::looks_like_number($_[0]);
     # refer to YAML::Loader::parse_inline_simple()
     return 0 if $_[0] =~ /^[\s\{\[\~\`\'\"\!\@\#\>\|\%\&\?\*\^]/;
     return 0 if $_[0] =~ /[\{\[\]\},]/;
@@ -485,6 +503,7 @@ sub is_valid_plain {
     return 0 if $_[0] =~ /\s#/;
     return 0 if $_[0] =~ /\:(\s|$)/;
     return 0 if $_[0] =~ /[\s\|\>]$/;
+    return 0 if $_[0] eq '-';
     return 1;
 }
 
@@ -554,36 +573,3 @@ sub escape {
 }
 
 1;
-
-=encoding UTF-8
-
-=head1 NAME
-
-YAML::Dumper - YAML class for dumping Perl objects to YAML
-
-=head1 SYNOPSIS
-
-    use YAML::Dumper;
-    my $dumper = YAML::Dumper->new;
-    $dumper->indent_width(4);
-    print $dumper->dump({foo => 'bar'});
-
-=head1 DESCRIPTION
-
-YAML::Dumper is the module that YAML.pm used to serialize Perl objects to
-YAML. It is fully object oriented and usable on its own.
-
-=head1 AUTHOR
-
-Ingy döt Net <ingy@cpan.org>
-
-=head1 COPYRIGHT
-
-Copyright (c) 2006, 2011-2014. Ingy döt Net. All rights reserved.
-
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
-
-See L<http://www.perl.com/perl/misc/Artistic.html>
-
-=cut

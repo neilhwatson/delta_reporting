@@ -1,13 +1,12 @@
 package Module::Build::Platform::darwin;
 
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.4205';
+use warnings;
+our $VERSION = '0.4214';
 $VERSION = eval $VERSION;
 use Module::Build::Platform::Unix;
 
-use vars qw(@ISA);
-@ISA = qw(Module::Build::Platform::Unix);
+our @ISA = qw(Module::Build::Platform::Unix);
 
 # This class isn't necessary anymore, but we can't delete it, because
 # some people might still have the old copy in their @INC, containing

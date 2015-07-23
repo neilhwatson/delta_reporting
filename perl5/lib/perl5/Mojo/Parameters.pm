@@ -151,14 +151,14 @@ sub to_hash {
 sub to_string {
   my $self = shift;
 
-  # String
+  # String (RFC 3986)
   my $charset = $self->charset;
   if (defined(my $str = $self->{string})) {
     $str = encode $charset, $str if $charset;
-    return url_escape $str, '^A-Za-z0-9\-._~!$&\'()*+,;=%:@/?';
+    return url_escape $str, '^A-Za-z0-9\-._~%!$&\'()*+,;=:@/?';
   }
 
-  # Build pairs
+  # Build pairs (HTML Living Standard)
   my $pairs = $self->pairs;
   return '' unless @$pairs;
   my @pairs;
@@ -167,9 +167,9 @@ sub to_string {
 
     # Escape and replace whitespace with "+"
     $name  = encode $charset,   $name if $charset;
-    $name  = url_escape $name,  '^A-Za-z0-9\-._~!$\'()*,:@/?';
+    $name  = url_escape $name,  '^*\-.0-9A-Z_a-z';
     $value = encode $charset,   $value if $charset;
-    $value = url_escape $value, '^A-Za-z0-9\-._~!$\'()*,:@/?';
+    $value = url_escape $value, '^*\-.0-9A-Z_a-z';
     s/\%20/\+/g for $name, $value;
 
     push @pairs, "$name=$value";
@@ -305,6 +305,9 @@ necessary.
   $params   = $params->pairs([foo => 'b&ar', baz => 23]);
 
 Parsed parameter pairs. Note that this method will normalize the parameters.
+
+  # Remove all parameters
+  $params->pairs([]);
 
 =head2 param
 
