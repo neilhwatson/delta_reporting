@@ -1,11 +1,8 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Mojo;
-
-# This regex is taken from Regexp::Common::number
-my $real_number = qr/
-   (?:(?i)(?:[-+]?)(?:(?=[.]?[0123456789])(?:[0123456789]*)(?:(?:[.])
-   (?:[0123456789]{0,}))?)(?:(?:[E])(?:(?:[-+]?)(?:[0123456789]+))|))
-/x;
+use Regexp::Common q/number/;
 
 my $t = Test::Mojo->new('DeltaR');
 
@@ -15,7 +12,7 @@ $t->get_ok('/about')
  ->status_is(200, 'Load /about' )
  ->text_is( 'html body div div div div a', 'Delta Reporting', 'First menu item is wrong' )
 
- ->content_like( qr/This database has $real_number records and is growing/mis,
+ ->content_like( qr/This database has $RE{num}{real} records and is growing/mis,
     '/about record count');
 
 done_testing();

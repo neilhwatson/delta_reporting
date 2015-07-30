@@ -1,6 +1,9 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Mojo;
 use Storable;
+use Regexp::Common q/net/;
 
 my %test_params = (
    # A copy of the test data that was inserted.
@@ -10,10 +13,10 @@ my %test_params = (
    promise_handle  => 'handle_dr_test',
 );
 
-$data_file = '/tmp/delta_reporting_test_data';
-my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
+my $data_file = '/tmp/delta_reporting_test_data';
+my $shared_data = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
-my $content = qr(
+my $html_table_content = qr(
       <td>$test_params{promiser}</td>
       .*
       <td>$test_params{promisee}</td>
@@ -22,7 +25,7 @@ my $content = qr(
       .*
       <td>$test_params{promise_outcome}</td>
       .*
-      <td>$stored->{data}{timestamp_regex}</td>
+      <td>$shared_data->{data}{timestamp_regex}</td>
 )msix;
 
 my $t = Test::Mojo->new( 'DeltaR' );
@@ -46,59 +49,143 @@ $t->post_ok( '/report/promises' =>
    })
    ->status_is(200)
 
-   ->content_like( qr/promiser.*not allowed/i,        '/report/promises promiser input error' )
-   ->content_like( qr/promisee.*not allowed/i,        '/report/promises promisee input error' )
-   ->content_like( qr/promise_outcome.*not allowed/i, '/report/promises promise_outcome input error' )
-   ->content_like( qr/promise_handle.*not allowed/i,  '/report/promises promise_handle input error' )
-   ->content_like( qr/class.*not allowed/i,           '/report/promises class input error' )
-   ->content_like( qr/hostname.*not allowed/i,        '/report/promises hostname input error' )
-   ->content_like( qr/ip_address.*not allowed/i,      '/report/promises ip_address input error' )
-   ->content_like( qr/policy_server.*not allowed/i,   '/report/promises policy_server input error' )
-   ->content_like( qr/timestamp.*not allowed/i,       '/report/promises timestamp input error' )
-   ->content_like( qr/gmt_offset.*not allowed/i,      '/report/promises gmt_offset input error' )
-   ->content_like( qr/delta_minutes.*not allowed/i,   '/report/promises delta_minutes input error' )
+   ->content_like( qr/promiser.*not allowed/i
+      , '/report/promises promiser input error' )
+
+   ->content_like( qr/promisee.*not allowed/i
+      , '/report/promises promisee input error' )
+
+   ->content_like( qr/promise_outcome.*not allowed/i
+     , '/report/promises promise_outcome input error' )
+
+   ->content_like( qr/promise_handle.*not allowed/i
+     , '/report/promises promise_handle input error' )
+
+   ->content_like( qr/class.*not allowed/i
+     , '/report/promises class input error' )
+
+   ->content_like( qr/hostname.*not allowed/i
+     , '/report/promises hostname input error' )
+
+   ->content_like( qr/ip_address.*not allowed/i
+     , '/report/promises ip_address input error' )
+
+   ->content_like( qr/policy_server.*not allowed/i
+     , '/report/promises policy_server input error' )
+
+   ->content_like( qr/timestamp.*not allowed/i
+     , '/report/promises timestamp input error' )
+
+   ->content_like( qr/gmt_offset.*not allowed/i
+     , '/report/promises gmt_offset input error' )
+  
+   ->content_like( qr/delta_minutes.*not allowed/i
+     , '/report/promises delta_minutes input error' )
    ;
 
+# Web query for a promise status in the past minute
 $t->post_ok( '/report/promises' =>
    form => {
       report_title    => 'DR test suite',
       promiser        => $test_params{promiser},
       hostname        => '%',
-      ip_address      => $stored->{data}{ip_address},
+      ip_address      => $shared_data->{data}{ip_address},
       policy_server   => '%',
       promise_outcome => $test_params{promise_outcome},
       promisee        => $test_params{promisee},
       promise_handle  => $test_params{promise_handle},
       latest_record   => 0,
-      timestamp       => $stored->{data}{query_timestamp},
-      gmt_offset      => $stored->{data}{gmt_offset},
+      timestamp       => $shared_data->{data}{query_timestamp},
+      gmt_offset      => $shared_data->{data}{gmt_offset},
       delta_minutes   => -1
    })
-   ->status_is(200)
 
+# Test the query results
+   ->status_is(200)
    ->text_like( 'html body div script' => qr/dataTable/,
       '/report/promises last munute dataTable script' )
+   ->content_like( $html_table_content, '/report/promises dr_test last minute' ); 
 
-   ->content_like( $content, '/report/promises dr_test last minute' ); 
-
+# Web query for a promise status, the last known record
 $t->post_ok( '/report/promises' =>
    form => {
       report_title    => 'DR test suite',
       promiser        => $test_params{promiser},
       hostname        => '%',
-      ip_address      => $stored->{data}{ip_address},
+      ip_address      => $shared_data->{data}{ip_address},
       policy_server   => '%',
       promise_outcome => $test_params{promise_outcome},
       promisee        => $test_params{promisee},
       promise_handle  => $test_params{promise_handle},
       latest_record   => 1,
    })
-   ->status_is(200)
 
+# Test the query results
+   ->status_is(200)
    ->text_like( 'html body div script' => qr/dataTable/,
       '/report/promises latest record dataTable script' )
+   ->content_like( $html_table_content, '/report/promises dr_test latest record' );
 
-   ->content_like( $content, '/report/promises dr_test latest record' );
+# Cli query for promise stamped less than minute ago
+my $query_command = "script/query"
+   . " -pr $test_params{promiser}"
+   . " -ip $shared_data->{data}{ip_address}"
+   . " -po $test_params{promise_outcome}"
+   . " -pe $test_params{promisee}"
+   . " -ph $test_params{promise_handle}"
+   . " -t '$shared_data->{data}{query_timestamp}$shared_data->{data}{gmt_offset}'"
+   . " -d -1";
+my $query_results = qx{ $query_command };
+
+# Test query results
+like( $query_results, qr{
+   # Table header
+   Promiser \s+ Promisee \s+ Promise \s handle \s+ Promise \s outcome
+   \s+ Timestamp \s+ Hostname \s+ IP \s address \s+ Policy \s server
+   \s+ ---------------------------------------------------------[-]+
+   # Table data
+   \s+ /etc/dr_test_kept                # promiser 
+   \s+ mojolicious                      # promisee 
+   \s+ handle_dr_test                   # promise handle
+   \s+ kept                             # promise outcome
+   \s+ $shared_data->{data}{date_regex} # date/time
+   \s+ unknown                         # hostname
+   \s+ 2001:db8::2                     # ip address
+   \s+ $RE{net}{domain}{-nospace}      # domain name
+   }mxs,
+
+   "Check CLI output for last minute class memberhsip"
+);
+
+# Cli query for the lasted known status of a promise
+$query_command = "script/query"
+   . " -pr $test_params{promiser}"
+   . " -ip $shared_data->{data}{ip_address}"
+   . " -po $test_params{promise_outcome}"
+   . " -pe $test_params{promisee}"
+   . " -ph $test_params{promise_handle}"
+   . " -l";
+$query_results = qx{ $query_command };
+
+# Test query results
+like( $query_results, qr{
+   # Table header
+   Promiser \s+ Promisee \s+ Promise \s handle \s+ Promise \s outcome
+   \s+ Timestamp \s+ Hostname \s+ IP \s address \s+ Policy \s server
+   \s+ ---------------------------------------------------------[-]+
+   # Table data
+   \s+ /etc/dr_test_kept                # promiser 
+   \s+ mojolicious                      # promisee 
+   \s+ handle_dr_test                   # promise handle
+   \s+ kept                             # promise outcome
+   \s+ $shared_data->{data}{date_regex} # date/time
+   \s+ unknown                         # hostname
+   \s+ 2001:db8::2                     # ip address
+   \s+ $RE{net}{domain}{-nospace}      # domain name
+   }mxs,
+
+   "Check CLI output for last minute class memberhsip"
+);
 
 done_testing();
 

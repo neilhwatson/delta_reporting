@@ -1,8 +1,10 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Mojo;
 use Storable;
 
-$data_file = '/tmp/delta_reporting_test_data';
+my $data_file = '/tmp/delta_reporting_test_data';
 my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
 my $t = Test::Mojo->new('DeltaR');

@@ -54,6 +54,7 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
   1. Test::Exception
   1. feature 'say', comes with perl 5.10+
   1. Net::DNS
+  1. Regexp::Common
   1. Sys::Hostname::Long 
   1. DBI
   1. DBD::Pg

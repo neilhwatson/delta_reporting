@@ -1,71 +1,66 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Mojo;
 use Storable;
+use Regexp::Common qw/number/;
 
-$data_file = '/tmp/delta_reporting_test_data';
+my $data_file = '/tmp/delta_reporting_test_data';
 my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
-# This regex is taken from Regexp::Common::number
-my $real_number = qr/
-   (?:(?i)(?:[-+]?)(?:(?=[.]?[0123456789])(?:[0123456789]*)(?:(?:[.])
-   (?:[0123456789]{0,}))?)(?:(?:[E])(?:(?:[-+]?)(?:[0123456789]+))|))
-/x;
-#$real_number = qr/./;
-
-my $stats_table_body_regex = qr(
+my $stats_table_body_regex = qr{
    <td>\s*Correlation\s*</td>
    .*
-   <td>\s*$real_number\s*</td>
+   <td>\s*$RE{num}{real}\s*</td>
    .*
    <td>\s*Intercept\s*</td>
    .*
-   <td>\s*$real_number\s*</td>
+   <td>\s*$RE{num}{real}\s*</td>
    .*
    <td>\s*Slope\s*</td>
    .*
-   <td>\s*$real_number\s*</td>
+   <td>\s*$RE{num}{real}\s*</td>
    .*
    <td>\s*Stderr\s*</td>
    .*
-   <td>\s*$real_number\s*</td>
-)misx;
+   <td>\s*$RE{num}{real}\s*</td>
+}misx;
 
 my $t = Test::Mojo->new('DeltaR');
 $t->ua->max_redirects(1);
 
-my %trends = (
+my %trend_report = (
    kept     => 'kept',
    notkept  => 'not kept',
    repaired => 'repaired'
 );
 
-for my $report ( keys %trends )
-{
-   my $promise_column = qr/$trends{$report}/i;
+for my $next_report ( keys %trend_report ) {
+   my $promise_column = qr/$trend_report{$next_report}/i;
 
-   $t->get_ok("/trend/$report")
+   $t->get_ok("/trend/$next_report")
       ->status_is(200)
 
-      ->element_exists( 'html head title' => "promises $trends{$report} trend",
-         "/trend/$report has wrong title" )
+      ->element_exists( 'html head title' => "promises $trend_report{$next_report} trend",
+         "/trend/$next_report has wrong title" )
 
-      ->content_like( qr(
+      ->content_like( qr{
          <th>Promises</th>
          .*
          <th>Value</th>
          .*
          $stats_table_body_regex
-         )misx, "/trend/$report Promises stats table" )
+         }misx, "/trend/$next_report Promises stats table" )
     
-      ->content_like( qr(
+      ->content_like( qr{
          <th>Hosts</th>
          .*
          <th>Value</th>
          .*
          $stats_table_body_regex
-         )misx, "/trend/$report Hosts stats table" )
+         }misx, "/trend/$next_report Hosts stats table" )
       
-      ->content_like( qr(
+      ->content_like( qr{
          <th.*?>\s*Date\s*</th>
          .*
          <th.*?>\s*Hosts\s*</th>
@@ -73,13 +68,17 @@ for my $report ( keys %trends )
          <th.*?>\s*$promise_column\s*</th>
          .*
          <td>$stored->{data}{datestamp_yesterday}</td>
-      )misx, "/trend/$report Raw data" )
+      }misx, "/trend/$next_report Raw data" )
 
       ->text_like( 'html body div script' => qr/dataTable/,
-         "/trend/$report dataTable script" )
+         "/trend/$next_report dataTable script" )
 
-      ->content_like( qr(var\s+dr_data\s+=\s+\[\{\S*"slope":$real_number)msix,
-         "trend/$report dr_data javascript variable");
+      ->content_like( qr{
+         var
+         \s+
+         dr_data \s+ = \s+\[\{ \S* "slope": $RE{num}{real}
+         }msix,
+         "trend/$next_report dr_data javascript variable");
 }
 
 done_testing();

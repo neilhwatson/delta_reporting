@@ -1,21 +1,27 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Mojo;
 use Storable;
+use Regexp::Common q/net/;
 
+  
+# duplicate of test data from load test
 my %test_params = (
-   # duplicate of test data from load test
    class => 'dr_test_class'
 );
 
-$data_file = '/tmp/delta_reporting_test_data';
-my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
+my $data_file = '/tmp/delta_reporting_test_data';
+my $shared_data = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
-my $content = qr(
+# Regex of returned web content for later testing
+my $html_table_content = qr(
    <td>$test_params{class}</td>
    .*
-   <td>$stored->{data}{timestamp_regex}</td>
+   <td>$shared_data->{data}{timestamp_regex}</td>
 )msix;
 
+# Params to use for test queries
 my $query_params = {
    report_title  => 'DR test suite',
    class         => 'any;',
@@ -28,7 +34,8 @@ my $query_params = {
    delta_minutes => '; DROP TABLES',
 };
 
-my @errors = 
+# Expected returned errors when query params are invalid
+my @input_errors = 
 (
    {
       regex => qr/class.*?not allowed/i,
@@ -60,85 +67,134 @@ my @errors =
    },
 );
 
-subtest 'Invalid CLI input' => sub
-{
+# Test invalid CLI query params.
+subtest 'Invalid CLI input' => sub {
    my @args;
-   for my $key ( keys %{ $query_params } )
+   for my $next_param ( keys %{ $query_params } )
    {
-      next if ( $key eq 'report_title' );
-      push @args, '--'.$key, "\'$query_params->{$key}\'";
+      next if ( $next_param eq 'report_title' );
+      push @args, '--'.$next_param, "\'$query_params->{$next_param}\'";
    }
 
-   my $stdout = '/tmp/'.$$.'_stdout';
-   my $command = './script/query '. join( ' ', @args ) .' 2>&1 1>'.$stdout;
+   # Build command line and send results to a file
+   my $command_output_file = '/tmp/'.$$.'_command_output_file';
+   my $command = './script/query '
+      . join( ' ', @args ) .' 2>&1 1>'
+      . $command_output_file;
    ok ( system( $command ), 'CLI should return none zero status' )
-      or warn "not ok .... CLI query command [$command] did NOT return false [$?].";
+      or warn "not ok .... CLI query command [$command]"
+      . " did NOT return false [$?].";
 
-   open my $fh, "$stdout" or warn "Cannot open [$stdout]";
-   my $error_string;
-   while (<$fh>)
-   {
-      chomp;
-      $error_string .= " ".$_;
+   # Read command output and test its contents
+   open my $fh, "$command_output_file"
+      or warn "Cannot open [$command_output_file] [$!]";
+   my $command_output = do { local $/, <$fh> };
+   close $fh;
+
+   # Test command output against expected errors
+   for my $next_error ( @input_errors ) {
+      like( $command_output, $next_error->{regex}
+         , "CLI query classes [$next_error->{name}]"
+      )
+         or warn "Failure in CLI query classes [$next_error->{name}]";
    }
 
-   for my $error ( @errors )
-   {
-      like( $error_string, $error->{regex}, "CLI query classes [$error->{name}]" )
-         or warn "CLI query classes [$error->{name}]";
-   }
-
-   unlink "$stdout";
+   unlink "$command_output_file";
    done_testing();
 };
 
+# Start web ui testing
 my $t = Test::Mojo->new( 'DeltaR' );
 $t->ua->max_redirects(1);
 
-subtest 'Invalid webform input' => sub
-{
-   for my $error ( @errors )
-   {
+# Feed class input form with error triggering params and test results
+subtest 'Invalid webform input' => sub {
+   for my $next_error ( @input_errors ) {
       $t->post_ok( '/report/classes' => form => $query_params )
          ->status_is(200)
-         ->content_like( $error->{regex}, "/report/classes $error->{name}" );
+         ->content_like( $next_error->{regex}
+            , "/report/classes $next_error->{name}" );
    }
 };
 
+# Web Query for record stamped less than one minute ago
 $t->post_ok( '/report/classes' =>
    form => {
       report_title  => 'DR test suite',
       class         => $test_params{class},
       hostname      => '%',
-      ip_address    => $stored->{data}{ip_address},
+      ip_address    => $shared_data->{data}{ip_address},
       policy_server => '%',
       latest_record => 0,
-      timestamp     => $stored->{data}{query_timestamp},
-      gmt_offset    => $stored->{data}{gmt_offset},
+      timestamp     => $shared_data->{data}{query_timestamp},
+      gmt_offset    => $shared_data->{data}{gmt_offset},
       delta_minutes => -1
    })
+# Test returned results
    ->status_is(200)
-
    ->text_like( 'html body div script' => qr/dataTable/,
       '/report/classes last minute dataTable script' )
+   ->content_like( $html_table_content, '/report/classes dr_test_class last minute' );
 
-   ->content_like( $content, '/report/classes dr_test_class last minute' );
-
+# Web query for the lastest known record
 $t->post_ok( '/report/classes' =>
    form => {
       report_title  => 'DR test suite',
       class         => $test_params{class},
       hostname      => '%',
-      ip_address    => $stored->{data}{ip_address},
+      ip_address    => $shared_data->{data}{ip_address},
       policy_server => '%',
       latest_record => 1,
    })
-   ->status_is(200)
 
+# Test returned results
+   ->status_is(200)
    ->text_like( 'html body div script' => qr/dataTable/,
       '/report/classes latest record dataTable script' )
+   ->content_like( $html_table_content, '/report/classes dr_test_class latest record' );
 
-   ->content_like( $content, '/report/classes dr_test_class latest record' );
+# Cli query for record class stamped less than minute ago
+my $query_command = "script/query"
+   . " -c $test_params{class}"
+   . " -ip $shared_data->{data}{ip_address}"
+   . " -t '$shared_data->{data}{query_timestamp}$shared_data->{data}{gmt_offset}'"
+   . " -d -1";
+my $query_results = qx{ $query_command };
+
+# Test returned results
+like( $query_results, qr{
+   Class \s+ Time \s+ Hostname \s+ IP \s Address \s+ Policy \s Server # Head
+   \s+ ---------------------------------------------------------[-]+ # Head line
+   \s+ dr_test_class                    # class 
+   \s+ $shared_data->{data}{date_regex} # date/time
+   \s+ unknown                          # hostname
+   \s+ 2001:db8::2                      # ip address
+   \s+ $RE{net}{domain}{-nospace}       # domain name
+   }mxs,
+
+   "Check CLI output for last minute class memberhsip"
+);
+
+# Cli query for latest known record
+$query_command = "script/query"
+   . " -c $test_params{class}"
+   . " -ip $shared_data->{data}{ip_address}"
+   . " -l";
+$query_results = qx{ $query_command };
+
+# Test returned results
+like( $query_results, qr{
+   Class \s+ Time \s+ Hostname \s+ IP \s Address \s+ Policy \s Server # Head
+   \s+ ---------------------------------------------------------[-]+ # Head line
+   \s+ dr_test_class                    # class 
+   \s+ $shared_data->{data}{date_regex} # date/time
+   \s+ unknown                          # hostname
+   \s+ 2001:db8::2                      # ip address
+   \s+ $RE{net}{domain}{-nospace}       # domain name
+   }mxs,
+
+   "Check CLI output for last minute class memberhsip"
+);
 
 done_testing();
 

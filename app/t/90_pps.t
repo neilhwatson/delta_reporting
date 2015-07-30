@@ -1,8 +1,10 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Mojo;
 use Storable;
 
-$data_file = '/tmp/delta_reporting_test_data';
+my $data_file = '/tmp/delta_reporting_test_data';
 my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";
 
 my $t = Test::Mojo->new('DeltaR');
@@ -14,7 +16,7 @@ $t->get_ok('/report/pps')
    ->element_exists( 'html head title' => 'Promises percent summary',
       '/report/pps has wrong title' )
 
-   ->content_like( qr(
+   ->content_like( qr{
       <th.*?>\s*Date\s*</th>
       .*
       <th.*?>\s*Hosts\s*</th>
@@ -26,15 +28,17 @@ $t->get_ok('/report/pps')
       <th.*?>\s*Not\skept\s*</th>
       .*
       <td>$stored->{data}{datestamp_yesterday}</td>
-   )misx, '/report/pps Raw data' )
+   }misx, '/report/pps Raw data' )
 
    ->text_like( 'html body div script' => qr/dataTable/,
       '/report/pps dataTable script' )
 
-   ->content_like( qr(var\s+pps_data\s+=\s+\[\s*\{\S*"key":"Kept")msix,
+   ->content_like( qr{ var \s+ pps_data \s+ = \s+ \[ \s* \{ \S*"key":"Kept"
+      }msix,
       '/report/pps pps_data javascript variable')
 
-   ->content_like( qr(var\s+host_data\s+=\s+\[\s*\{\S*"key":"Hosts")msix,
+   ->content_like( qr{ var \s+ host_data \s+ = \s+ \[ \s* \{ \S* "key":"Hosts"
+      }msix,
       '/report/pps host_data javascript variable');
 
 done_testing();

@@ -218,7 +218,7 @@ query
 
 [ -ho | --hostname ] hostname of agent host
 
-[ -i | --ip_address ] IP address of agent host
+[ -ip | --ip_address ] IP address of agent host
 
 [ -t | --timestamp ] timestamp of record in the form of 'yyyy-mm-dd hh:mm:ss[+-]zzzz'
 
@@ -238,7 +238,7 @@ query
 
 [ -c | --class ] CFEngine class
 
-[ -i | --inventory] report inventory (hard classes)
+[ -in | --inventory] report inventory (hard classes)
 
 Use perldoc to see full documentation.
 
@@ -254,7 +254,7 @@ Print help and exit.
 
 hostname of agent host
 
-=item [ -i | --ip_address ]
+=item [ -ip | --ip_address ]
 
 IP address of agent host
 
@@ -286,7 +286,7 @@ promiser
 
 promisee
 
-=item [inventroy]
+=item [ -in | --inventroy]
 
 Ignore all other options and perform hard class inventory report.
 

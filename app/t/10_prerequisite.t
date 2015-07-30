@@ -1,3 +1,5 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Exception;
 use Test::Mojo;
@@ -18,11 +20,19 @@ my %stored = (
       missing_ip_address  => '2001:db8::1',
       ip_address          => '2001:db8::2',
       config              => 'DeltaR.conf',
+
+# Matching 2015-07-30 13:02:22-04 style date stamps
+# Must store as a string because Storable cannot store regexp
+      date_regex          => q{
+         \d{4}-\d{2}-\d{2}  # Year
+         \s
+         \d{2}:\d{2}:\d{2}  # Time
+         [+-]\d{2,4}        # Timezone
+      },
    }
 );
 
-sub store_test_data
-{
+sub store_test_data {
    my $data = shift;
 
    store( $data, $data->{file} ) or
@@ -31,23 +41,20 @@ sub store_test_data
    return 1;
 }
 
-sub build_test_conf
-{
+sub build_test_conf {
    my $conf = $stored{data}{config};
 
-   if ( -e $conf )
-   {
+   if ( -e $conf ) {
       copy( $conf, "$conf.backup" ) or 
          die "Cannot backup [$stored{data}{config}], [$!]";
    }
 
-   open( FH, '>', $conf ) or die "Cannot open [$conf], [$!]";
+   open( my $conf_file, '>', $conf ) or die "Cannot open [$conf], [$!]";
 
-   for my $line (<DATA>)
-   {
-      print FH $line or die "Cannot write [$line] to [$conf], [$!]";
+   for my $line (<DATA>) {
+      print $conf_file $line or die "Cannot write [$line] to [$conf], [$!]";
    }
-   close FH;
+   close $conf_file;
    return 1
 }
 
@@ -69,8 +76,7 @@ if ( $timestamp =~ m/ \A
    $stored{data}{timestamp_regex} = $1.'\s'.$2.'[-+]{1}\d{2,4}';
    $stored{data}{gmt_offset}      = $3;
 }
-else
-{
+else {
    die "Could not parse timestamp [$timestamp] for storage.";
 }
 
@@ -82,14 +88,15 @@ ok( build_test_conf(), "Build test configuration" )
 ## Load app config
 my $t = Test::Mojo->new( 'DeltaR' );
 
-ok( $t->app->config->{db_name} eq 'delta_reporting_test', 'Confirm config test database' )
+ok( $t->app->config->{db_name} eq 'delta_reporting_test'
+   , 'Confirm config test database' )
    or BAIL_OUT( "Config test failed" );
 
 ## Initialize test database
 $t->ua->max_redirects(1);
-lives_and
-{
-   $t->get_ok( '/initialize_database' ) ->status_is( 200, 'Initialize database' );
+lives_and {
+   $t->get_ok( '/initialize_database' )
+   ->status_is( 200, 'Initialize database' );
 } '/initialze_database';
 
 done_testing();

@@ -1,9 +1,11 @@
+use strict;
+use warnings;
 use Test::More;
 use Test::Mojo;
 use File::Copy 'copy';
 use Storable;
 
-my $shared  = retrieve( '/tmp/delta_reporting_test_data' );
+my $shared = retrieve( '/tmp/delta_reporting_test_data' );
 
 my $t = Test::Mojo->new( 'DeltaR' );
 
