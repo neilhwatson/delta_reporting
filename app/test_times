@@ -1,0 +1,2 @@
+Before any major Mojo::Pg additions.
+Files=11, Tests=105, 32 wallclock secs ( 0.06 usr  0.01 sys +  7.24 cusr  0.50 csys =  7.81 CPU)

@@ -6,10 +6,12 @@ use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
 use Try::Tiny;
+use Data::Dumper; # TODO remove later
 
 # TODO can probably dumb these for $self-->{dbh}
 # TODO change args to arg to reduce code.
 our $dbh;
+our $mdb;
 our $record_limit;
 our $agent_table;
 our $promise_counts;
@@ -22,22 +24,55 @@ our $logger;
 sub new 
 {
    my ( $class, $args ) = @_;
-   $record_limit    = $args->{'record_limit'};
-   $agent_table     = $args->{'agent_table'};
-   $promise_counts  = $args->{'promise_counts'};
-   $inventory_table = $args->{'inventory_table'};
+
+   # Safely quote config values that will end up in SQL statements.
+   # This dual dbh, mdb is temporary until mojo::pg is fully envoked.
+   my $quote_ident;
+   if ( defined $args->{dbh} ) {
+      $dbh         = $args->{'dbh'};
+      $quote_ident = \&quote_ident_dbh;
+      
+   }
+   elsif ( defined $args->{mdb} ) {
+      $mdb         = $args->{'mdb'};
+      $quote_ident = \&quote_ident_mdb;
+   }
+
+   $agent_table     = $quote_ident->( $args->{'agent_table'} );
+   $promise_counts  = $quote_ident->( $args->{'promise_counts'} );
+   $inventory_table = $quote_ident->( $args->{'inventory_table'} );
+
    $inventory_limit = $args->{'inventory_limit'};
+   $record_limit    = $args->{'record_limit'};
    $delete_age      = $args->{'delete_age'};
    $reduce_age      = $args->{'reduce_age'};
-   $dbh             = $args->{'dbh'};
    $logger          = $args->{'logger'};
 
    my $self = bless $args, $class;
    return $self;
 };
 
-sub sql_prepare_and_execute
-{
+sub quote_ident_mdb {
+   my $string = shift;
+   my $query = "SELECT quote_ident( '$string' )";
+
+   my $results = $mdb->query( $query  );
+   return $results->text;
+}
+
+sub quote_ident_dbh {
+   my $string = shift;
+   my $query = "SELECT quote_ident( '$string' )";
+
+   my $data = sql_prepare_and_execute( '', {
+      query  => $query,
+      return => 'fetchall_arrayref'
+   });
+   return $data->[0][0];
+}
+
+sub sql_prepare_and_execute {
+   # TODO self not required?
    my ( $self, $args ) = @_;
    my $return      = exists $args->{return}      ? $args->{return}
                    : 'none';
@@ -112,7 +147,7 @@ sub table_cleanup
 
    for my $q ( @query )
    {
-      sql_prepare_and_execute( $self, { query  => $q,});
+      sql_prepare_and_execute( $self, { query  => $q});
    }
    return;
 }
@@ -125,7 +160,7 @@ sub delete_records
       $dbh->quote_identifier( $agent_table ),
       $dbh->quote( "$delete_age days" );
 
-   return sql_prepare_and_execute( $self, { query  => $query,});
+   return sql_prepare_and_execute( $self, { query  => $query});
 }
 
 sub reduce_records
@@ -161,7 +196,7 @@ END
 
    for my $q ( @query )
    {
-      sql_prepare_and_execute( $self, { query  => $q,});
+      sql_prepare_and_execute( $self, { query  => $q});
    }
 
    return;
@@ -185,50 +220,39 @@ sub count_records
 sub query_missing
 {
    my $self = shift;
-   my $query = sprintf <<END,
-(SELECT DISTINCT hostname, ip_address, policy_server FROM %s
+   my $query = <<"END_QUERY";
+(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table
 WHERE class = 'any'
    AND timestamp < ( now() - interval '24' hour )
    AND timestamp > ( now() - interval '48' hour )
    LIMIT ? )
 EXCEPT
-(SELECT DISTINCT hostname, ip_address, policy_server FROM %s
+(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table 
 WHERE class = 'any'
    AND timestamp > ( now() - interval '24' hour )
    LIMIT ? )
-END
-   $dbh->quote_identifier( $agent_table ),
-   $dbh->quote_identifier( $agent_table ),
-   my @bind_params;
-   push @bind_params, [ $record_limit, $record_limit ];
-   
-   return sql_prepare_and_execute( $self, {
-      query       => $query,
-      bind_params => \@bind_params,
-      return      => 'fetchall_arrayref',
-   });
+END_QUERY
+
+   my $results = $mdb->query( $query, ( $record_limit, $inventory_limit ));
+   return $results->arrays;
 }
 
 sub query_recent_promise_counts
 {
    my ( $self, $interval ) = @_;
-   my $query = sprintf <<END,
+   my $query = <<"END_QUERY";
 SELECT promise_outcome, count( promise_outcome ) FROM
 (
-   SELECT promise_outcome FROM %s 
-   WHERE timestamp >= ( now() - interval %s )
+   SELECT promise_outcome FROM $agent_table
+   WHERE timestamp >= ( now() - interval '$interval' minute )
    AND promise_outcome != 'empty'
 )
 AS promise_count
 GROUP BY promise_outcome,promise_count;
-END
-   $dbh->quote_identifier( $agent_table ),
-   $dbh->quote( "$interval minute" );
+END_QUERY
 
-   return sql_prepare_and_execute( $self, {
-      query       => $query,
-      return      => 'fetchall_arrayref',
-   });
+   my $results = $mdb->query( $query );
+   return $results->arrays;
 }
 
 sub query_inventory
@@ -236,27 +260,22 @@ sub query_inventory
    my ( $self, $class ) = @_;
    my ( $x, @bind_params );
 
-   my $inventory_query = sprintf <<END,
+   my $inventory_query = <<"END_QUERY";
 SELECT class,COUNT( class )
 FROM(
-   SELECT class,ip_address FROM %s 
-   WHERE timestamp > ( now() - interval %s )
+   SELECT class,ip_address FROM $agent_table 
+   WHERE timestamp > ( now() - interval '$inventory_limit' minute )
    AND (
-END
-   $dbh->quote_identifier( $agent_table ),
-   $dbh->quote( "$inventory_limit minute" );
+END_QUERY
 
    # Get all inventory classes if none are provided.
    if ( not defined $class or $class eq '' )
    {
-      my $class_query = sprintf "SELECT class FROM %s", 
-         $dbh->quote_identifier( $inventory_table );
+      my $class_query = "SELECT class FROM $inventory_table"; 
+      my $results = $mdb->query( $class_query )
+         or warn "$class_query error $!";
+      my $class_arrayref = $results->arrays;       
 
-      my $class_arrayref = sql_prepare_and_execute( $self, {
-         query  => $class_query,
-         return => 'fetchall_arrayref',
-      });
-      
       # Build returned hard classes into final inventory query.
       for my $row ( @ {$class_arrayref } )
       {
@@ -264,32 +283,30 @@ END
          my $or = '';
          if ( $x > 1 ) { $or = 'OR' };
 
-         push @{ $bind_params[0] }, @$row;
+         push @bind_params, $row->[0];
          $inventory_query .= qq/ $or lower(class) LIKE lower(?) ESCAPE '!' /;
       }
    }
    # Or query only the provided class.
    else
    {
-      push @bind_params, [ $class ];
+      push @bind_params, $class;
       $inventory_query .= qq/ class = lower(?) /;
    }
 
-   $inventory_query .= <<END;
+   $inventory_query .= <<'END_QUERY';
 )
    GROUP BY class,ip_address
 )
 AS class_count
 GROUP BY class
 ORDER BY class
-END
+END_QUERY
 
-   return sql_prepare_and_execute( $self, {
-      query       => $inventory_query,
-      bind_params => \@bind_params,
-      return      => 'fetchall_arrayref',
-   });
-};
+   my $results = $mdb->query( $inventory_query, @bind_params )
+      or warn "$inventory_query error $!";
+   return $results->arrays;
+}
 
 sub query_promises
 {
@@ -462,24 +479,18 @@ END
    });
 }
 
-sub query_latest_record
-{
+sub query_latest_record {
    my $self = shift;
-   my $query = sprintf <<END,
-SELECT timestamp FROM %s
-ORDER BY timestamp desc LIMIT 1
-END
-   $dbh->quote_identifier( $agent_table );
+   my $query = <<"END_QUERY";
+SELECT timestamp FROM $agent_table ORDER BY timestamp desc LIMIT 1
+END_QUERY
 
-   my $data = sql_prepare_and_execute( $self, {
-      query       => $query,
-      return      => 'fetchall_arrayref',
-   });
+   my $results = $mdb->query( $query );
+   my $data = $results->arrays;
    return $data->[0][0];
 }
 
-sub get_timestamp_clause
-{
+sub get_timestamp_clause {
    my $query_params = shift;
    my $delta_sign;
    my $first_time_limit;

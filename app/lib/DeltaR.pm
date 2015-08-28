@@ -6,6 +6,7 @@ use DeltaR::Dashboard;
 use Mojo::JSON 'encode_json';
 use Log::Log4perl;
 use DBI;
+use Mojo::Pg;
 
 sub startup
 {
@@ -20,14 +21,18 @@ sub startup
       db_wpass        => "",
       db_host         => "localhost",
       secrets         => [ 'secret passphrase', 'old secret passphrase' ],
-      record_limit    => 1000, # Limit the number of records returned by a query.
+      # Limit the number of records returned by a query.
+      record_limit    => 1000,
       agent_table     => "agent_log",
       promise_counts  => "promise_counts",
       inventory_table => "inventory_table",
-      inventory_limit => 20, # mintes to look backwards for inventory query
+      # mintes to look backwards for inventory query
+      inventory_limit => 20,
       client_log_dir  => "/var/cfengine/delta_reporting/log/client_logs",
-      delete_age      => 90, # (days) Delete records older than this.
-      reduce_age      => 10, # (days) Reduce duplicate records older than this to one per day
+      # (days) Delete records older than this.
+      delete_age      => 90,
+      # (days) Reduce duplicate records older than this to one per day
+      reduce_age      => 10,
       hypnotoad       => {
          proxy      => 1,
          production => 1,
@@ -40,14 +45,25 @@ sub startup
    if ( -e 'DeltaR.conf' ) {
       $config = $self->plugin('config', file => 'DeltaR.conf' );
    }
-
-   $self->secrets( @{ $config->{secrets} } );
-
+   # TODO valid config. Try Mojolicious::Validator;
+   
    # use commands from DeltaR::Command namespace
    push @{$self->commands->namespaces}, 'DeltaR::Command';
 
 ## Helpers
 
+   $self->helper( mdb => sub {
+      my ( $self, $arg_ref ) = @_;
+
+      my $pg = Mojo::Pg->new(
+         "postgresql://$config->{db_host}/$config->{db_name}" );
+      $pg->options({ RaiseError => 1 });
+      $pg->username( $arg_ref->{db_user} );
+      $pg->password( $arg_ref->{db_pass} );
+      my $dbh = $pg->db;
+      return $dbh;
+   });
+         
    $self->helper( dbh => sub {
       my ( $self, %args ) = @_;
       my $db_name = $config->{db_name};
@@ -59,6 +75,25 @@ sub startup
             { RaiseError => 1 }
       );
       return $dbh;
+   });
+
+   $self->helper( dr2 => sub {
+      my $self = shift;
+      my $dq = DeltaR::Query->new({
+         logger          => $self->logger(),
+         agent_table     => $config->{agent_table},
+         promise_counts  => $config->{promise_counts},
+         inventory_table => $config->{inventory_table},
+         inventory_limit => $config->{inventory_limit},
+         delete_age      => $config->{delete_age},
+         reduce_age      => $config->{reduce_age},
+         record_limit    => $config->{record_limit},
+         mdb             => $self->mdb({
+            db_user => $config->{db_user},
+            db_pass => $config->{db_pass},
+         }),
+      });
+      return $dq;
    });
 
    $self->helper( dr => sub {
@@ -111,7 +146,7 @@ sub startup
 ##  Dashboard helper
    $self->helper( dashboard => sub {
          my $self      = shift;
-         my $dashboard = DeltaR::Dashboard->new({ dbh => $self->dr });
+         my $dashboard = DeltaR::Dashboard->new({ dbh => $self->dr2 });
          return $dashboard
    });
 
@@ -122,7 +157,7 @@ sub startup
       my $self = shift;
 
       my ( $latest_date, $latest_time ) =
-         split /\s/, $self->dr->query_latest_record();
+         split /\s/, $self->dr2->query_latest_record();
 
       my $hostcount = $self->dashboard->hostcount();
 
@@ -185,7 +220,8 @@ sub startup
 
 =head1 SYNOPSIS
 
-This is the main Delta Reporting module. Start up and routing are controlled here.
+This is the main Delta Reporting module. Start up and routing are controlled
+here.
 
 =head1 LICENSE
 

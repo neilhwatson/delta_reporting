@@ -1692,3 +1692,25 @@ C<EXE_FILES: >
 
 =back
 
+=head2 Fri Aug 28 08:58:59 2015: C<Module> L<Mojo::Pg|Mojo::Pg>
+
+=over 4
+
+=item *
+
+C<installed into: /home/neil/perl5/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 2.08>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
