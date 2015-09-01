@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious::Controller';
 sub missing
 {
    my $self = shift;
-   my $rows = $self->app->dr2->query_missing();
+   my $rows = $self->app->dr->query_missing();
 
    $self->render(
       title       => "Missing hosts",
@@ -20,7 +20,7 @@ sub missing
 sub inventory
 {
    my $self = shift;
-   my $rows = $self->app->dr2->query_inventory();
+   my $rows = $self->app->dr->query_inventory();
 
    $self->render(
       title       => 'Inventory report',

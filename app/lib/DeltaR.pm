@@ -6,6 +6,7 @@ use DeltaR::Dashboard;
 use Mojo::JSON 'encode_json';
 use Log::Log4perl;
 use DBI;
+#DBI->trace(1);
 use Mojo::Pg;
 
 sub startup
@@ -77,7 +78,7 @@ sub startup
       return $dbh;
    });
 
-   $self->helper( dr2 => sub {
+   $self->helper( dr => sub {
       my $self = shift;
       my $dq = DeltaR::Query->new({
          logger          => $self->logger(),
@@ -92,25 +93,6 @@ sub startup
             db_user => $config->{db_user},
             db_pass => $config->{db_pass},
          }),
-      });
-      return $dq;
-   });
-
-   $self->helper( dr => sub {
-      my $self = shift;
-      my $dq = DeltaR::Query->new({
-         logger          => $self->logger(),
-         agent_table     => $config->{agent_table},
-         promise_counts  => $config->{promise_counts},
-         inventory_table => $config->{inventory_table},
-         inventory_limit => $config->{inventory_limit},
-         delete_age      => $config->{delete_age},
-         reduce_age      => $config->{reduce_age},
-         record_limit    => $config->{record_limit},
-         dbh             => $self->dbh(
-            db_user => $config->{db_user},
-            db_pass => $config->{db_pass},
-         ),
       });
       return $dq;
    });
@@ -146,7 +128,7 @@ sub startup
 ##  Dashboard helper
    $self->helper( dashboard => sub {
          my $self      = shift;
-         my $dashboard = DeltaR::Dashboard->new({ dbh => $self->dr2 });
+         my $dashboard = DeltaR::Dashboard->new({ dbh => $self->dr });
          return $dashboard
    });
 
@@ -157,7 +139,7 @@ sub startup
       my $self = shift;
 
       my ( $latest_date, $latest_time ) =
-         split /\s/, $self->dr2->query_latest_record();
+         split /\s/, $self->dr->query_latest_record();
 
       my $hostcount = $self->dashboard->hostcount();
 

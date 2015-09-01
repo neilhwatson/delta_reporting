@@ -6,9 +6,11 @@ use feature 'say';
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
 use Try::Tiny;
-use Data::Dumper; # TODO remove later
+use Carp qw/ croak /;
+# use Data::Dumper; # TODO remove later
 
 # TODO can probably dumb these for $self-->{dbh}
+# TODO change to inside out?
 # TODO change args to arg to reduce code.
 our $dbh;
 our $mdb;
@@ -56,8 +58,9 @@ sub quote_ident_mdb {
    my $string = shift;
    my $query = "SELECT quote_ident( '$string' )";
 
-   my $results = $mdb->query( $query  );
-   return $results->text;
+   my $results = $mdb->query( $query );
+   my $quoted_strings = $results->arrays;
+   return $quoted_strings->[0][0];
 }
 
 sub quote_ident_dbh {
@@ -69,6 +72,15 @@ sub quote_ident_dbh {
       return => 'fetchall_arrayref'
    });
    return $data->[0][0];
+}
+
+sub quote_literal{
+   my $string= shift;
+   my $query = "SELECT quote_literal( '$string' )";
+
+   my $results = $mdb->query( $query );
+   my $quoted_strings = $results->arrays;
+   return $quoted_strings->[0][0];
 }
 
 sub sql_prepare_and_execute {
@@ -206,15 +218,11 @@ sub count_records
 {
    my $self = shift;
    my $query = "SELECT reltuples FROM pg_class WHERE relname = ?";
-   my @bind_params;
-   push @bind_params, [ $agent_table ];
 
-   my $record_count = sql_prepare_and_execute( $self, {
-      query       => $query,
-      bind_params => \@bind_params,
-      return      => 'fetchall_arrayref',
-   });
-   return $record_count->[0][0];
+   my $results = $mdb->query( $query, ( $agent_table ));
+   my $record_counts = $results->arrays;
+
+   return $record_counts->[0][0];
 }
 
 sub query_missing
@@ -329,7 +337,7 @@ END
    for my $param ( qw/ promiser promisee promise_handle promise_outcome
       hostname ip_address policy_server/ )
    {
-      push @{ $bind_params[0] }, $query_params->{$param};
+      push @bind_params, $query_params->{$param};
    }
 
    if ( $query_params->{'latest_record'} == 1 )
@@ -342,7 +350,7 @@ GROUP BY promise_outcome,promiser,promise_handle,promisee,hostname,ip_address,po
 ORDER BY maxtime DESC
 LIMIT ?
 END
-      push @{ $bind_params[0] }, $record_limit;
+      push @bind_params, $record_limit;
    }
    elsif ( $query_params->{'latest_record'} == 0 )
    {
@@ -356,14 +364,11 @@ $timestamp{clause}
 ORDER BY timestamp DESC
 LIMIT ? 
 END
-      push @{ $bind_params[0] }, ( @{ $timestamp{bind_params} }, $record_limit );
+      push @bind_params, ( @{ $timestamp{bind_params} }, $record_limit );
    }
 
-   return sql_prepare_and_execute( $self, {
-      query       => $query,
-      bind_params => \@bind_params,
-      return      => 'fetchall_arrayref',
-   });
+   my $results = $mdb->query( $query, @bind_params );
+   return $results->arrays;
 }
 
 sub insert_promise_counts
@@ -418,14 +423,12 @@ sub query_promise_count
    my $query = "SELECT datestamp";
    for my $field ( @{ $fields} )
    {
-      $query .= sprintf ', %s', $dbh->quote_identifier( $field );
+      $query .= sprintf ', %s', quote_ident_mdb( $field );
    }
-   $query .= sprintf ' FROM %s', $dbh->quote_identifier( $promise_counts ); 
+   $query .= sprintf ' FROM %s', $promise_counts; 
 
-   return sql_prepare_and_execute $self, ({
-      query       => $query,
-      return      => 'fetchall_arrayref',
-   });
+   my $results = $mdb->query( $query );
+   return $results->arrays;
 }
 
 sub query_classes
@@ -433,61 +436,48 @@ sub query_classes
    my $self         = shift;
    my $query_params = shift;
    my $query;
-   my $common_query_section = <<END;
+   my $common_query_section = <<END_COMMON_QUERY;
 FROM $agent_table WHERE lower(class) LIKE lower(?) ESCAPE '!'
 AND lower(hostname) LIKE lower(?) ESCAPE '!'
 AND lower(ip_address) LIKE lower(?) ESCAPE '!'
 AND lower(policy_server) LIKE lower(?) ESCAPE '!'
-END
+END_COMMON_QUERY
 
    my @bind_params;
    for my $param ( qw/ class hostname ip_address policy_server/ )
    {
-      push @{ $bind_params[0] }, $query_params->{$param};
+      push @bind_params, $query_params->{$param};
    }
 
    if ( $query_params->{'latest_record'} == 1 )
    {
-      $query = <<END;
+      $query = <<END_QUERY;
 SELECT class,max(timestamp)
 AS maxtime,hostname,ip_address,policy_server
 $common_query_section
 GROUP BY class,hostname,ip_address,policy_server
 ORDER BY maxtime DESC
 LIMIT ?
-END
-      push @{ $bind_params[0] }, $record_limit;
+END_QUERY
+
+      push @bind_params, $record_limit;
    }
    elsif ( $query_params->{'latest_record'} == 0 )
    {
       my %timestamp = get_timestamp_clause( $query_params );
 
-      $query = <<END;
+      $query = <<END_QUERY;
 SELECT class,timestamp,hostname,ip_address,policy_server
 $common_query_section
 $timestamp{clause}
 ORDER BY timestamp DESC
 LIMIT ? 
-END
-      push @{ $bind_params[0] }, ( @{ $timestamp{bind_params} }, $record_limit );
+END_QUERY
+      push @bind_params, ( @{ $timestamp{bind_params} }, $record_limit );
    }
 
-   return sql_prepare_and_execute( $self, {
-      query       => $query,
-      bind_params => \@bind_params,
-      return      => 'fetchall_arrayref',
-   });
-}
-
-sub query_latest_record {
-   my $self = shift;
-   my $query = <<"END_QUERY";
-SELECT timestamp FROM $agent_table ORDER BY timestamp desc LIMIT 1
-END_QUERY
-
-   my $results = $mdb->query( $query );
-   my $data = $results->arrays;
-   return $data->[0][0];
+   my $results = $mdb->query( $query, @bind_params );
+   return $results->arrays;
 }
 
 sub get_timestamp_clause {
@@ -522,20 +512,34 @@ sub get_timestamp_clause {
          $second_time_limit = '=<';
       }
    }
+   else {
+      croak "Cannot match delta minutes";
+   }
    my @bind_params;
    push @bind_params, $query_params->{delta_minutes};
 
-   my $clause = sprintf <<END,
+   my $sql_quoted_timestamp = quote_literal( $query_params->{timestamp} );
+   my $clause = sprintf <<END_CLAUSE,
 AND timestamp $first_time_limit %s::timestamp 
 AND timestamp $second_time_limit ( %s::timestamp $delta_sign ? * interval '1 minute' )
-END
-   $dbh->quote( $query_params->{timestamp} ),
-   $dbh->quote( $query_params->{timestamp} );
-
+END_CLAUSE
+   $sql_quoted_timestamp, $sql_quoted_timestamp;
+   
    return (
       bind_params => \@bind_params,
       clause      => $clause,
    );
+}
+
+sub query_latest_record {
+   my $self = shift;
+   my $query = <<"END_QUERY";
+SELECT timestamp FROM $agent_table ORDER BY timestamp desc LIMIT 1
+END_QUERY
+
+   my $results = $mdb->query( $query );
+   my $data = $results->arrays;
+   return $data->[0][0];
 }
 
 sub drop_tables
