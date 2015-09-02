@@ -5,6 +5,7 @@ use Test::Exception;
 use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
+use feature 'say';
 use File::Copy 'copy';
 
 my $timestamp           = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
@@ -96,7 +97,9 @@ ok( $t->app->config->{db_name} eq 'delta_reporting_test'
 $t->ua->max_redirects(1);
 lives_and {
    $t->get_ok( '/initialize_database' )
-   ->status_is( 200, 'Initialize database' );
+   ->status_is( 200, 'Initialize database' )->or( sub {
+      warn "Initialize database error ".$t->tx->res->body;
+   });
 } '/initialze_database';
 
 done_testing();

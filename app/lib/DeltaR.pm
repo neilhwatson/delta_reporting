@@ -5,7 +5,7 @@ use DeltaR::Query;
 use DeltaR::Dashboard;
 use Mojo::JSON 'encode_json';
 use Log::Log4perl;
-use DBI;
+# use DBI;
 #DBI->trace(1);
 use Mojo::Pg;
 
@@ -53,7 +53,7 @@ sub startup
 
 ## Helpers
 
-   $self->helper( mdb => sub {
+   $self->helper( dbh => sub {
       my ( $self, $arg_ref ) = @_;
 
       my $pg = Mojo::Pg->new(
@@ -65,19 +65,6 @@ sub startup
       return $dbh;
    });
          
-   $self->helper( dbh => sub {
-      my ( $self, %args ) = @_;
-      my $db_name = $config->{db_name};
-      my $db_host = $config->{db_host};
-
-      my $dbh = DBI->connect(
-            "DBI:Pg:dbname=$db_name; host=$db_host",
-            "$args{db_user}", "$args{db_pass}",
-            { RaiseError => 1 }
-      );
-      return $dbh;
-   });
-
    $self->helper( dr => sub {
       my $self = shift;
       my $dq = DeltaR::Query->new({
@@ -89,7 +76,7 @@ sub startup
          delete_age      => $config->{delete_age},
          reduce_age      => $config->{reduce_age},
          record_limit    => $config->{record_limit},
-         mdb             => $self->mdb({
+         dbh             => $self->dbh({
             db_user => $config->{db_user},
             db_pass => $config->{db_pass},
          }),
@@ -108,10 +95,10 @@ sub startup
          delete_age      => $config->{delete_age},
          reduce_age      => $config->{reduce_age},
          record_limit    => $config->{record_limit},
-         dbh             => $self->dbh(
+         dbh             => $self->dbh({
             db_user => $config->{db_wuser},
             db_pass => $config->{db_wpass},
-         ),
+         }),
       });
       return $dq;
    });
