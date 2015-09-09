@@ -52,7 +52,8 @@ sub startup
    
    my $validator
       = DeltaR::Validator->new({ input => $config });
-   croak "Invalid config file" unless $validator->validate_config();
+   my @validator_errors = $validator->validate_config();
+   croak @validator_errors if ( (scalar @validator_errors) > 0 );
 
    # use commands from DeltaR::Command namespace
    push @{$self->commands->namespaces}, 'DeltaR::Command';

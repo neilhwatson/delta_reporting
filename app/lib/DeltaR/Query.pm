@@ -3,6 +3,7 @@ package DeltaR::Query;
 use strict;
 use warnings;
 use feature 'say';
+use DeltaR::Validator;
 use Net::DNS;
 use Sys::Hostname::Long 'hostname_long';
 use Try::Tiny;
@@ -603,13 +604,17 @@ END_QUERY
          $record{promisee}
       )  = split /\s*;;\s*/, $next_line;
 
-      my $errors = validate_load_inputs( \%record );
-      if ( $#{ $errors } > 0 ){
-         for my $err ( @{ $errors } ) {
-            $logger->error_warn( "validation error [$err], skipping record" )
-         }
-         next LINE;
-      };
+      my $delta_validator = DeltaR::Validator->new({ input => \%record });
+      my @errors = $delta_validator->validate_loading_data();
+      if ( ( scalar @errors ) > 0 ){
+            $logger->error_warn( "@errors, skipping record" );
+            next LINE;
+      }
+
+      # Truncate long fields to guard against overflow.
+      for my $next_field ( keys %record ) {
+         $record{ $next_field } = substr( $record{ $next_field }, 0, 250 );
+      }
 
       # Queue up queries for every line
       $dbh->query( $query, (
@@ -638,22 +643,6 @@ END_QUERY
    $tx->commit;
 
    return;
-}
-
-# Valid inputs for loading client logs
-sub validate_load_inputs {
-   my $record = shift;
-   my %valid_inputs = (
-      promise_outcome => '^kept|repaired|notkept|empty$',
-      timestamp       => '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[-+]{1}\d{4}$',
-   );
-   
-   my $errors = test_for_invalid_data({
-      valid_inputs      => \%valid_inputs,
-      max_record_length => 125,
-      inputs            => $record
-   });
-   return $errors;
 }
 
 sub validate_form_inputs {
