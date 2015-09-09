@@ -2,7 +2,6 @@ use strict;
 use warnings;
 use Test::More;
 use Test::Mojo;
-use File::Copy 'copy';
 use Storable;
 
 my $shared = retrieve( '/tmp/delta_reporting_test_data' );
@@ -14,17 +13,7 @@ ok( $t->app->config->{db_name} eq 'delta_reporting_test', 'Confirm config test d
 
 ok( $t->app->dw->drop_tables, 'Drop tables in test database' );
 
-if ( -e "$shared->{data}{config}.backup" )
-{
-   my $config = copy( $shared->{data}{config}.'.backup', $shared->{data}{config} )
-      or do
-      {
-         warn "Cannot restore [$shared->{data}{config}], [$!]. Do it by hand.";
-      };
-   ok( $config == 1, 'Config file restore' );
-   unlink $shared->{data}{config};
-}
-
+ok( unlink "$shared->{data}{config}", 'Remove test config file' );
 ok( unlink '/tmp/delta_reporting_test_data', 'Clean up log file' );
 
 done_testing();

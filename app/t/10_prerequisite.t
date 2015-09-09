@@ -6,10 +6,11 @@ use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
 use feature 'say';
-use File::Copy 'copy';
 
 my $timestamp           = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
 my $datestamp_yesterday = strftime "%Y-%m-%d", localtime( time - 60**2 *24 );
+
+my @config_data = <DATA>;
 
 my %stored = (
    file => '/tmp/delta_reporting_test_data',
@@ -43,17 +44,22 @@ sub store_test_data {
 }
 
 sub build_test_conf {
+   my $invalid_db_name = shift;
    my $conf = $stored{data}{config};
-
-   if ( -e $conf ) {
-      copy( $conf, "$conf.backup" ) or 
-         die "Cannot backup [$stored{data}{config}], [$!]";
-   }
 
    open( my $conf_file, '>', $conf ) or die "Cannot open [$conf], [$!]";
 
-   for my $line (<DATA>) {
-      print $conf_file $line or die "Cannot write [$line] to [$conf], [$!]";
+   for my $next_line (@config_data) {
+
+      # Insert broken db name if given
+      if ( defined $invalid_db_name and $next_line =~ m/\s+db_name\s+/ ) {
+         print $conf_file qq{db_name => "$invalid_db_name",\n}
+            or die "Cannot write [$next_line] to [$conf], [$!]";
+      }
+      else {
+         print $conf_file $next_line
+            or die "Cannot write [$next_line] to [$conf], [$!]";
+      }
    }
    close $conf_file;
    return 1
@@ -83,10 +89,16 @@ else {
 
 ok( store_test_data( \%stored ), "Store shared test data" )
    or BAIL_OUT( "Failed to backup [$stored{data}{config}]" );
-ok( build_test_conf(), "Build test configuration" )
-   or BAIL_OUT( "Failed to build [$stored{data}{config}]" );
 
-## Load app config
+# Test invalid config validation
+my $invalid_db_name = 'Illegal ; #$&db name';
+build_test_conf( $invalid_db_name );
+ok( ! eval { Test::Mojo->new( 'DeltaR' ) }, "Validator must fail" );
+
+## Load proper config 
+build_test_conf();
+
+## Load app 
 my $t = Test::Mojo->new( 'DeltaR' );
 
 ok( $t->app->config->{db_name} eq 'delta_reporting_test'

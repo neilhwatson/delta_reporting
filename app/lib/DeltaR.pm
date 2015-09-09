@@ -3,8 +3,10 @@ package DeltaR;
 use Mojo::Base qw( Mojolicious );
 use DeltaR::Query;
 use DeltaR::Dashboard;
+use DeltaR::Validator;
 use Mojo::JSON 'encode_json';
 use Log::Log4perl;
+use Carp;
 # use DBI;
 #DBI->trace(1);
 use Mojo::Pg;
@@ -48,6 +50,10 @@ sub startup
    }
    # TODO valid config. Try Mojolicious::Validator;
    
+   my $validator
+      = DeltaR::Validator->new({ input => $config });
+   croak "Invalid config file" unless $validator->validate_config();
+
    # use commands from DeltaR::Command namespace
    push @{$self->commands->namespaces}, 'DeltaR::Command';
 
