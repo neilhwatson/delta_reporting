@@ -48,38 +48,29 @@ $t->post_ok( '/report/promises' =>
       delta_minutes    => '; DROP TABLES',
    })
    ->status_is(200)
-
-   ->content_like( qr/promiser.*not allowed/i
+   ->content_like( qr/\QERROR: These inputs for Validator::\E/
+      , '/repot/promises error header' )
+   ->content_like( qr/promiser/i
       , '/report/promises promiser input error' )
-
-   ->content_like( qr/promisee.*not allowed/i
+   ->content_like( qr/promisee/i
       , '/report/promises promisee input error' )
-
-   ->content_like( qr/promise_outcome.*not allowed/i
+   ->content_like( qr/promise_outcome/i
      , '/report/promises promise_outcome input error' )
-
-   ->content_like( qr/promise_handle.*not allowed/i
+   ->content_like( qr/promise_handle/i
      , '/report/promises promise_handle input error' )
-
-   ->content_like( qr/class.*not allowed/i
+   ->content_like( qr/class/i
      , '/report/promises class input error' )
-
-   ->content_like( qr/hostname.*not allowed/i
+   ->content_like( qr/hostname/i
      , '/report/promises hostname input error' )
-
-   ->content_like( qr/ip_address.*not allowed/i
+   ->content_like( qr/ip_address/i
      , '/report/promises ip_address input error' )
-
-   ->content_like( qr/policy_server.*not allowed/i
+   ->content_like( qr/policy_server/i
      , '/report/promises policy_server input error' )
-
-   ->content_like( qr/timestamp.*not allowed/i
+   ->content_like( qr/timestamp/i
      , '/report/promises timestamp input error' )
-
-   ->content_like( qr/gmt_offset.*not allowed/i
+   ->content_like( qr/gmt_offset/i
      , '/report/promises gmt_offset input error' )
-  
-   ->content_like( qr/delta_minutes.*not allowed/i
+   ->content_like( qr/delta_minutes/i
      , '/report/promises delta_minutes input error' )
    ;
 
@@ -103,7 +94,7 @@ $t->post_ok( '/report/promises' =>
 # Test the query results
    ->status_is(200)
    ->text_like( 'html body div script' => qr/dataTable/,
-      '/report/promises last munute dataTable script' )
+      '/report/promises last minute dataTable script' )
    ->content_like( $html_table_content, '/report/promises dr_test last minute' ); 
 
 # Web query for a promise status, the last known record
@@ -154,7 +145,7 @@ like( $query_results, qr{
    \s+ $RE{net}{domain}{-nospace}      # domain name
    }mxs,
 
-   "Check CLI output for last minute class memberhsip"
+   "Check CLI output for last minute promise report"
 );
 
 # Cli query for the lasted known status of a promise

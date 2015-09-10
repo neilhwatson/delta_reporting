@@ -28,44 +28,20 @@ my $query_params = {
    hostname      => 'ettin;',
    ip_address    => '10.com',
    policy_server => '; DELETE FROM',
-   latest_record => 0,
    timestamp     => '$400;',
    gmt_offset    => '\\;400; EXIT',
    delta_minutes => '; DROP TABLES',
 };
 
-# Expected returned errors when query params are invalid
-my @input_errors = 
-(
-   {
-      regex => qr/class.*?not allowed/i,
-      name => 'class input error'
-   },
-   {
-      regex => qr/.*hostname.*?not allowed.*/i,
-      name => 'hostname input error'
-   },
-   {
-      regex => qr/ip_address.*?not allowed/i,
-      name => 'ip_address input error'
-   },
-   {
-      regex => qr/policy_server.*?not allowed/i,
-      name => 'policy_server input error'
-   },
-   {
-      regex => qr/timestamp.*?not allowed/i,
-      name => 'timestamp input error'
-   },
-   {
-      regex => qr/gmt_offset.*?not allowed/i,
-      name => 'gmt_offset input error'
-   },
-   {
-      regex => qr/delta_minutes.*?not allowed/i,
-      name => 'delta_minutes input error'
-   },
-);
+my @input_errors = ( qw/
+   class
+   delta_minutes
+   gmt_offset
+   hostname
+   ip_address
+   policy_server
+   timestamp
+/);
 
 # Test invalid CLI query params.
 subtest 'Invalid CLI input' => sub {
@@ -90,16 +66,16 @@ subtest 'Invalid CLI input' => sub {
       or warn "Cannot open [$command_output_file] [$!]";
    my $command_output = do { local $/, <$fh> };
    close $fh;
+   unlink "$command_output_file";
 
    # Test command output against expected errors
    for my $next_error ( @input_errors ) {
-      like( $command_output, $next_error->{regex}
-         , "CLI query classes [$next_error->{name}]"
+      like( $command_output, qr/
+         \QERROR: These inputs for Validator::\E .* $next_error /msx
+         , "CLI query classes [$next_error]"
       )
-         or warn "Failure in CLI query classes [$next_error->{name}]";
+         or warn "Failure in CLI query classes [$next_error]";
    }
-
-   unlink "$command_output_file";
    done_testing();
 };
 
@@ -108,14 +84,26 @@ my $t = Test::Mojo->new( 'DeltaR' );
 $t->ua->max_redirects(1);
 
 # Feed class input form with error triggering params and test results
-subtest 'Invalid webform input' => sub {
-   for my $next_error ( @input_errors ) {
-      $t->post_ok( '/report/classes' => form => $query_params )
-         ->status_is(200)
-         ->content_like( $next_error->{regex}
-            , "/report/classes $next_error->{name}" );
-   }
-};
+$t->post_ok( '/report/classes' => form => $query_params )
+   ->status_is(200)
+   ->content_like( qr/\QERROR: These inputs for Validator::\E/
+      , "/report/classes error header" )
+   ->content_like( qr/class/i
+      , '/report/classes class input error' )
+   ->content_like( qr/hostname/i
+      , '/report/classes hostname input error' )
+   ->content_like( qr/ip_address/i
+      , '/report/classes ip_address input error' )
+   ->content_like( qr/policy_server/i
+      , '/report/classes policy_server input error' )
+   ->content_like( qr/timestamp/i
+      , '/report/classes timestamp input error' )
+   ->content_like( qr/gmt_offset/i
+      , '/report/classes gmt_offset input error' )
+   ->content_like( qr/delta_minutes/i
+      , '/report/classes delta_minutes input error' )
+;
+
 
 # Web Query for record stamped less than one minute ago
 $t->post_ok( '/report/classes' =>

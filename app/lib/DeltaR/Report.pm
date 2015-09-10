@@ -1,6 +1,7 @@
 package DeltaR::Report;
 
 use Mojo::Base 'Mojolicious::Controller';
+use DeltaR::Validator;
 
 sub missing
 {
@@ -60,15 +61,22 @@ sub classes
       latest_record => $latest_record,
    );
 
-   my $errors = 
-      $self->app->dr->validate_form_inputs( \%query_params );
-   if ( @{ $errors } )
-   {
+   # Validate user input
+   my $delta_validator
+      = DeltaR::Validator->new({ input => \%query_params });
+   my @validator_errors = $delta_validator->class_query_form();
+   if ( (scalar @validator_errors) > 0 ) {
       $self->stash(
          title  => $self->param('report_title'),
-         errors => $errors
+         errors => \@validator_errors 
       );
       return $self->render( template => 'error', format => 'html' );
+   }
+
+   # Truncate long fields to guard against overflow.
+   for my $next_field ( keys %query_params ) {
+      $query_params{ $next_field }
+         = substr( $query_params{ $next_field }, 0, 250 );
    }
 
    my $rows = $self->app->dr->query_classes( \%query_params );
@@ -113,15 +121,22 @@ sub promises
       latest_record   => $latest_record,
    );
 
-   my $errors =
-      $self->app->dr->validate_form_inputs( \%query_params );
-   if ( @{ $errors } )
-   {
+   # Validate user input
+   my $delta_validator
+      = DeltaR::Validator->new({ input => \%query_params });
+   my @validator_errors = $delta_validator->promise_query_form();
+   if ( (scalar @validator_errors) > 0 ) {
       $self->stash(
          title  => $self->param('report_title'),
-         errors => $errors
+         errors => \@validator_errors 
       );
       return $self->render( template => 'error', format => 'html' );
+   }
+
+   # Truncate long fields to guard against overflow.
+   for my $next_field ( keys %query_params ) {
+      $query_params{ $next_field }
+         = substr( $query_params{ $next_field }, 0, 250 );
    }
 
    my $rows = $self->app->dr->query_promises( \%query_params );

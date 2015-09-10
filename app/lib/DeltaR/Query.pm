@@ -605,7 +605,7 @@ END_QUERY
       )  = split /\s*;;\s*/, $next_line;
 
       my $delta_validator = DeltaR::Validator->new({ input => \%record });
-      my @errors = $delta_validator->validate_loading_data();
+      my @errors = $delta_validator->client_log();
       if ( ( scalar @errors ) > 0 ){
             $logger->error_warn( "@errors, skipping record" );
             next LINE;
@@ -643,57 +643,6 @@ END_QUERY
    $tx->commit;
 
    return;
-}
-
-sub validate_form_inputs {
-   my ( $self, $query_params ) = @_; 
-   my $errors = test_for_invalid_data({ inputs => $query_params });
-   return $errors;
-}
-
-sub test_for_invalid_data {
-   my ( $params ) = @_;
-
-   my %default_valid_inputs = (
-      class           => '^[%\w]+$',
-      delta_minutes   => '^[+-]{0,1}\d{1,4}$',
-      gmt_offset      => '^[+-]{0,1}\d{1,4}$',
-      hostname        => '^[%\w\-\.]+$',
-      ip_address      => '^[%\d\.:a-fA-F]+$',
-      policy_server   => '^([%\d\.:a-fA-F]+)|([%\w\-\.]+)$',
-      promise_handle  => '^[%\w]+$',
-      promise_outcome => '^%|kept|repaired|notkept$',
-      promisee        => '^[%\w/\s\d\.\-\\:]+$',
-      promiser        => '^[%\w/\s\d\.\-\\:=]+$',
-      timestamp       => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
-      latest_record   => '0|1',
-   );
-
-   # Merge parameter valid inputs into defaults. Use to allow incoming params
-   # to override the default_valid_inputs.
-   for my $k ( keys %{ $params->{valid_inputs} } ) {
-      $default_valid_inputs{$k} = $params->{valid_inputs}->{$k};
-   }
-   my $valid_inputs      = \%default_valid_inputs;
-   my $inputs            = $params->{inputs};
-   my $max_record_length = exists $params->{max_record_length} ?
-      $params->{max_record_length} : 24;
-   my @errors;
-
-   for my $p ( keys %{ $inputs } ) {
-      if ( $valid_inputs->{$p} ) {
-         if (
-            $inputs->{$p} !~ m/$valid_inputs->{$p}/
-            or $inputs->{$p}  =~ m/;/
-            ) {
-            push @errors, "$p '$inputs->{$p}' not allowed. Permitted format: $valid_inputs->{$p}";
-         }
-         elsif ( length( $inputs->{$p} ) > $max_record_length ) {
-            push @errors, "Error [$p], [$inputs->{$p}] is too long. Maximum length is [$max_record_length].";
-         }
-      }
-   }
-   return \@errors;
 }
 
 sub get_ptr {

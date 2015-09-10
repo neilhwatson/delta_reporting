@@ -1,8 +1,9 @@
 package DeltaR::Command::query;
+use DeltaR::Validator;
 use Mojo::Base qw( Mojolicious::Command );
 use Getopt::Long 'GetOptionsFromArray';
 use POSIX qw( strftime );
-#use Data::Dumper; # TODO remove for production
+use Pod::Usage;
 
 our @row;
 
@@ -127,38 +128,47 @@ sub run
    #
    # Help and validate
    #
-   if ( $query_params{help} )
-   {
-      usage( $self, "help" );
-      return;
+   my $delta_validator
+      = DeltaR::Validator->new({ input => \%query_params });
+   my @validator_errors;
+
+   if ( $query_params{class} ) {
+      @validator_errors = $delta_validator->class_query_form();
+   }
+   elsif ( $query_params{promiser} ) {
+      @validator_errors = $delta_validator->promise_query_form();
    }
 
-   my $errors = $dq->validate_form_inputs( \%query_params );
-
-   if ( @{ $errors } )
-   {
-      my $errors = "\nError: ".join "\n", @{ $errors };
-      usage( $self, $errors );
+   if ( (scalar @validator_errors) > 0 ) {
+      my $msg = join ' ', @validator_errors;
+      usage( $self, $msg );
       exit 1;
+   }
+
+   # Truncate long fields to guard against overflow.
+   for my $next_field ( keys %query_params ) {
+      $query_params{ $next_field }
+         = substr( $query_params{ $next_field }, 0, 250 );
    }
 
    #
    # Perform query
    #
-   if ( $query_params{inventory} )
-   {
+   if ( $query_params{inventory} ) {
       $report_type = 'inventory';
       $rows = $dq->query_inventory;
    }
-   elsif ( $query_params{class} )
-   {
+   elsif ( $query_params{class} ) {
       $report_type = 'class';
       $rows = $dq->query_classes( \%query_params );
    }
-   else
-   {
+   elsif ( $query_params{promiser} ) {
       $report_type = 'promise';
       $rows = $dq->query_promises( \%query_params );
+   }
+   else {
+      usage( $self, "No query type given (e.g. class, promise, inventory)" );
+      exit 1;
    }
 
    #
@@ -205,9 +215,11 @@ sub usage
    say $self->extract_usage;
 }
 
+1;
 
 ##########################
 # POD
+=pod
 
 =head1 SYNOPSIS
 
@@ -408,6 +420,4 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 =cut
-
-1;
 

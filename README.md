@@ -42,6 +42,7 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 1. Perl Modules
   1. Mojolicious framework, included.
   1. Statistics::LineFit, included.
+  1. Mojo::Pg, included.
   1. Local::lib, included.
   1. Try::Tiny, included.
   1. Log::Log4perl, included

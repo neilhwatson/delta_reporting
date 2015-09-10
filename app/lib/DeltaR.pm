@@ -52,7 +52,7 @@ sub startup
    
    my $validator
       = DeltaR::Validator->new({ input => $config });
-   my @validator_errors = $validator->validate_config();
+   my @validator_errors = $validator->config_file();
    croak @validator_errors if ( (scalar @validator_errors) > 0 );
 
    # use commands from DeltaR::Command namespace
