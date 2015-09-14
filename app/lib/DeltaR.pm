@@ -7,9 +7,9 @@ use DeltaR::Validator;
 use Mojo::JSON 'encode_json';
 use Log::Log4perl;
 use Carp;
+use Mojo::Pg;
 # use DBI;
 #DBI->trace(1);
-use Mojo::Pg;
 
 sub startup
 {
@@ -65,7 +65,6 @@ sub startup
 
       my $pg = Mojo::Pg->new(
          "postgresql://$config->{db_host}/$config->{db_name}" );
-      $pg->options({ RaiseError => 1 });
       $pg->username( $arg_ref->{db_user} );
       $pg->password( $arg_ref->{db_pass} );
       my $dbh = $pg->db;

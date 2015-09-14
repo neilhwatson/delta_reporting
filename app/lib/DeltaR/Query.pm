@@ -9,53 +9,44 @@ use Sys::Hostname::Long 'hostname_long';
 use Try::Tiny;
 use Carp;
 
-# TODO can probably dumb these for $self-->{dbh}
-# TODO change to inside out?
-# TODO change args to arg to reduce code.
-our $dbh;
-our $record_limit;
-our $agent_table;
-our $promise_counts;
-our $inventory_table;
-our $inventory_limit;
-our $delete_age;
-our $reduce_age;
-our $logger;
+my ( %dbh, %agent_table, %logger, %reduce_age, %delete_age, %record_limit,
+   %promise_counts, %inventory_table, %inventory_limit );
 
 sub new {
-   my ( $class, $args ) = @_;
+   my ( $class, $arg_ref ) = @_;
+      
+   my $self = bless {}, $class;
 
-   $dbh             = $args->{'dbh'};
-   # Safely quote config values that will end up in SQL statements.
-   $agent_table     = quote_ident( $args->{'agent_table'} );
-   $promise_counts  = quote_ident( $args->{'promise_counts'} );
-   $inventory_table = quote_ident( $args->{'inventory_table'} );
+   # Inside out variables
+   $dbh{$self}             = $arg_ref->{dbh};
+   $inventory_limit{$self} = $arg_ref->{'inventory_limit'};
+   $record_limit{$self}    = $arg_ref->{'record_limit'};
+   $delete_age{$self}      = $arg_ref->{'delete_age'};
+   $reduce_age{$self}      = $arg_ref->{'reduce_age'};
+   $logger{$self}          = $arg_ref->{'logger'};
+   $agent_table{$self}     = $self->quote_ident( $arg_ref->{'agent_table'} );
+   $promise_counts{$self} 
+      = $self->quote_ident( $arg_ref->{'promise_counts'} );
+   $inventory_table{$self}
+      = $self->quote_ident( $arg_ref->{'inventory_table'} );
 
-   $inventory_limit = $args->{'inventory_limit'};
-   $record_limit    = $args->{'record_limit'};
-   $delete_age      = $args->{'delete_age'};
-   $reduce_age      = $args->{'reduce_age'};
-   $logger          = $args->{'logger'};
-
-   # TODO do not need to bless args?
-   my $self = bless $args, $class;
    return $self;
 };
 
 sub quote_ident {
-   my $string = shift;
+   my ( $self, $string ) = @_;
    my $query = "SELECT quote_ident( '$string' )";
 
-   my $results = $dbh->query( $query );
+   my $results = $dbh{$self}->query( $query );
    my $quoted_strings = $results->arrays;
    return $quoted_strings->[0][0];
 }
 
 sub quote_literal {
-   my $string= shift;
+   my ( $self, $string ) = @_;
    my $query = "SELECT quote_literal( '$string' )";
 
-   my $results = $dbh->query( $query );
+   my $results = $dbh{$self}->query( $query );
    my $quoted_strings = $results->arrays;
    return $quoted_strings->[0][0];
 }
@@ -64,22 +55,22 @@ sub table_cleanup {
    my $self = shift;
    my $return;
    my @clean_operations = (
-      "VACUUM $agent_table",
-      "REINDEX TABLE $agent_table",
+      "VACUUM $agent_table{$self}",
+      "REINDEX TABLE $agent_table{$self}",
    );
 
    for my $next_op ( @clean_operations ) {
-      $dbh->query( $next_op );
+      $dbh{$self}->query( $next_op );
    }
    return;
 }
 
 sub delete_records {
    my $self  = shift;
-   my $query = "DELETE FROM $agent_table WHERE timestamp < now()
-      - interval '$delete_age days'";
+   my $query = "DELETE FROM $agent_table{$self} WHERE timestamp < now()
+      - interval '$delete_age{$self} days'";
 
-   $dbh->query( $query );
+   $dbh{$self}->query( $query );
    return;
 }
 
@@ -88,20 +79,21 @@ sub reduce_records {
 
    my @reduce_operations = (
 
-      "SELECT * INTO TEMP tmp_agent_log FROM $agent_table
-         WHERE timestamp < now() - interval '$reduce_age days'",
+      "SELECT * INTO TEMP tmp_agent_log FROM $agent_table{$self}
+         WHERE timestamp < now() - interval '$reduce_age{$self} days'",
 
-      "DELETE FROM $agent_table WHERE timestamp < now()
-         - interval '$reduce_age days'",
+      "DELETE FROM $agent_table{$self} WHERE timestamp < now()
+         - interval '$reduce_age{$self} days'",
 
-      qq{ INSERT INTO $agent_table SELECT 
+      qq{ INSERT INTO $agent_table{$self} SELECT 
          class, hostname, ip_address, promise_handle, promiser,
          promisee, policy_server, "rowId", timestamp, promise_outcome
          FROM (
             SELECT *, row_number() OVER w
             FROM tmp_agent_log
             WINDOW w AS (
-               PARTITION BY class, ip_address, hostname, promiser, date_trunc(\'day\', timestamp)
+               PARTITION BY class, ip_address, hostname, promiser
+                  , date_trunc(\'day\', timestamp)
                ORDER BY timestamp DESC
                )   
             ) t1
@@ -110,10 +102,10 @@ sub reduce_records {
    );
 
    # Queue up queries
-   my $tx = $dbh->begin;
+   my $tx = $dbh{$self}->begin;
    for my $next_op ( @reduce_operations )
    {
-      $dbh->query( $next_op );
+      $dbh{$self}->query( $next_op );
    }
    $tx->commit;
    return;
@@ -123,7 +115,7 @@ sub count_records {
    my $self = shift;
    my $query = "SELECT reltuples FROM pg_class WHERE relname = ?";
 
-   my $results = $dbh->query( $query, ( $agent_table ));
+   my $results = $dbh{$self}->query( $query, ( $agent_table{$self} ));
    my $record_counts = $results->arrays;
 
    return $record_counts->[0][0];
@@ -132,19 +124,20 @@ sub count_records {
 sub query_missing {
    my $self = shift;
    my $query = <<"END_QUERY";
-(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table
+(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table{$self}
 WHERE class = 'any'
    AND timestamp < ( now() - interval '24' hour )
    AND timestamp > ( now() - interval '48' hour )
    LIMIT ? )
 EXCEPT
-(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table 
+(SELECT DISTINCT hostname, ip_address, policy_server FROM $agent_table{$self} 
 WHERE class = 'any'
    AND timestamp > ( now() - interval '24' hour )
    LIMIT ? )
 END_QUERY
 
-   my $results = $dbh->query( $query, ( $record_limit, $inventory_limit ));
+   my $results = $dbh{$self}->query( $query
+      , ( $record_limit{$self}, $inventory_limit{$self} ));
    return $results->arrays;
 }
 
@@ -153,7 +146,7 @@ sub query_recent_promise_counts {
    my $query = <<"END_QUERY";
 SELECT promise_outcome, count( promise_outcome ) FROM
 (
-   SELECT promise_outcome FROM $agent_table
+   SELECT promise_outcome FROM $agent_table{$self}
    WHERE timestamp >= ( now() - interval '$interval' minute )
    AND promise_outcome != 'empty'
 )
@@ -161,7 +154,7 @@ AS promise_count
 GROUP BY promise_outcome,promise_count;
 END_QUERY
 
-   my $results = $dbh->query( $query );
+   my $results = $dbh{$self}->query( $query );
    return $results->arrays;
 }
 
@@ -172,16 +165,16 @@ sub query_inventory {
    my $inventory_query = <<"END_QUERY";
 SELECT class,COUNT( class )
 FROM(
-   SELECT class,ip_address FROM $agent_table 
-   WHERE timestamp > ( now() - interval '$inventory_limit' minute )
+   SELECT class,ip_address FROM $agent_table{$self} 
+   WHERE timestamp > ( now() - interval '$inventory_limit{$self}' minute )
    AND (
 END_QUERY
 
    # Get all inventory classes if none are provided.
    if ( not defined $class or $class eq '' )
    {
-      my $class_query = "SELECT class FROM $inventory_table"; 
-      my $results = $dbh->query( $class_query )
+      my $class_query = "SELECT class FROM $inventory_table{$self}"; 
+      my $results = $dbh{$self}->query( $class_query )
          or warn "$class_query error $!";
       my $class_arrayref = $results->arrays;       
 
@@ -212,17 +205,16 @@ GROUP BY class
 ORDER BY class
 END_QUERY
 
-   my $results = $dbh->query( $inventory_query, @bind_params )
+   my $results = $dbh{$self}->query( $inventory_query, @bind_params )
       or warn "$inventory_query error $!";
    return $results->arrays;
 }
 
 sub query_promises {
-   my $self = shift;
-   my $query_params = shift;
+   my ( $self, $query_params ) = @_;
    my $query;
    my $common_query_section = <<END;
-FROM $agent_table WHERE 
+FROM $agent_table{$self} WHERE 
 lower(promiser) LIKE lower(?) ESCAPE '!'
 AND lower(promisee) LIKE lower(?) ESCAPE '!'
 AND lower(promise_handle) LIKE lower(?) ESCAPE '!'
@@ -244,14 +236,15 @@ END
 SELECT promiser,promisee,promise_handle,promise_outcome,max(timestamp)
 AS maxtime,hostname,ip_address,policy_server
 $common_query_section
-GROUP BY promise_outcome,promiser,promise_handle,promisee,hostname,ip_address,policy_server
+GROUP BY promise_outcome,promiser,promise_handle,promisee,hostname
+   ,ip_address,policy_server
 ORDER BY maxtime DESC
 LIMIT ?
 END
-      push @bind_params, $record_limit;
+      push @bind_params, $record_limit{$self};
    }
    elsif ( $query_params->{'latest_record'} == 0 ) {
-      my %timestamp = get_timestamp_clause( $query_params );
+      my %timestamp = $self->_get_timestamp_clause( $query_params );
 
       $query = <<END;
 SELECT promiser,promisee,promise_handle,promise_outcome,timestamp,
@@ -261,27 +254,29 @@ $timestamp{clause}
 ORDER BY timestamp DESC
 LIMIT ? 
 END
-      push @bind_params, ( @{ $timestamp{bind_params} }, $record_limit );
+      push @bind_params, ( @{ $timestamp{bind_params} }
+         , $record_limit{$self} );
    }
 
-   my $results = $dbh->query( $query, @bind_params );
+   my $results = $dbh{$self}->query( $query, @bind_params );
    return $results->arrays;
 }
 
-# This is not used in production, but in testing to insert sample historical data.
+# This is not used in production, but in testing to insert sample historical
+# data.
 sub insert_promise_counts {
    my ( $self, $historical_trends ) = @_;
    
-   my $query = qq{ INSERT INTO $promise_counts
+   my $query = qq{ INSERT INTO $promise_counts{$self}
       ( datestamp, hosts, kept, notkept, repaired )
       VALUES ( ?, ?, ?, ?, ? )
    };
 
    # Begin transaction queue
-   my $tx = $dbh->begin;
+   my $tx = $dbh{$self}->begin;
 
    for my $next_trend ( @{ $historical_trends } ){
-      $dbh->query( $query, @{ $next_trend } );
+      $dbh{$self}->query( $query, @{ $next_trend } );
    }
    $tx->commit;
    return 1;
@@ -290,24 +285,26 @@ sub insert_promise_counts {
 sub insert_yesterdays_promise_counts {
    my $self  = shift;
    my $query = <<END_QUERY;
-INSERT INTO $promise_counts ( datestamp, hosts, kept, notkept, repaired )
+INSERT INTO $promise_counts{$self} ( datestamp, hosts, kept, notkept
+   , repaired )
    SELECT
      date_trunc('day', timestamp) AS timestamp,
-     COUNT(DISTINCT CASE WHEN class = 'any' THEN ip_address ELSE NULL END) AS hosts,
+     COUNT(DISTINCT CASE WHEN class = 'any' THEN ip_address ELSE NULL END)
+        AS hosts,
      COUNT(CASE promise_outcome WHEN 'kept' THEN 1 END) AS kept,
      COUNT(CASE promise_outcome WHEN 'notkept' THEN 1 END) AS notkept,
      COUNT(CASE promise_outcome WHEN 'repaired' THEN 1 END) AS repaired
-   FROM $agent_table 
+   FROM $agent_table{$self} 
    WHERE timestamp >= CURRENT_DATE - INTERVAL '1 DAY'
      AND timestamp  < CURRENT_DATE 
      AND NOT EXISTS (
-        SELECT 1 FROM $promise_counts WHERE datestamp = timestamp 
+        SELECT 1 FROM $promise_counts{$self} WHERE datestamp = timestamp 
      )
    GROUP BY date_trunc('day', timestamp)
 ;
 END_QUERY
 
-   $dbh->query( $query );
+   $dbh{$self}->query( $query );
    return;
 }
 
@@ -316,11 +313,11 @@ sub query_promise_count {
 
    my $query = "SELECT datestamp";
    for my $field ( @{ $fields} ) {
-      $query .= sprintf ', %s', quote_ident( $field );
+      $query .= sprintf ', %s', $self->quote_ident( $field );
    }
-   $query .= sprintf ' FROM %s', $promise_counts; 
+   $query .= sprintf ' FROM %s', $promise_counts{$self}; 
 
-   my $results = $dbh->query( $query );
+   my $results = $dbh{$self}->query( $query );
    return $results->arrays;
 }
 
@@ -329,7 +326,7 @@ sub query_classes {
    my $query_params = shift;
    my $query;
    my $common_query_section = <<END_COMMON_QUERY;
-FROM $agent_table WHERE lower(class) LIKE lower(?) ESCAPE '!'
+FROM $agent_table{$self} WHERE lower(class) LIKE lower(?) ESCAPE '!'
 AND lower(hostname) LIKE lower(?) ESCAPE '!'
 AND lower(ip_address) LIKE lower(?) ESCAPE '!'
 AND lower(policy_server) LIKE lower(?) ESCAPE '!'
@@ -350,10 +347,10 @@ ORDER BY maxtime DESC
 LIMIT ?
 END_QUERY
 
-      push @bind_params, $record_limit;
+      push @bind_params, $record_limit{$self};
    }
    elsif ( $query_params->{'latest_record'} == 0 ) {
-      my %timestamp = get_timestamp_clause( $query_params );
+      my %timestamp = $self->_get_timestamp_clause( $query_params );
 
       $query = <<END_QUERY;
 SELECT class,timestamp,hostname,ip_address,policy_server
@@ -362,99 +359,29 @@ $timestamp{clause}
 ORDER BY timestamp DESC
 LIMIT ? 
 END_QUERY
-      push @bind_params, ( @{ $timestamp{bind_params} }, $record_limit );
+      push @bind_params, ( @{ $timestamp{bind_params} }
+         , $record_limit{$self} );
    }
 
-   my $results = $dbh->query( $query, @bind_params );
+   my $results = $dbh{$self}->query( $query, @bind_params );
    return $results->arrays;
-}
-
-sub get_timestamp_clause {
-   my $query_params = shift;
-   my $delta_sign;
-   my $first_time_limit;
-   my $second_time_limit;
-
-   # Alter timestamps for DB consumption.
-   for my $i ( qw/ delta_minutes gmt_offset / ) {
-      if ( $query_params->{$i} !~ m/^[-+]/ ) {
-         $query_params->{$i} = '+'.$query_params->{$i};
-      }
-   }
-   $query_params->{timestamp} = $query_params->{timestamp}.$query_params->{gmt_offset};
-   delete $query_params->{gmt_offset};
-   if ( $query_params->{delta_minutes} =~ m/^([-+])(\d{1,4})/ ) {
-      $delta_sign = $1;
-      $query_params->{delta_minutes} = $2;
-
-      if ( $delta_sign eq '-' )
-      {
-         $first_time_limit = '<=';
-         $second_time_limit = '>=';
-      }
-      elsif ( $delta_sign eq '+' )
-      {
-         $first_time_limit = '=>';
-         $second_time_limit = '=<';
-      }
-   }
-   else {
-      croak "Cannot match delta minutes";
-   }
-   my @bind_params;
-   push @bind_params, $query_params->{delta_minutes};
-
-   my $sql_quoted_timestamp = quote_literal( $query_params->{timestamp} );
-   my $clause = sprintf <<END_CLAUSE,
-AND timestamp $first_time_limit %s::timestamp 
-AND timestamp $second_time_limit ( %s::timestamp $delta_sign ? * interval '1 minute' )
-END_CLAUSE
-   $sql_quoted_timestamp, $sql_quoted_timestamp;
-   
-   return (
-      bind_params => \@bind_params,
-      clause      => $clause,
-   );
 }
 
 sub query_latest_record {
    my $self = shift;
    my $query = <<"END_QUERY";
-SELECT timestamp FROM $agent_table ORDER BY timestamp desc LIMIT 1
+SELECT timestamp FROM $agent_table{$self} ORDER BY timestamp desc LIMIT 1
 END_QUERY
 
-   my $results = $dbh->query( $query );
+   my $results = $dbh{$self}->query( $query );
    my $data = $results->arrays;
    return $data->[0][0];
 }
 
-sub drop_tables
-# This is not used in production, but in testing.
-{
-   my $self = shift;
-   my $return = 1;
-   my @tables = (
-      "$agent_table",
-      "$inventory_table",
-      # "client_by_timestamp ", # dropped by default?
-      "$promise_counts",
-      # "promise_counts_idx ", # dropped by default?
-   );
-
-   # Queue up db transactions
-   my $tx = $dbh->begin;
-   for my $table ( @tables ) {
-      $dbh->query( "DROP TABLE IF EXISTS $table CASCADE" );
-   }
-   $tx->commit;
-   return 1;
-}
-
-sub create_tables
-{
+sub create_tables {
    my $self = shift;
    my @create_tables = (
-      qq{ CREATE TABLE $agent_table
+      qq{ CREATE TABLE $agent_table{$self}
          (
             class text,
             hostname text,
@@ -471,11 +398,11 @@ sub create_tables
          WITH ( OIDS=FALSE )
       },
 
-      qq{ CREATE INDEX client_by_timestamp ON $agent_table USING btree
+      qq{ CREATE INDEX client_by_timestamp ON $agent_table{$self} USING btree
          (timestamp, class)
       },
 
-      qq{ CREATE TABLE $inventory_table
+      qq{ CREATE TABLE $inventory_table{$self}
          (
             "rowId" serial NOT NULL, -- auto generated row id
             class text
@@ -483,7 +410,7 @@ sub create_tables
          WITH ( OIDS=FALSE )
       },
 
-      qq{ INSERT INTO $inventory_table ( class )
+      qq{ INSERT INTO $inventory_table{$self} ( class )
          VALUES 
             ('am_policy_hub'),
             ('any'),
@@ -508,7 +435,7 @@ sub create_tables
             ('zone_%')
       },
 
-      qq{ CREATE TABLE $promise_counts
+      qq{ CREATE TABLE $promise_counts{$self}
          (
             rowid serial NOT NULL,
             datestamp date,
@@ -520,40 +447,39 @@ sub create_tables
          WITH ( OIDS=FALSE )
       },
 
-      qq{ CREATE INDEX promise_counts_idx ON $promise_counts
+      qq{ CREATE INDEX promise_counts_idx ON $promise_counts{$self}
          USING btree( datestamp )
       },
 
-      qq{ GRANT SELECT ON $agent_table, $promise_counts, $inventory_table TO
-         deltar_ro
+      qq{ GRANT SELECT ON $agent_table{$self}, $promise_counts{$self}
+         , $inventory_table{$self} TO deltar_ro
       },
 
-      qq{ GRANT ALL ON $agent_table, $promise_counts, $inventory_table TO
-         deltar_rw
+      qq{ GRANT ALL ON $agent_table{$self}, $promise_counts{$self}
+         , $inventory_table{$self} TO deltar_rw
       },
    );
 
    # Queue up transactions
-   my $tx = $dbh->begin;
+   my $tx = $dbh{$self}->begin;
    for my $next_table ( @create_tables ) {
-      $dbh->query( $next_table );
+      $dbh{$self}->query( $next_table );
    }
    $tx->commit;
 
    return 1;
 }
 
-sub insert_client_log
-{
+sub insert_client_log {
    my ( $self, $client_log ) = @_;
    my %record;
    my $query = <<END_QUERY;
-INSERT INTO $agent_table
+INSERT INTO $agent_table{$self}
 (class, timestamp, hostname, ip_address, promise_handle,
 promiser, promise_outcome, promisee, policy_server)
 SELECT ?,?,?,?,?,?,?,?,? 
 WHERE NOT EXISTS (
-   SELECT 1 FROM $agent_table WHERE
+   SELECT 1 FROM $agent_table{$self} WHERE
 class = ?
 AND timestamp = ?
 AND hostname = ?
@@ -568,7 +494,7 @@ END_QUERY
 
    # Slurp log file.
    open( my $fh, "<", "$client_log" ) or do {
-      $logger->error_warn( "Could not open file [$client_log]" );
+      $logger{$self}->error_warn( "Could not open file [$client_log]" );
       return 0;
    };
    my @lines = <$fh>;
@@ -577,13 +503,13 @@ END_QUERY
    # Get ip address from file name.
    if ( $client_log =~ m{ ([^/]+) \.log\Z }msx ) {
       $record{ip_address} = $1;
-      $record{hostname} = get_ptr( $record{ip_address} );
+      $record{hostname} = _get_ptr( $record{ip_address} );
    }
 
    $record{policy_server} = hostname_long();
    
    # Get ready for db insert transactions
-   my $tx = $dbh->begin;
+   my $tx = $dbh{$self}->begin;
 
    # Process each line of file
    LINE: for my $next_line ( @lines ) {
@@ -607,7 +533,7 @@ END_QUERY
       my $delta_validator = DeltaR::Validator->new({ input => \%record });
       my @errors = $delta_validator->client_log();
       if ( ( scalar @errors ) > 0 ){
-            $logger->error_warn( "@errors, skipping record" );
+            $logger{$self}->error_warn( "@errors, skipping record" );
             next LINE;
       }
 
@@ -617,7 +543,7 @@ END_QUERY
       }
 
       # Queue up queries for every line
-      $dbh->query( $query, (
+      $dbh{$self}->query( $query, (
          $record{class},
          $record{timestamp},
          $record{hostname},
@@ -645,7 +571,58 @@ END_QUERY
    return;
 }
 
-sub get_ptr {
+sub _get_timestamp_clause {
+   my ( $self, $query_params ) = @_;
+   my $delta_sign;
+   my $first_time_limit;
+   my $second_time_limit;
+
+   # Alter timestamps for DB consumption.
+   for my $i ( qw/ delta_minutes gmt_offset / ) {
+      if ( $query_params->{$i} !~ m/^[-+]/ ) {
+         $query_params->{$i} = '+'.$query_params->{$i};
+      }
+   }
+   $query_params->{timestamp}
+      = $query_params->{timestamp}.$query_params->{gmt_offset};
+   delete $query_params->{gmt_offset};
+   if ( $query_params->{delta_minutes} =~ m/^([-+])(\d{1,4})/ ) {
+      $delta_sign = $1;
+      $query_params->{delta_minutes} = $2;
+
+      if ( $delta_sign eq '-' )
+      {
+         $first_time_limit = '<=';
+         $second_time_limit = '>=';
+      }
+      elsif ( $delta_sign eq '+' )
+      {
+         $first_time_limit = '=>';
+         $second_time_limit = '=<';
+      }
+   }
+   else {
+      croak "Cannot match delta minutes";
+   }
+   my @bind_params;
+   push @bind_params, $query_params->{delta_minutes};
+
+   my $sql_quoted_timestamp
+      = $self->quote_literal( $query_params->{timestamp} );
+   my $clause = sprintf <<END_CLAUSE,
+AND timestamp $first_time_limit %s::timestamp 
+AND timestamp $second_time_limit
+   ( %s::timestamp $delta_sign ? * interval '1 minute' )
+END_CLAUSE
+   $sql_quoted_timestamp, $sql_quoted_timestamp;
+   
+   return (
+      bind_params => \@bind_params,
+      clause      => $clause,
+   );
+}
+
+sub _get_ptr {
    my $ip = shift;
    my $hostname = 'unknown';
    my $res = Net::DNS::Resolver->new;
@@ -660,6 +637,44 @@ sub get_ptr {
       }
    }
    return $hostname;
+}
+
+# This is not used in production, but in testing.
+sub drop_tables {
+   my $self = shift;
+   my $return = 1;
+   my @tables = (
+      "$agent_table{$self}",
+      "$inventory_table{$self}",
+      # "client_by_timestamp ", # dropped by default?
+      "$promise_counts{$self}",
+      # "promise_counts_idx ", # dropped by default?
+   );
+
+   # Queue up db transactions
+   my $tx = $dbh{$self}->begin;
+   for my $table ( @tables ) {
+      $dbh{$self}->query( "DROP TABLE IF EXISTS $table CASCADE" );
+   }
+   $tx->commit;
+   return 1;
+}
+
+sub DESTROY {
+   my $dead_body = $_[0];
+
+   delete $dbh{$dead_body};
+   delete $inventory_limit{$dead_body};
+   delete $record_limit{$dead_body};
+   delete $delete_age{$dead_body};
+   delete $reduce_age{$dead_body};
+   delete $logger{$dead_body};
+   delete $agent_table{$dead_body};
+   delete $promise_counts{$dead_body};
+   delete $inventory_table{$dead_body};
+
+   my $super = $dead_body->can("SUPER::DESTROY");
+   goto &$super if $super;
 }
 
 1;

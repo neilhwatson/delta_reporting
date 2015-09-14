@@ -29,7 +29,7 @@ sub new {
       hostname_or_ip => qr/
          (?: $RE{net}{IPv6} ) |
          (?: $RE{net}{IPv4} ) |
-         (?: $RE{net}{domain}{-nospace}{-rfc1101} )
+         (?: $RE{net}{domain}{-nospace}{-rfc1101}\.? )
       /msx,
 
       yyyy_mm_dd      => qr/ \d{4}-\d{2}-\d{2}         /msx,
@@ -117,12 +117,12 @@ sub client_log {
       class           => qr/\A \w+ \Z/msx,
       promise_handle  => qr/\A \w+ \Z/msx,
       promiser        => qr/\A .*  \Z/msx,
-      hostname        => qr/\A $RE{net}{domain}{-nospace}{-rfc1101}   \Z/msx,
-      ip_address      => qr/\A (?: $my_RE{$self}{ip_address}        ) \Z/msx,
-      policy_server   => qr/\A (?: $my_RE{$self}{hostname_or_ip}    ) \Z/msx,
-      promisee        => qr/\A $my_RE{$self}{promisee}                \Z/msx,
+      hostname        => qr/\A $RE{net}{domain}{-nospace}{-rfc1101}\.? \Z/msx,
+      ip_address      => qr/\A (?: $my_RE{$self}{ip_address}        )  \Z/msx,
+      policy_server   => qr/\A (?: $my_RE{$self}{hostname_or_ip}    )  \Z/msx,
+      promisee        => qr/\A $my_RE{$self}{promisee}                 \Z/msx,
       promise_outcome => qr/\A
-                         (?: $my_RE{$self}{promise_outcome} | empty ) \Z/msx,
+                         (?: $my_RE{$self}{promise_outcome} | empty )  \Z/msx,
       timestamp       => qr/\A 
          $my_RE{$self}{yyyy_mm_dd}
          T
