@@ -1,6 +1,7 @@
 package Mojolicious::Validator;
 use Mojo::Base -base;
 
+use Mojo::Util 'trim';
 use Mojolicious::Validator::Validation;
 
 has checks => sub {
@@ -12,8 +13,10 @@ has checks => sub {
     upload   => sub { !ref $_[2] || !$_[2]->isa('Mojo::Upload') }
   };
 };
+has filters => sub { {trim => \&_trim} };
 
-sub add_check { $_[0]->checks->{$_[1]} = $_[2] and return $_[0] }
+sub add_check  { $_[0]->checks->{$_[1]}  = $_[2] and return $_[0] }
+sub add_filter { $_[0]->filters->{$_[1]} = $_[2] and return $_[0] }
 
 sub validation {
   Mojolicious::Validator::Validation->new(validator => shift);
@@ -36,6 +39,8 @@ sub _size {
   my $len = ref $value ? $value->size : length $value;
   return $len < $min || $len > $max;
 }
+
+sub _trim { trim $_[2] }
 
 1;
 
@@ -71,7 +76,7 @@ String value needs to be equal to the value of another field.
 
 =head2 in
 
-  $validation = $validation->in(qw(foo bar baz));
+  $validation = $validation->in('foo', 'bar', 'baz');
 
 String value needs to match one of the values in the list.
 
@@ -85,14 +90,25 @@ String value needs to match the regular expression.
 
   $validation = $validation->size(2, 5);
 
-String value length or size of L<Mojo::Upload> object needs to be between these
-two values.
+String value length or size of L<Mojo::Upload> object in bytes needs to be
+between these two values.
 
 =head2 upload
 
   $validation = $validation->upload;
 
 Value needs to be a L<Mojo::Upload> object, representing a file upload.
+
+=head1 FILTERS
+
+These filters are available by default.
+
+=head2 trim
+
+  $validation = $validation->optional('foo', 'trim');
+
+Trim whitespace characters from both ends of string value with
+L<Mojo::Util/"trim">.
 
 =head1 ATTRIBUTES
 
@@ -115,7 +131,25 @@ implements the following new ones.
 
   $validator = $validator->add_check(size => sub {...});
 
-Register a new validation check.
+Register a validation check.
+
+  $validator->add_check(foo => sub {
+    my ($validation, $name, $value, @args) = @_;
+    ...
+    return undef;
+  });
+
+=head2 add_filter
+
+  $validator = $validator->add_filter(trim => sub {...});
+
+Register a new filter.
+
+  $validator->add_filter(foo => sub {
+    my ($validation, $name, $value) = @_;
+    ...
+    return $value;
+  });
 
 =head2 validation
 
@@ -130,6 +164,6 @@ Build L<Mojolicious::Validator::Validation> object to perform validations.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

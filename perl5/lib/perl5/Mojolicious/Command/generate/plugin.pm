@@ -35,7 +35,13 @@ Mojolicious::Command::generate::plugin - Plugin generator command
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION generate plugin [NAME]
+  Usage: APPLICATION generate plugin [OPTIONS] [NAME]
+
+    mojo generate plugin
+    mojo generate plugin TestPlugin
+
+  Options:
+    -h, --help   Show this summary of available options
 
 =head1 DESCRIPTION
 
@@ -80,7 +86,7 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut
 
@@ -131,7 +137,7 @@ Register plugin in L<Mojolicious> application.
 
 <% %>=head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 <% %>=cut
 

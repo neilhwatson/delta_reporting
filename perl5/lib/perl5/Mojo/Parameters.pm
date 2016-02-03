@@ -21,7 +21,7 @@ sub append {
     if (ref $value eq 'ARRAY') { push @$old, $name => $_ // '' for @$value }
 
     # Single value
-    else { push @$old, $name => $value }
+    elsif (defined $value) { push @$old, $name => $value }
   }
 
   return $self;
@@ -78,7 +78,7 @@ sub pairs {
   # Parse string
   if (defined(my $str = delete $self->{string})) {
     my $pairs = $self->{pairs} = [];
-    return $pairs unless length $str;
+    return $pairs if $str eq '';
 
     my $charset = $self->charset;
     for my $pair (split '&', $str) {
@@ -201,8 +201,8 @@ Mojo::Parameters - Parameters
 
 =head1 DESCRIPTION
 
-L<Mojo::Parameters> is a container for form parameters used by L<Mojo::URL> and
-based on L<RFC 3986|http://tools.ietf.org/html/rfc3986> as well as the
+L<Mojo::Parameters> is a container for form parameters used by L<Mojo::URL>,
+based on L<RFC 3986|http://tools.ietf.org/html/rfc3986> and the
 L<HTML Living Standard|https://html.spec.whatwg.org>.
 
 =head1 ATTRIBUTES
@@ -283,7 +283,7 @@ Merge parameters. Note that this method will normalize the parameters.
 
   my $names = $params->names;
 
-Return a list of all parameter names.
+Return an array reference with all parameter names.
 
   # Names of all parameters
   say for @{$params->names};
@@ -378,6 +378,6 @@ Alias for L</"to_string">.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

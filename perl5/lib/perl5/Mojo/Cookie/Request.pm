@@ -18,7 +18,7 @@ sub parse {
 
 sub to_string {
   my $self = shift;
-  return '' unless length(my $name = $self->name // '');
+  return '' if (my $name = $self->name // '') eq '';
   my $value = $self->value // '';
   return join '=', $name, $value =~ /[,;" ]/ ? quote $value : $value;
 }
@@ -42,7 +42,7 @@ Mojo::Cookie::Request - HTTP request cookie
 
 =head1 DESCRIPTION
 
-L<Mojo::Cookie::Request> is a container for HTTP request cookies based on
+L<Mojo::Cookie::Request> is a container for HTTP request cookies, based on
 L<RFC 6265|http://tools.ietf.org/html/rfc6265>.
 
 =head1 ATTRIBUTES
@@ -68,6 +68,6 @@ Render cookie.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

@@ -45,9 +45,7 @@ sub _walk {
   # Regex (verbose)
   my $pattern = $route->pattern;
   $pattern->match('/', $route->is_endpoint && !$partial);
-  my $regex  = (regexp_pattern $pattern->regex)[0];
-  my $format = (regexp_pattern($pattern->format_regex))[0];
-  push @$row, $regex, $format ? $format : '' if $verbose;
+  push @$row, (regexp_pattern $pattern->regex)[0] if $verbose;
 
   $depth++;
   _walk($_, $depth, $rows, $verbose) for @{$route->children};
@@ -66,9 +64,17 @@ Mojolicious::Command::routes - Routes command
 
   Usage: APPLICATION routes [OPTIONS]
 
+    ./myapp.pl routes
+    ./myapp.pl routes -v
+
   Options:
-    -v, --verbose   Print additional details about routes, flags indicate
-                    C=Conditions, D=Detour, U=Under and W=WebSocket
+    -h, --help          Show this summary of available options
+        --home <path>   Path to home directory of your application, defaults to
+                        the value of MOJO_HOME or auto-detection
+    -m, --mode <name>   Operating mode for your application, defaults to the
+                        value of MOJO_MODE/PLACK_ENV or "development"
+    -v, --verbose       Print additional details about routes, flags indicate
+                        C=Conditions, D=Detour, U=Under and W=WebSocket
 
 =head1 DESCRIPTION
 
@@ -112,6 +118,6 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

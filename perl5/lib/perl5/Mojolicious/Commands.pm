@@ -106,13 +106,19 @@ Mojolicious::Commands - Command line interface
 
   Usage: APPLICATION COMMAND [OPTIONS]
 
+    mojo version
+    mojo generate lite_app
+    ./myapp.pl daemon -m production -l http://*:8080
+    ./myapp.pl get /foo
+    ./myapp.pl routes -v
+
   Tip: CGI and PSGI environments can be automatically detected very often and
        work without commands.
 
   Options (for all commands):
     -h, --help          Get more information on a specific command
-        --home <path>   Path to your applications home directory, defaults to
-                        the value of MOJO_HOME or auto detection
+        --home <path>   Path to home directory of your application, defaults to
+                        the value of MOJO_HOME or auto-detection
     -m, --mode <name>   Operating mode for your application, defaults to the
                         value of MOJO_MODE/PLACK_ENV or "development"
 
@@ -196,7 +202,7 @@ for a fully functional L<Mojolicious> plugin.
 
 =head2 get
 
-  $ mojo get http://mojolicio.us
+  $ mojo get http://mojolicious.org
   $ ./myapp.pl get /foo
 
 Use L<Mojolicious::Command::get> to perform requests to remote host or local
@@ -296,7 +302,7 @@ implements the following new ones.
 
   my $env = $commands->detect;
 
-Try to detect environment or return C<undef> if none could be detected.
+Try to detect environment, or return C<undef> if none could be detected.
 
 =head2 run
 
@@ -320,6 +326,6 @@ shared by all commands, will be parsed from C<@ARGV> during compile time.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

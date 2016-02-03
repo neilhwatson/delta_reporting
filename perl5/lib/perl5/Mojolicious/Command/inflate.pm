@@ -38,7 +38,16 @@ Mojolicious::Command::inflate - Inflate command
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION inflate
+  Usage: APPLICATION inflate [OPTIONS]
+
+    ./myapp.pl inflate
+
+  Options:
+    -h, --help          Show this summary of available options
+        --home <path>   Path to home directory of your application, defaults to
+                        the value of MOJO_HOME or auto-detection
+    -m, --mode <name>   Operating mode for your application, defaults to the
+                        value of MOJO_MODE/PLACK_ENV or "development"
 
 =head1 DESCRIPTION
 
@@ -83,6 +92,6 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

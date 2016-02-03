@@ -62,7 +62,7 @@ Mojolicious::Plugin::JSONConfig - JSON configuration plugin
   # foo.html.ep
   %= $config->{foo}
 
-  # The configuration is available application wide
+  # The configuration is available application-wide
   my $config = app->config;
   say $config->{foo};
 
@@ -138,6 +138,6 @@ Process configuration file with L<Mojo::Template>.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

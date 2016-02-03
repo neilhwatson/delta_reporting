@@ -140,13 +140,13 @@ unspecific values that contain more than one MIME type is disabled by default.
 
   my $type = $types->type('png');
   $types   = $types->type(png => 'image/png');
-  $types   = $types->type(json => [qw(application/json text/x-json)]);
+  $types   = $types->type(json => ['application/json', 'text/x-json']);
 
 Get or set MIME types for file extension, alternatives are only used for
 detection.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

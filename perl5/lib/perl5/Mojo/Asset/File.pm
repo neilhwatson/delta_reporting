@@ -46,9 +46,7 @@ sub DESTROY {
 
 sub add_chunk {
   my ($self, $chunk) = @_;
-  $chunk //= '';
-  croak "Can't write to asset: $!"
-    unless defined $self->handle->syswrite($chunk, length $chunk);
+  defined $self->handle->syswrite($chunk) or croak "Can't write to asset: $!";
   return $self;
 }
 
@@ -124,8 +122,11 @@ sub mtime { (stat shift->handle)[9] }
 sub size { -s shift->handle }
 
 sub slurp {
-  return '' unless defined(my $file = shift->path);
-  return Mojo::Util::slurp $file;
+  my $handle = shift->handle;
+  $handle->sysseek(0, SEEK_SET);
+  defined $handle->sysread(my $content, -s $handle, 0)
+    or croak qq{Can't read from asset: $!};
+  return $content;
 }
 
 1;
@@ -176,15 +177,15 @@ Delete L</"path"> automatically once the file is not used anymore.
   my $handle = $file->handle;
   $file      = $file->handle(IO::File->new);
 
-Filehandle, created on demand.
+Filehandle, created on demand for L</"path">, which can be generated
+automatically and safely based on L</"tmpdir">.
 
 =head2 path
 
   my $path = $file->path;
   $file    = $file->path('/home/sri/foo.txt');
 
-File path used to create L</"handle">, can also be automatically generated if
-necessary.
+File path used to create L</"handle">.
 
 =head2 tmpdir
 
@@ -192,7 +193,7 @@ necessary.
   $file      = $file->tmpdir('/tmp');
 
 Temporary directory used to generate L</"path">, defaults to the value of the
-C<MOJO_TMPDIR> environment variable or auto detection.
+C<MOJO_TMPDIR> environment variable or auto-detection.
 
 =head1 METHODS
 
@@ -251,6 +252,6 @@ Read all asset data at once.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

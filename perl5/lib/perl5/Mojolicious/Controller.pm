@@ -78,7 +78,7 @@ sub every_param {
 sub every_signed_cookie {
   my ($self, $name) = @_;
 
-  my $secrets = $self->stash->{'mojo.secrets'};
+  my $secrets = $self->app->secrets;
   my @results;
   for my $value (@{$self->every_cookie($name)}) {
 
@@ -107,7 +107,7 @@ sub finish {
 
   # WebSocket
   my $tx = $self->tx;
-  $tx->finish(@_) and return $tx->is_established ? $self : $self->rendered(101)
+  $tx->finish(@_) and return $tx->established ? $self : $self->rendered(101)
     if $tx->is_websocket;
 
   # Chunked stream
@@ -138,7 +138,7 @@ sub helpers { $_[0]->app->renderer->get_helper('')->($_[0]) }
 sub on {
   my ($self, $name, $cb) = @_;
   my $tx = $self->tx;
-  $self->rendered(101) if $tx->is_websocket && !$tx->is_established;
+  $self->rendered(101) if $tx->is_websocket && !$tx->established;
   return $tx->on($name => sub { shift; $self->$cb(@_) });
 }
 
@@ -168,7 +168,7 @@ sub render {
   my $plugins = $app->plugins->emit_hook(before_render => $self, $args);
   my $maybe   = delete $args->{'mojo.maybe'};
 
-  my $ts = $args->{'mojo.to_string'};
+  my $ts = $args->{'mojo.string'};
   my ($output, $format) = $app->renderer->render($self, $args);
 
   # Maybe no 404
@@ -187,7 +187,7 @@ sub render_later { shift->stash('mojo.rendered' => 1) }
 
 sub render_maybe { shift->render(@_, 'mojo.maybe' => 1) }
 
-sub render_to_string { shift->render(@_, 'mojo.to_string' => 1) }
+sub render_to_string { shift->render(@_, 'mojo.string' => 1) }
 
 sub rendered {
   my ($self, $status) = @_;
@@ -252,7 +252,7 @@ sub send {
   Carp::croak 'No WebSocket connection to send message to'
     unless $tx->is_websocket;
   $tx->send($msg, $cb ? sub { shift; $self->$cb(@_) } : ());
-  return $tx->is_established ? $self : $self->rendered(101);
+  return $tx->established ? $self : $self->rendered(101);
 }
 
 sub session {
@@ -283,8 +283,7 @@ sub signed_cookie {
   return $self->every_signed_cookie($name)->[-1] unless defined $value;
 
   # Response cookie
-  my $checksum
-    = Mojo::Util::hmac_sha1_sum($value, $self->stash->{'mojo.secrets'}[0]);
+  my $checksum = Mojo::Util::hmac_sha1_sum($value, $self->app->secrets->[0]);
   return $self->cookie($name, "$value--$checksum", $options);
 }
 
@@ -296,7 +295,7 @@ sub url_for {
 
   # Absolute URL
   return $target if Scalar::Util::blessed $target && $target->isa('Mojo::URL');
-  return Mojo::URL->new($target) if $target =~ m!^(?:[^:/?#]+:|//)!;
+  return Mojo::URL->new($target) if $target =~ m!^(?:[^:/?#]+:|//|#)!;
 
   # Base
   my $url  = Mojo::URL->new;
@@ -348,14 +347,12 @@ sub validation {
 
 sub write {
   my ($self, $chunk, $cb) = @_;
-  ($cb, $chunk) = ($chunk, undef) if ref $chunk eq 'CODE';
   $self->res->content->write($chunk, $cb ? sub { shift; $self->$cb(@_) } : ());
   return $self->rendered;
 }
 
 sub write_chunk {
   my ($self, $chunk, $cb) = @_;
-  ($cb, $chunk) = ($chunk, undef) if ref $chunk eq 'CODE';
   my $content = $self->res->content;
   $content->write_chunk($chunk, $cb ? sub { shift; $self->$cb(@_) } : ());
   return $self->rendered;
@@ -417,8 +414,9 @@ Router results for the current request, defaults to a
 L<Mojolicious::Routes::Match> object.
 
   # Introspect
-  my $controller = $c->match->endpoint->pattern->defaults->{controller};
-  my $action     = $c->match->stack->[-1]{action};
+  my $name   = $c->match->endpoint->name;
+  my $foo    = $c->match->endpoint->pattern->defaults->{foo};
+  my $action = $c->match->stack->[-1]{action};
 
 =head2 tx
 
@@ -577,7 +575,7 @@ establish the WebSocket connection.
 
   my $value = $c->param('foo');
   $c        = $c->param(foo => 'ba;r');
-  $c        = $c->param(foo => qw(ba;r baz));
+  $c        = $c->param(foo => 'ba;r', 'baz');
   $c        = $c->param(foo => ['ba;r', 'baz']);
 
 Access route placeholder values that are not reserved stash values, file
@@ -726,17 +724,18 @@ Get L<Mojo::Message::Request> object from L</"tx">.
   my $req = $c->tx->req;
 
   # Extract request information
-  my $url   = $c->req->url->to_abs;
-  my $info  = $c->req->url->to_abs->userinfo;
-  my $host  = $c->req->url->to_abs->host;
-  my $agent = $c->req->headers->user_agent;
-  my $bytes = $c->req->body;
-  my $str   = $c->req->text;
-  my $hash  = $c->req->params->to_hash;
-  my $value = $c->req->json;
-  my $foo   = $c->req->json('/23/foo');
-  my $dom   = $c->req->dom;
-  my $bar   = $c->req->dom('div.bar')->first->text;
+  my $url    = $c->req->url->to_abs;
+  my $info   = $c->req->url->to_abs->userinfo;
+  my $host   = $c->req->url->to_abs->host;
+  my $agent  = $c->req->headers->user_agent;
+  my $custom = $c->req->headers->header('Custom-Header');
+  my $bytes  = $c->req->body;
+  my $str    = $c->req->text;
+  my $hash   = $c->req->params->to_hash;
+  my $value  = $c->req->json;
+  my $foo    = $c->req->json('/23/foo');
+  my $dom    = $c->req->dom;
+  my $bar    = $c->req->dom('div.bar')->first->text;
 
 =head2 res
 
@@ -747,8 +746,11 @@ Get L<Mojo::Message::Response> object from L</"tx">.
   # Longer version
   my $res = $c->tx->res;
 
-  # Force file download by setting a custom response header
+  # Force file download by setting a response header
   $c->res->headers->content_disposition('attachment; filename=foo.png;');
+
+  # Use a custom response header
+  $c->res->headers->header('Custom-Header' => 'whatever');
 
   # Make sure response is cached correctly
   $c->res->headers->cache_control('public, max-age=300');
@@ -764,12 +766,12 @@ Get L<Mojo::Message::Response> object from L</"tx">.
 
 Automatically select best possible representation for resource from C<Accept>
 request header, C<format> stash value or C<format> C<GET>/C<POST> parameter,
-defaults to rendering an empty C<204> response. Each representation can be
-handled with a callback or a hash reference containing arguments to be passed
-to L</"render">. Since browsers often don't really know what they actually
-want, unspecific C<Accept> request headers with more than one MIME type will be
-ignored, unless the C<X-Requested-With> header is set to the value
-C<XMLHttpRequest>.
+defaults to L<Mojolicious::Renderer/"default_format"> or rendering an empty
+C<204> response. Each representation can be handled with a callback or a hash
+reference containing arguments to be passed to L</"render">. Since browsers
+often don't really know what they actually want, unspecific C<Accept> request
+headers with more than one MIME type will be ignored, unless the
+C<X-Requested-With> header is set to the value C<XMLHttpRequest>.
 
   # Everything else than "json" and "xml" gets a 204 response
   $c->respond_to(
@@ -806,7 +808,8 @@ establish the WebSocket connection.
   $c->send({binary => encode_json({test => 'I ♥ Mojolicious!'})});
 
   # Send "Ping" frame
-  $c->send([1, 0, 0, 0, 9, 'Hello World!']);
+  use Mojo::WebSocket 'WS_PING';
+  $c->send([1, 0, 0, 0, WS_PING, 'Hello World!']);
 
   # Make sure previous message has been written before continuing
   $c->send('First message!' => sub {
@@ -863,8 +866,8 @@ failing signature verification will be automatically discarded.
 
   my $hash = $c->stash;
   my $foo  = $c->stash('foo');
-  $c       = $c->stash({foo => 'bar'});
-  $c       = $c->stash(foo => 'bar');
+  $c       = $c->stash({foo => 'bar', baz => 23});
+  $c       = $c->stash(foo => 'bar', baz => 23);
 
 Non-persistent data storage and exchange for the current request, application
 wide default values can be set with L<Mojolicious/"defaults">. Some stash
@@ -891,6 +894,7 @@ C<mojo.*> prefix are reserved for internal use.
   my $url = $c->url_for('//example.com/index.html');
   my $url = $c->url_for('http://example.com/index.html');
   my $url = $c->url_for('mailto:sri@example.com');
+  my $url = $c->url_for('#whatever');
 
 Generate a portable L<Mojo::URL> object with base for a path, URL or route.
 
@@ -925,7 +929,7 @@ excessively large, there's a 16MB limit by default.
 
   # Validate GET/POST parameter
   my $validation = $c->validation;
-  $validation->required('title')->size(3, 50);
+  $validation->required('title', 'trim')->size(3, 50);
   my $title = $validation->param('title');
 
   # Validate file upload
@@ -938,7 +942,6 @@ excessively large, there's a 16MB limit by default.
   $c = $c->write;
   $c = $c->write('');
   $c = $c->write($bytes);
-  $c = $c->write(sub {...});
   $c = $c->write($bytes => sub {...});
 
 Write dynamic content non-blocking, the optional drain callback will be invoked
@@ -992,13 +995,12 @@ defaults to C<15> seconds.
   $c = $c->write_chunk;
   $c = $c->write_chunk('');
   $c = $c->write_chunk($bytes);
-  $c = $c->write_chunk(sub {...});
   $c = $c->write_chunk($bytes => sub {...});
 
-Write dynamic content non-blocking with C<chunked> transfer encoding, the
-optional drain callback will be invoked once all data has been written. Calling
-this method without a chunk of data will finalize the response headers and
-allow for dynamic content to be written later.
+Write dynamic content non-blocking with chunked transfer encoding, the optional
+drain callback will be invoked once all data has been written. Calling this
+method without a chunk of data will finalize the response headers and allow for
+dynamic content to be written later.
 
   # Make sure previous chunk has been written before continuing
   $c->write_chunk('H' => sub {
@@ -1042,6 +1044,6 @@ L<Mojolicious::Plugin::TagHelpers>.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

@@ -23,10 +23,10 @@ sub check {
 
   return $self unless $self->is_valid;
 
-  my $cb    = $self->validator->checks->{$check};
-  my $name  = $self->topic;
-  my $input = $self->input->{$name};
-  for my $value (ref $input eq 'ARRAY' ? @$input : $input) {
+  my $cb     = $self->validator->checks->{$check};
+  my $name   = $self->topic;
+  my $values = $self->output->{$name};
+  for my $value (ref $values eq 'ARRAY' ? @$values : $values) {
     next unless my $result = $self->$cb($name, $value, @_);
     return $self->error($name => [$check, $result, @_]);
   }
@@ -64,12 +64,16 @@ sub has_error { $_[1] ? exists $_[0]{error}{$_[1]} : !!keys %{$_[0]{error}} }
 sub is_valid { exists $_[0]->output->{$_[1] // $_[0]->topic} }
 
 sub optional {
-  my ($self, $name) = @_;
+  my ($self, $name, @filters) = @_;
 
-  my $input = $self->input->{$name};
-  my @input = ref $input eq 'ARRAY' ? @$input : $input;
-  $self->output->{$name} = $input
-    unless grep { !defined($_) || !length($_) } @input;
+  return $self->topic($name) unless defined(my $input = $self->input->{$name});
+
+  my @input = ref $input eq 'ARRAY' ? @$input : ($input);
+  for my $cb (map { $self->validator->filters->{$_} } @filters) {
+    @input = map { $self->$cb($name, $_) } @input;
+  }
+  $self->output->{$name} = @input > 1 ? \@input : $input[0]
+    unless grep { $_ eq '' } @input;
 
   return $self->topic($name);
 }
@@ -79,8 +83,8 @@ sub param { shift->every_param(shift)->[-1] }
 sub passed { [sort keys %{shift->output}] }
 
 sub required {
-  my ($self, $name) = @_;
-  return $self if $self->optional($name)->is_valid;
+  my ($self, $name) = (shift, shift);
+  return $self if $self->optional($name, @_)->is_valid;
   return $self->error($name => ['required']);
 }
 
@@ -101,7 +105,7 @@ Mojolicious::Validator::Validation - Perform validations
   my $validation
     = Mojolicious::Validator::Validation->new(validator => $validator);
   $validation->input({foo => 'bar'});
-  $validation->required('foo')->in(qw(bar baz));
+  $validation->required('foo')->in('bar', 'baz');
   say $validation->param('foo');
 
 =head1 DESCRIPTION
@@ -191,7 +195,7 @@ array reference.
 
   my $names = $validation->failed;
 
-Return a list of all names for values that failed validation.
+Return an array reference with all names for values that failed validation.
 
   # Names of all values that failed
   say for @{$validation->failed};
@@ -220,8 +224,12 @@ the current L</"topic">.
 =head2 optional
 
   $validation = $validation->optional('foo');
+  $validation = $validation->optional('foo', 'filter1', 'filter2');
 
-Change validation L</"topic">.
+Change validation L</"topic"> and apply filters.
+
+  # Trim value and check size
+  $validation->optional('user', 'trim')->size(1, 15);
 
 =head2 param
 
@@ -234,7 +242,7 @@ you want to access more than just the last one, you can use L</"every_param">.
 
   my $names = $validation->passed;
 
-Return a list of all names for values that passed validation.
+Return an array reference with all names for values that passed validation.
 
   # Names of all values that passed
   say for @{$validation->passed};
@@ -242,9 +250,13 @@ Return a list of all names for values that passed validation.
 =head2 required
 
   $validation = $validation->required('foo');
+  $validation = $validation->required('foo', 'filter1', 'filter2');
 
-Change validation L</"topic"> and make sure a value is present and not an empty
-string.
+Change validation L</"topic">, apply filters, and make sure a value is present
+and not an empty string.
+
+  # Trim value and check size
+  $validation->required('user', 'trim')->size(1, 15);
 
 =head1 AUTOLOAD
 
@@ -255,13 +267,13 @@ L<Mojolicious::Validator::Validation> objects, similar to L</"check">.
   # Call validation checks
   $validation->required('foo')->size(2, 5)->like(qr/^[A-Z]/);
   $validation->optional('bar')->equal_to('foo');
-  $validation->optional('baz')->in(qw(test 123));
+  $validation->optional('baz')->in('test', '123');
 
   # Longer version
-  $validation->required('foo')->check('size', 2,5)->check('like', qr/^[A-Z]/);
+  $validation->required('foo')->check('size', 2, 5)->check('like', qr/^[A-Z]/);
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

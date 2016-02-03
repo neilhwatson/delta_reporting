@@ -27,7 +27,7 @@ Mojo::Cookie - HTTP cookie base class
 
 =head1 DESCRIPTION
 
-L<Mojo::Cookie> is an abstract base class for HTTP cookie containers based on
+L<Mojo::Cookie> is an abstract base class for HTTP cookie containers, based on
 L<RFC 6265|http://tools.ietf.org/html/rfc6265>, like L<Mojo::Cookie::Request>
 and L<Mojo::Cookie::Response>.
 
@@ -84,6 +84,6 @@ Alias for L</"to_string">.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

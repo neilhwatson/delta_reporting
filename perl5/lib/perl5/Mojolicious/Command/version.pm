@@ -53,7 +53,12 @@ Mojolicious::Command::version - Version command
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION version
+  Usage: APPLICATION version [OPTIONS]
+
+    mojo version
+
+  Options:
+    -h, --help   Show this summary of available options
 
 =head1 DESCRIPTION
 
@@ -98,6 +103,6 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

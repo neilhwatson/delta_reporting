@@ -18,11 +18,20 @@ Mojolicious::Command::psgi - PSGI command
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION psgi
+  Usage: APPLICATION psgi [OPTIONS]
+
+    ./myapp.pl psgi
+
+  Options:
+    -h, --help          Show this summary of available options
+        --home <path>   Path to home directory of your application, defaults to
+                        the value of MOJO_HOME or auto-detection
+    -m, --mode <name>   Operating mode for your application, defaults to the
+                        value of MOJO_MODE/PLACK_ENV or "development"
 
 =head1 DESCRIPTION
 
-L<Mojolicious::Command::psgi> starts applications with L<Mojo::Server::PSGI>
+L<Mojolicious::Command::psgi> starts applications with the L<Mojo::Server::PSGI>
 backend.
 
 This is a core command, that means it is always enabled and its code a good
@@ -63,6 +72,6 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

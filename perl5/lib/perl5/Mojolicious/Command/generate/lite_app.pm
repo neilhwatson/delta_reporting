@@ -21,7 +21,13 @@ Mojolicious::Command::generate::lite_app - Lite app generator command
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION generate lite_app [NAME]
+  Usage: APPLICATION generate lite_app [OPTIONS] [NAME]
+
+    mojo generate lite_app
+    mojo generate lite_app foo.pl
+
+  Options:
+    -h, --help   Show this summary of available options
 
 =head1 DESCRIPTION
 
@@ -66,7 +72,7 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut
 

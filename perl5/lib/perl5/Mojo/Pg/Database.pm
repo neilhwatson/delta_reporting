@@ -14,9 +14,6 @@ has [qw(dbh pg)];
 sub DESTROY {
   my $self = shift;
 
-  # Supported on Perl 5.14+
-  return if defined ${^GLOBAL_PHASE} && ${^GLOBAL_PHASE} eq 'DESTRUCT';
-
   my $waiting = $self->{waiting};
   $waiting->{cb}($self, 'Premature connection close', undef) if $waiting->{cb};
 
@@ -26,7 +23,6 @@ sub DESTROY {
 
 sub begin {
   my $self = shift;
-  $self->dbh->begin_work;
   my $tx = Mojo::Pg::Transaction->new(db => $self);
   weaken $tx->{db};
   return $tx;
@@ -107,9 +103,8 @@ sub _json { ref $_[0] eq 'HASH' && exists $_[0]{json} }
 
 sub _notifications {
   my $self = shift;
-  while (my $notify = $self->dbh->pg_notifies) {
-    $self->emit(notification => @$notify);
-  }
+  my $dbh  = $self->dbh;
+  while (my $n = $dbh->pg_notifies) { $self->emit(notification => @$n) }
 }
 
 sub _unwatch {
@@ -306,6 +301,6 @@ Unsubscribe from a channel, C<*> can be used to unsubscribe from all channels.
 
 =head1 SEE ALSO
 
-L<Mojo::Pg>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::Pg>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

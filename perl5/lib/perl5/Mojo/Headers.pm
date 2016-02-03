@@ -7,7 +7,7 @@ has max_line_size => sub { $ENV{MOJO_MAX_LINE_SIZE} || 8192 };
 has max_lines     => sub { $ENV{MOJO_MAX_LINES}     || 100 };
 
 # Common headers
-my %NORMALCASE = map { lc($_) => $_ } (
+my %NORMALCASE = map { lc() => $_ } (
   qw(Accept Accept-Charset Accept-Encoding Accept-Language Accept-Ranges),
   qw(Access-Control-Allow-Origin Allow Authorization Cache-Control Connection),
   qw(Content-Disposition Content-Encoding Content-Language Content-Length),
@@ -101,7 +101,7 @@ sub parse {
     # New header
     if ($line =~ /^(\S[^:]*)\s*:\s*(.*)$/) { push @$headers, [$1, $2] }
 
-    # Multiline
+    # Multi-line
     elsif ($line =~ s/^\s+// && @$headers) { $headers->[-1][1] .= " $line" }
 
     # Empty line
@@ -135,7 +135,7 @@ sub to_hash {
 sub to_string {
   my $self = shift;
 
-  # Make sure multiline values are formatted correctly
+  # Make sure multi-line values are formatted correctly
   my @headers;
   for my $name (@{$self->names}) {
     push @headers, "$name: $_" for @{$self->{headers}{lc $name}};
@@ -171,7 +171,7 @@ Mojo::Headers - Headers
 
 =head1 DESCRIPTION
 
-L<Mojo::Headers> is a container for HTTP headers based on
+L<Mojo::Headers> is a container for HTTP headers, based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230> and
 L<RFC 7231|http://tools.ietf.org/html/rfc7231>.
 
@@ -482,7 +482,7 @@ Shortcut for the C<Location> header.
 
   my $names = $headers->names;
 
-Return a list of all currently defined headers.
+Return an array reference with all currently defined headers.
 
   # Names of all headers
   say for @{$headers->names};
@@ -675,6 +675,6 @@ Shortcut for the C<WWW-Authenticate> header.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

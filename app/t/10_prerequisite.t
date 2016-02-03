@@ -9,6 +9,7 @@ use feature 'say';
 
 my $timestamp           = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
 my $datestamp_yesterday = strftime "%Y-%m-%d", localtime( time - 60**2 *24 );
+my $timestamp_less_minute = strftime "%Y-%m-%d %H:%M:%S", localtime( time - 60 );
 
 my @config_data = <DATA>;
 
@@ -86,6 +87,7 @@ if ( $timestamp =~ m/ \A
 else {
    die "Could not parse timestamp [$timestamp] for storage.";
 }
+$stored{data}{timestamp_less_minute} = $timestamp_less_minute;
 
 ok( store_test_data( \%stored ), "Store shared test data" )
    or BAIL_OUT( "Failed to backup [$stored{data}{config}]" );

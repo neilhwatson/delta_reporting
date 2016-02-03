@@ -58,11 +58,11 @@ Mojolicious::Plugin::HeaderCondition - Header condition plugin
   get '/' => (agent => qr/Firefox/) => sub {...};
 
   # The "host" condition is a shortcut for the detected host
-  get '/' => (host => qr/mojolicio\.us/) => sub {...};
+  get '/' => (host => qr/mojolicious\.org/) => sub {...};
 
 =head1 DESCRIPTION
 
-L<Mojolicious::Plugin::HeaderCondition> is a route condition for header based
+L<Mojolicious::Plugin::HeaderCondition> is a route condition for header-based
 routes.
 
 This is a core plugin, that means it is always enabled and its code a good
@@ -84,6 +84,6 @@ Register conditions in L<Mojolicious> application.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

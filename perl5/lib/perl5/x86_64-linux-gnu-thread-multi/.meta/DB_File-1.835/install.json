@@ -1,1 +1,0 @@
-{"name":"DB_File","target":"DB_File","dist":"DB_File-1.835","pathname":"P/PM/PMQS/DB_File-1.835.tar.gz","version":"1.835","provides":{"DB_File::BTREEINFO":{"file":"DB_File.pm","version":"1.835"},"DB_File::RECNOINFO":{"version":"1.835","file":"DB_File.pm"},"DB_File":{"file":"DB_File.pm","version":"1.835"},"DB_File::HASHINFO":{"version":"1.835","file":"DB_File.pm"}}}

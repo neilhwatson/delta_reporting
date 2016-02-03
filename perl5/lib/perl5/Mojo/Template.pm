@@ -40,10 +40,10 @@ sub build {
     if ($op eq 'text') {
       $value = join "\n", map { quotemeta $_ } split("\n", $value, -1);
       $value .= '\n' if $newline;
-      $blocks[-1] .= "\$_O .= \"" . $value . "\";" if length $value;
+      $blocks[-1] .= "\$_O .= \"" . $value . "\";" if $value ne '';
     }
 
-    # Code or multiline expression
+    # Code or multi-line expression
     elsif ($op eq 'code' || $multi) { $blocks[-1] .= $value }
 
     # Capture end
@@ -65,7 +65,7 @@ sub build {
       # Raw
       elsif (!$multi) { $blocks[-1] .= "\$_O .= scalar + $value" }
 
-      # Multiline
+      # Multi-line
       $multi = !$next || $next->[0] ne 'text';
 
       # Append semicolon
@@ -350,7 +350,7 @@ automatically enabled.
   %% Replaced with "%", useful for generating templates
 
 Escaping behavior can be reversed with the L</"auto_escape"> attribute, this is
-the default in L<Mojolicious> C<.ep> templates for example.
+the default in L<Mojolicious> C<.ep> templates, for example.
 
   <%= Perl expression, replaced with XML escaped result %>
   <%== Perl expression, replaced with result %>
@@ -619,16 +619,18 @@ Build Perl L</"code"> from L</"tree">.
 
 =head2 compile
 
-  my $exception = $mt->compile;
+  my $e = $mt->compile;
 
-Compile Perl L</"code"> for template.
+Compile Perl L</"code"> for template and return a L<Mojo::Exception> object, or
+C<undef> if there was no exception.
 
 =head2 interpret
 
   my $output = $mt->interpret;
   my $output = $mt->interpret(@args);
 
-Interpret L</"compiled"> template code.
+Interpret L</"compiled"> template code and return the result, or a
+L<Mojo::Exception> object if rendering failed.
 
   # Reuse template
   say $mt->render('Hello <%= $_[0] %>!', 'Bender');
@@ -646,7 +648,8 @@ Parse template into L</"tree">.
   my $output = $mt->render('<%= 1 + 1 %>');
   my $output = $mt->render('<%= shift() + shift() %>', @args);
 
-Render template.
+Render template and return the result, or a L<Mojo::Exception> object if
+rendering failed.
 
   say $mt->render('Hello <%= $_[0] %>!', 'Bender');
 
@@ -655,7 +658,8 @@ Render template.
   my $output = $mt->render_file('/tmp/foo.mt');
   my $output = $mt->render_file('/tmp/foo.mt', @args);
 
-Render template file.
+Render template file and return the result, or a L<Mojo::Exception> object if
+rendering failed.
 
 =head1 DEBUGGING
 
@@ -666,6 +670,6 @@ advanced diagnostics information printed to C<STDERR>.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

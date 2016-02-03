@@ -31,7 +31,7 @@ sub handler { Carp::croak 'Method "handler" not implemented in subclass' }
 
 =head1 NAME
 
-Mojo - Duct tape for the HTML5 web!
+Mojo - Web development toolkit
 
 =head1 SYNOPSIS
 
@@ -58,9 +58,11 @@ Mojo - Duct tape for the HTML5 web!
 
 =head1 DESCRIPTION
 
-A flexible runtime environment for Perl real-time web frameworks, with all the
-basic tools and helpers needed to write simple web applications and higher
-level web frameworks, such as L<Mojolicious>.
+A powerful web development toolkit, with all the basic tools and helpers needed
+to write simple web applications and higher level web frameworks, such as
+L<Mojolicious>. Some of the most commonly used tools are L<Mojo::UserAgent>,
+L<Mojo::DOM>, L<Mojo::JSON>, L<Mojo::Server::Daemon>, L<Mojo::Server::Prefork>,
+L<Mojo::IOLoop> and L<Mojo::Template>.
 
 See L<Mojolicious::Guides> for more!
 
@@ -115,8 +117,8 @@ Transaction builder, defaults to building a L<Mojo::Transaction::HTTP> object.
 
   my $hash = $app->config;
   my $foo  = $app->config('foo');
-  $app     = $app->config({foo => 'bar'});
-  $app     = $app->config(foo => 'bar');
+  $app     = $app->config({foo => 'bar', baz => 23});
+  $app     = $app->config(foo => 'bar', baz => 23);
 
 Application configuration.
 
@@ -142,6 +144,6 @@ be overloaded in a subclass.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

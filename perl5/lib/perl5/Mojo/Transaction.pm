@@ -10,25 +10,12 @@ has [
 has req => sub { Mojo::Message::Request->new };
 has res => sub { Mojo::Message::Response->new };
 
-sub client_close {
-  my ($self, $close) = @_;
-
-  # Premature connection close
-  my $res = $self->res->finish;
-  if ($close && !$res->code && !$res->error) {
-    $res->error({message => 'Premature connection close'});
-  }
-
-  # 4xx/5xx
-  elsif ($res->is_status_class(400) || $res->is_status_class(500)) {
-    $res->error({message => $res->message, code => $res->code});
-  }
-
-  return $self->server_close;
-}
+sub client_close { shift->server_close }
 
 sub client_read  { croak 'Method "client_read" not implemented by subclass' }
 sub client_write { croak 'Method "client_write" not implemented by subclass' }
+
+sub completed { ++$_[0]{completed} and return $_[0] }
 
 sub connection {
   my $self = shift;
@@ -38,11 +25,9 @@ sub connection {
 
 sub error { $_[0]->req->error || $_[0]->res->error }
 
-sub is_finished { (shift->{state} // '') eq 'finished' }
+sub is_finished { !!shift->{completed} }
 
 sub is_websocket {undef}
-
-sub is_writing { (shift->{state} // 'write') eq 'write' }
 
 sub remote_address {
   my $self = shift;
@@ -51,23 +36,17 @@ sub remote_address {
   return $self->original_remote_address unless $self->req->reverse_proxy;
 
   # Reverse proxy
-  return ($self->req->headers->header('X-Forwarded-For') // '')
-    =~ /([^,\s]+)$/ ? $1 : $self->original_remote_address;
+  return ($self->req->headers->header('X-Forwarded-For') // '') =~ /([^,\s]+)$/
+    ? $1
+    : $self->original_remote_address;
 }
 
-sub resume       { shift->_state(qw(write resume)) }
-sub server_close { shift->_state(qw(finished finish)) }
+sub server_close { shift->completed->emit('finish') }
 
 sub server_read  { croak 'Method "server_read" not implemented by subclass' }
 sub server_write { croak 'Method "server_write" not implemented by subclass' }
 
 sub success { $_[0]->error ? undef : $_[0]->res }
-
-sub _state {
-  my ($self, $state, $event) = @_;
-  $self->{state} = $state;
-  return $self->emit($event);
-}
 
 1;
 
@@ -115,23 +94,14 @@ Emitted when a connection has been assigned to transaction.
 
 Emitted when transaction is finished.
 
-=head2 resume
-
-  $tx->on(resume => sub {
-    my $tx = shift;
-    ...
-  });
-
-Emitted when transaction is resumed.
-
 =head1 ATTRIBUTES
 
 L<Mojo::Transaction> implements the following attributes.
 
 =head2 kept_alive
 
-  my $kept_alive = $tx->kept_alive;
-  $tx            = $tx->kept_alive(1);
+  my $bool = $tx->kept_alive;
+  $tx      = $tx->kept_alive($bool);
 
 Connection has been kept alive.
 
@@ -185,24 +155,29 @@ implements the following new ones.
 =head2 client_close
 
   $tx->client_close;
-  $tx->client_close(1);
 
-Transaction closed client-side, no actual connection close is assumed by
-default, used to implement user agents.
+Transaction closed client-side, used to implement user agents such as
+L<Mojo::UserAgent>.
 
 =head2 client_read
 
   $tx->client_read($bytes);
 
-Read data client-side, used to implement user agents. Meant to be overloaded in
-a subclass.
+Read data client-side, used to implement user agents such as L<Mojo::UserAgent>.
+Meant to be overloaded in a subclass.
 
 =head2 client_write
 
   my $bytes = $tx->client_write;
 
-Write data client-side, used to implement user agents. Meant to be overloaded
-in a subclass.
+Write data client-side, used to implement user agents such as
+L<Mojo::UserAgent>. Meant to be overloaded in a subclass.
+
+=head2 completed
+
+  $tx = $tx->completed;
+
+Finalize transaction.
 
 =head2 connection
 
@@ -239,18 +214,6 @@ Check if transaction is finished.
 
 False, this is not a L<Mojo::Transaction::WebSocket> object.
 
-=head2 is_writing
-
-  my $bool = $tx->is_writing;
-
-Check if transaction is writing.
-
-=head2 resume
-
-  $tx = $tx->resume;
-
-Resume transaction.
-
 =head2 remote_address
 
   my $address = $tx->remote_address;
@@ -264,21 +227,22 @@ proxy.
 
   $tx->server_close;
 
-Transaction closed server-side, used to implement web servers.
+Transaction closed server-side, used to implement web servers such as
+L<Mojo::Server::Daemon>.
 
 =head2 server_read
 
   $tx->server_read($bytes);
 
-Read data server-side, used to implement web servers. Meant to be overloaded in
-a subclass.
+Read data server-side, used to implement web servers such as
+L<Mojo::Server::Daemon>. Meant to be overloaded in a subclass.
 
 =head2 server_write
 
   my $bytes = $tx->server_write;
 
-Write data server-side, used to implement web servers. Meant to be overloaded
-in a subclass.
+Write data server-side, used to implement web servers such as
+L<Mojo::Server::Daemon>. Meant to be overloaded in a subclass.
 
 =head2 success
 
@@ -286,7 +250,7 @@ in a subclass.
 
 Returns the L<Mojo::Message::Response> object from L</"res"> if transaction was
 successful or C<undef> otherwise. Connection and parser errors have only a
-message in L</"error">, 400 and 500 responses also a code.
+message in L</"error">, C<400> and C<500> responses also a code.
 
   # Sensible exception handling
   if (my $res = $tx->success) { say $res->body }
@@ -298,6 +262,6 @@ message in L</"error">, 400 and 500 responses also a code.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

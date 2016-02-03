@@ -116,13 +116,34 @@ $t->post_ok( '/report/classes' =>
       latest_record => 0,
       timestamp     => $shared_data->{data}{query_timestamp},
       gmt_offset    => $shared_data->{data}{gmt_offset},
-      delta_minutes => -1
+      delta_minutes => '-1',
    })
 # Test returned results
    ->status_is(200)
    ->text_like( 'html body div script' => qr/dataTable/,
-      '/report/classes last minute dataTable script' )
-   ->content_like( $html_table_content, '/report/classes dr_test_class last minute' );
+      '/report/classes last minute minus delta dataTable script' )
+   ->content_like( $html_table_content
+      , '/report/classes dr_test_class last minute with minus delta' );
+
+# Web Query for record stamped less than one minute ago, but using +1 delta
+$t->post_ok( '/report/classes' =>
+   form => {
+      report_title  => 'DR test suite',
+      class         => $test_params{class},
+      hostname      => '%',
+      ip_address    => $shared_data->{data}{ip_address},
+      policy_server => '%',
+      latest_record => 0,
+      timestamp     => $shared_data->{data}{timestamp_less_minute},
+      gmt_offset    => $shared_data->{data}{gmt_offset},
+      delta_minutes => '+1',
+   })
+# Test returned results
+   ->status_is(200)
+   ->text_like( 'html body div script' => qr/dataTable/,
+      '/report/classes last minute plus delta dataTable script' )
+   ->content_like( $html_table_content
+      , '/report/classes dr_test_class last minute with plus delta' );
 
 # Web query for the lastest known record
 $t->post_ok( '/report/classes' =>

@@ -16,7 +16,8 @@ sub commit {
 
 sub new {
   my $self = shift->SUPER::new(@_, rollback => 1);
-  $self->{dbh} = $self->db->dbh;
+  my $dbh = $self->{dbh} = $self->db->dbh;
+  $dbh->begin_work;
   return $self;
 }
 
@@ -72,6 +73,6 @@ Construct a new L<Mojo::Pg::Transaction> object.
 
 =head1 SEE ALSO
 
-L<Mojo::Pg>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::Pg>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

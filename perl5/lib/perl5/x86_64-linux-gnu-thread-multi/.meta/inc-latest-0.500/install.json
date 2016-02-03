@@ -1,1 +1,0 @@
-{"dist":"inc-latest-0.500","name":"inc::latest","target":"inc::latest","pathname":"D/DA/DAGOLDEN/inc-latest-0.500.tar.gz","version":"0.500","provides":{"inc::latest::private":{"version":"0.500","file":"lib/inc/latest/private.pm"},"inc::latest":{"file":"lib/inc/latest.pm","version":"0.500"}}}

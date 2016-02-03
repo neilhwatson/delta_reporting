@@ -7,8 +7,9 @@ use Mojo::URL;
 
 has env => sub { {} };
 has method => 'GET';
+has [qw(proxy reverse_proxy)];
 has url => sub { Mojo::URL->new };
-has 'reverse_proxy';
+has via_proxy => 1;
 
 sub clone {
   my $self = shift;
@@ -35,12 +36,9 @@ sub cookies {
     unless @_;
 
   # Add cookies
-  my @cookies = $headers->cookie || ();
-  for my $cookie (@_) {
-    $cookie = Mojo::Cookie::Request->new($cookie) if ref $cookie eq 'HASH';
-    push @cookies, $cookie;
-  }
-  $headers->cookie(join('; ', @cookies));
+  my @cookies = map { ref $_ eq 'HASH' ? Mojo::Cookie::Request->new($_) : $_ }
+    $headers->cookie || (), @_;
+  $headers->cookie(join '; ', @cookies);
 
   return $self;
 }
@@ -75,8 +73,8 @@ sub fix_headers {
   }
 
   # Basic proxy authentication
-  return $self unless my $proxy = $self->proxy;
-  return $self unless my $info  = $proxy->userinfo;
+  return $self unless (my $proxy = $self->proxy) && $self->via_proxy;
+  return $self unless my $info = $proxy->userinfo;
   $headers->proxy_authorization('Basic ' . b64_encode($info, ''))
     unless $headers->proxy_authorization;
   return $self;
@@ -143,13 +141,6 @@ sub parse {
     if $self->reverse_proxy
     && ($headers->header('X-Forwarded-Proto') // '') eq 'https';
 
-  return $self;
-}
-
-sub proxy {
-  my $self = shift;
-  return $self->{proxy} unless @_;
-  $self->{proxy} = !$_[0] || ref $_[0] ? shift : Mojo::URL->new(shift);
   return $self;
 }
 
@@ -241,7 +232,7 @@ sub _start_line {
   }
 
   # Proxy
-  elsif ($self->proxy && $url->protocol ne 'https') {
+  elsif ($self->proxy && $self->via_proxy && $url->protocol ne 'https') {
     $path = $url->clone->userinfo(undef) unless $self->is_handshake;
   }
 
@@ -280,7 +271,7 @@ Mojo::Message::Request - HTTP request
 
 =head1 DESCRIPTION
 
-L<Mojo::Message::Request> is a container for HTTP requests based on
+L<Mojo::Message::Request> is a container for HTTP requests, based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230>,
 L<RFC 7231|http://tools.ietf.org/html/rfc7231>,
 L<RFC 7235|http://tools.ietf.org/html/rfc7235> and
@@ -315,6 +306,20 @@ Direct access to the C<CGI> or C<PSGI> environment hash if available.
 
 HTTP request method, defaults to C<GET>.
 
+=head2 proxy
+
+  my $url = $req->proxy;
+  $req    = $req->proxy(Mojo::URL->new('http://127.0.0.1:3000'));
+
+Proxy URL for request.
+
+=head2 reverse_proxy
+
+  my $bool = $req->reverse_proxy;
+  $req     = $req->reverse_proxy($bool);
+
+Request has been performed through a reverse proxy.
+
 =head2 url
 
   my $url = $req->url;
@@ -327,12 +332,12 @@ HTTP request URL, defaults to a L<Mojo::URL> object.
   my $host = $req->url->to_abs->host;
   my $path = $req->url->to_abs->path;
 
-=head2 reverse_proxy
+=head2 via_proxy
 
-  my $bool = $req->reverse_proxy;
-  $req     = $req->reverse_proxy($bool);
+  my $bool = $req->via_proxy;
+  $req     = $req->via_proxy($bool);
 
-Request has been performed through a reverse proxy.
+Request can be performed through a proxy server.
 
 =head1 METHODS
 
@@ -439,17 +444,6 @@ default.
 
 Parse HTTP request chunks or environment hash.
 
-=head2 proxy
-
-  my $proxy = $req->proxy;
-  $req      = $req->proxy('http://foo:bar@127.0.0.1:3000');
-  $req      = $req->proxy(Mojo::URL->new('http://127.0.0.1:3000'));
-
-Proxy URL for request.
-
-  # Disable proxy
-  $req->proxy(0);
-
 =head2 query_params
 
   my $params = $req->query_params;
@@ -467,6 +461,6 @@ Size of the request-line in bytes. Note that this method finalizes the request.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

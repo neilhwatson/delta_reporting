@@ -12,6 +12,7 @@ use Mojo::Transaction::HTTP;
 use Mojo::Transaction::WebSocket;
 use Mojo::URL;
 use Mojo::Util qw(encode url_escape);
+use Mojo::WebSocket qw(challenge client_handshake);
 
 has generators => sub { {form => \&_form, json => \&_json} };
 has name => 'Mojolicious (Perl)';
@@ -32,7 +33,7 @@ sub endpoint {
   my $socks;
   if (my $proxy = $req->proxy) { $socks = $proxy->protocol eq 'socks' }
   return $self->_proxy($tx, $proto, $host, $port)
-    if $proto eq 'http' && !$req->is_handshake && !$socks;
+    if $proto eq 'http' && $req->via_proxy && !$req->is_handshake && !$socks;
 
   return $proto, $host, $port;
 }
@@ -47,7 +48,7 @@ sub proxy_connect {
   return undef if uc $req->method eq 'CONNECT';
 
   # No proxy
-  return undef unless my $proxy = $req->proxy;
+  return undef unless (my $proxy = $req->proxy) && $req->via_proxy;
   return undef if $proxy->protocol eq 'socks';
 
   # WebSocket and/or HTTPS
@@ -75,7 +76,7 @@ sub redirect {
   $location = Mojo::URL->new($location);
   $location = $location->base($old->req->url)->to_abs unless $location->is_abs;
   my $proto = $location->protocol;
-  return undef unless $proto eq 'http' || $proto eq 'https';
+  return undef if ($proto ne 'http' && $proto ne 'https') || !$location->host;
 
   # Clone request if necessary
   my $new = Mojo::Transaction::HTTP->new;
@@ -113,8 +114,8 @@ sub tx {
 
   # Generator
   if (@_ > 1) {
-    return $tx unless my $generator = $self->generators->{shift()};
-    $self->$generator($tx, @_);
+    my $cb = $self->generators->{shift()};
+    $self->$cb($tx, @_);
   }
 
   # Body
@@ -128,7 +129,7 @@ sub upgrade {
   my $code = $tx->res->code // 0;
   return undef unless $tx->req->is_handshake && $code == 101;
   my $ws = Mojo::Transaction::WebSocket->new(handshake => $tx, masked => 1);
-  return $ws->client_challenge ? $ws : undef;
+  return challenge($ws) ? $ws->established(1) : undef;
 }
 
 sub websocket {
@@ -144,13 +145,12 @@ sub websocket {
   $url->scheme($proto eq 'wss' ? 'https' : 'http') if $proto;
 
   # Handshake
-  Mojo::Transaction::WebSocket->new(handshake => $tx)->client_handshake;
-
-  return $tx;
+  return client_handshake $tx;
 }
 
 sub _form {
   my ($self, $tx, $form, %options) = @_;
+  $options{charset} = 'UTF-8' unless exists $options{charset};
 
   # Check for uploads and force multipart if necessary
   my $req       = $tx->req;
@@ -170,12 +170,12 @@ sub _form {
   }
 
   # Query parameters or urlencoded
-  my $p = Mojo::Parameters->new(map { $_ => $form->{$_} } sort keys %$form);
-  $p->charset($options{charset}) if defined $options{charset};
   my $method = uc $req->method;
-  if ($method eq 'GET' || $method eq 'HEAD') { $req->url->query($p) }
+  my @form = map { $_ => $form->{$_} } sort keys %$form;
+  if ($method eq 'GET' || $method eq 'HEAD') { $req->url->query->merge(@form) }
   else {
-    $req->body($p->to_string);
+    $req->body(
+      Mojo::Parameters->new(@form)->charset($options{charset})->to_string);
     _type($headers, 'application/x-www-form-urlencoded');
   }
   return $tx;
@@ -192,7 +192,7 @@ sub _multipart {
 
   my @parts;
   for my $name (sort keys %$form) {
-    my $values = $form->{$name};
+    next unless defined(my $values = $form->{$name});
     for my $value (ref $values eq 'ARRAY' ? @$values : ($values)) {
       push @parts, my $part = Mojo::Content::Single->new;
 
@@ -326,7 +326,12 @@ implements the following new ones.
 
   $t = $t->add_generator(foo => sub {...});
 
-Register a new content generator.
+Register a content generator.
+
+  $t->add_generator(foo => sub {
+    my ($t, $tx, @args) = @_;
+    ...
+  });
 
 =head2 endpoint
 
@@ -411,7 +416,8 @@ Parameters may be encoded with the C<charset> option.
 An array reference can be used for multiple form values sharing the same name.
 
   # POST request with form values sharing the same name
-  my $tx = $t->tx(POST => 'http://example.com' => form => {a => [qw(b c d)]});
+  my $tx = $t->tx(
+    POST => 'http://example.com' => form => {a => ['b', 'c', 'd']});
 
 A hash reference with a C<content> or C<file> value can be used to switch to
 the C<multipart/form-data> content type for file uploads.
@@ -475,6 +481,6 @@ handshake requests.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

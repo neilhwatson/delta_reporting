@@ -45,11 +45,18 @@ Mojolicious::Command::daemon - Daemon command
                                          SOMAXCONN
     -c, --clients <number>               Maximum number of concurrent
                                          connections, defaults to 1000
+    -h, --help                           Show this summary of available options
+        --home <path>                    Path to home directory of your
+                                         application, defaults to the value of
+                                         MOJO_HOME or auto-detection
     -i, --inactivity-timeout <seconds>   Inactivity timeout, defaults to the
                                          value of MOJO_INACTIVITY_TIMEOUT or 15
     -l, --listen <location>              One or more locations you want to
                                          listen on, defaults to the value of
                                          MOJO_LISTEN or "http://*:3000"
+    -m, --mode <name>                    Operating mode for your application,
+                                         defaults to the value of
+                                         MOJO_MODE/PLACK_ENV or "development"
     -p, --proxy                          Activate reverse proxy support,
                                          defaults to the value of
                                          MOJO_REVERSE_PROXY
@@ -58,7 +65,7 @@ Mojolicious::Command::daemon - Daemon command
 
 =head1 DESCRIPTION
 
-L<Mojolicious::Command::daemon> starts applications with
+L<Mojolicious::Command::daemon> starts applications with the
 L<Mojo::Server::Daemon> backend.
 
 This is a core command, that means it is always enabled and its code a good
@@ -99,6 +106,6 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

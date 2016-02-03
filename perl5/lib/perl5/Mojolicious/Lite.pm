@@ -96,8 +96,8 @@ automatically exported.
   my $route = any '/:foo' => sub {...};
   my $route = any '/:foo' => {foo => 'bar'} => sub {...};
   my $route = any '/:foo' => [foo => qr/\w+/] => sub {...};
-  my $route = any [qw(GET POST)] => '/:foo' => sub {...};
-  my $route = any [qw(GET POST)] => '/:foo' => [foo => qr/\w+/] => sub {...};
+  my $route = any ['GET', 'POST'] => '/:foo' => sub {...};
+  my $route = any ['GET', 'POST'] => '/:foo' => [foo => qr/\w+/] => sub {...};
 
 Generate route with L<Mojolicious::Routes::Route/"any">, matching any of the
 listed HTTP request methods or all. See also L<Mojolicious::Guides::Tutorial>
@@ -230,6 +230,6 @@ L<Mojolicious::Lite> inherits all methods from L<Mojolicious>.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

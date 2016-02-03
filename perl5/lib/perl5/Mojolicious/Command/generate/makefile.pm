@@ -18,7 +18,12 @@ Mojolicious::Command::generate::makefile - Makefile generator command
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION generate makefile
+  Usage: APPLICATION generate makefile [OPTIONS]
+
+    mojo generate makefile
+
+  Options:
+    -h, --help   Show this summary of available options
 
 =head1 DESCRIPTION
 
@@ -63,7 +68,7 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut
 

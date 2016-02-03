@@ -45,9 +45,10 @@ sub ensure_pid_file {
   return if -e (my $file = $self->pid_file);
 
   # Create PID file
-  $self->app->log->info(qq{Creating process id file "$file"});
-  die qq{Can't create process id file "$file": $!}
+  $self->app->log->error(qq{Can't create process id file "$file": $!})
+    and die qq{Can't create process id file "$file": $!}
     unless open my $handle, '>', $file;
+  $self->app->log->info(qq{Creating process id file "$file"});
   chmod 0644, $handle;
   print $handle $$;
 }
@@ -60,8 +61,7 @@ sub run {
   my $self = shift;
 
   # No Windows support
-  say 'Preforking is not available for Windows.' and exit 0
-    if $^O eq 'MSWin32';
+  say 'Preforking is not available for Windows.' and exit 0 if $^O eq 'MSWin32';
 
   # Prepare event loop
   my $loop = $self->ioloop->max_accepts($self->accepts);
@@ -211,8 +211,7 @@ Mojo::Server::Prefork - Preforking non-blocking I/O HTTP and WebSocket server
   use Mojo::Server::Prefork;
 
   my $prefork = Mojo::Server::Prefork->new(listen => ['http://*:8080']);
-  $prefork->unsubscribe('request');
-  $prefork->on(request => sub {
+  $prefork->unsubscribe('request')->on(request => sub {
     my ($prefork, $tx) = @_;
 
     # Request
@@ -233,7 +232,7 @@ Mojo::Server::Prefork - Preforking non-blocking I/O HTTP and WebSocket server
 
 L<Mojo::Server::Prefork> is a full featured, UNIX optimized, preforking
 non-blocking I/O HTTP and WebSocket server, built around the very well tested
-and reliable L<Mojo::Server::Daemon>, with IPv6, TLS, Comet (long polling),
+and reliable L<Mojo::Server::Daemon>, with IPv6, TLS, SNI, Comet (long polling),
 keep-alive and multiple event loop support. Note that the server uses signals
 for process management, so you should avoid modifying signal handlers in your
 applications.
@@ -456,10 +455,10 @@ Number of currently active worker processes with a heartbeat.
 
   $prefork->run;
 
-Run server.
+Run server and wait for L</"MANAGER SIGNALS">.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

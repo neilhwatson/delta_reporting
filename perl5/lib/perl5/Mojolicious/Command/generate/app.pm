@@ -53,7 +53,13 @@ Mojolicious::Command::generate::app - App generator command
 
 =head1 SYNOPSIS
 
-  Usage: APPLICATION generate app [NAME]
+  Usage: APPLICATION generate app [OPTIONS] [NAME]
+
+    mojo generate app
+    mojo generate app TestApp
+
+  Options:
+    -h, --help   Show this summary of available options
 
 =head1 DESCRIPTION
 
@@ -98,7 +104,7 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut
 
@@ -111,7 +117,8 @@ __DATA__
 use strict;
 use warnings;
 
-use lib 'lib';
+use FindBin;
+BEGIN { unshift @INC, "$FindBin::Bin/../lib" }
 
 # Start command line interface for application
 require Mojolicious::Commands;

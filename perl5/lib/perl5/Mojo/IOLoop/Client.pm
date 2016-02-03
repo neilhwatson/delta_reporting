@@ -86,10 +86,7 @@ sub _connect {
   }
   $handle->blocking(0);
 
-  # Wait for handle to become writable
-  weaken $self;
-  $self->reactor->io($handle => sub { $self->_ready($args) })
-    ->watch($handle, 0, 1);
+  $self->_wait($handle, $args);
 }
 
 sub _port { $_[0]{socks_port} || $_[0]{port} || ($_[0]{tls} ? 443 : 80) }
@@ -97,10 +94,14 @@ sub _port { $_[0]{socks_port} || $_[0]{port} || ($_[0]{tls} ? 443 : 80) }
 sub _ready {
   my ($self, $args) = @_;
 
-  # Retry or handle exceptions
+  # Socket changes in between attempts and needs to be re-added for epoll/kqueue
   my $handle = $self->{handle};
-  return $! == EINPROGRESS ? undef : $self->emit(error => $!)
-    if $handle->isa('IO::Socket::IP') && !$handle->connect;
+  if ($handle->isa('IO::Socket::IP') && !$handle->connect) {
+    return $self->emit(error => $!) unless $! == EINPROGRESS;
+    $self->reactor->remove($handle);
+    return $self->_wait($handle, $args);
+  }
+
   return $self->emit(error => $! || 'Not connected') unless $handle->connected;
 
   # Disable Nagle's algorithm
@@ -145,8 +146,7 @@ sub _try_socks {
     error => 'IO::Socket::Socks 0.64+ required for SOCKS support')
     unless SOCKS;
 
-  my %options
-    = (ConnectAddr => $args->{address}, ConnectPort => $args->{port});
+  my %options = (ConnectAddr => $args->{address}, ConnectPort => $args->{port});
   @options{qw(AuthType Username Password)}
     = ('userpass', @$args{qw(socks_user socks_pass)})
     if $args->{socks_user};
@@ -185,6 +185,13 @@ sub _try_tls {
   return $self->emit(error => 'TLS upgrade failed')
     unless IO::Socket::SSL->start_SSL($handle, %options);
   $reactor->io($handle => sub { $self->_tls })->watch($handle, 0, 1);
+}
+
+sub _wait {
+  my ($self, $handle, $args) = @_;
+  weaken $self;
+  $self->reactor->io($handle => sub { $self->_ready($args) })
+    ->watch($handle, 0, 1);
 }
 
 1;
@@ -272,7 +279,7 @@ These options are currently available:
 
 =item address
 
-  address => 'mojolicio.us'
+  address => 'mojolicious.org'
 
 Address or host name of the peer to connect to, defaults to C<127.0.0.1>.
 
@@ -353,6 +360,6 @@ Path to the TLS key file.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

@@ -18,8 +18,8 @@ use constant TLS_WRITE => TLS ? IO::Socket::SSL::SSL_WANT_WRITE() : 0;
 
 # To regenerate the certificate run this command (18.04.2012)
 # openssl req -new -x509 -keyout server.key -out server.crt -nodes -days 7300
-my $CERT = catfile dirname(__FILE__), 'certs', 'server.crt';
-my $KEY  = catfile dirname(__FILE__), 'certs', 'server.key';
+my $CERT = catfile dirname(__FILE__), 'resources', 'server.crt';
+my $KEY  = catfile dirname(__FILE__), 'resources', 'server.key';
 
 has multi_accept => 50;
 has reactor => sub { Mojo::IOLoop->singleton->reactor };
@@ -97,6 +97,7 @@ sub listen {
   $tls->{SSL_ca_file} = $args->{tls_ca}
     if $args->{tls_ca} && -T $args->{tls_ca};
   $tls->{SSL_cipher_list} = $args->{tls_ciphers} if $args->{tls_ciphers};
+  $tls->{SSL_version}     = $args->{tls_version} if $args->{tls_version};
 }
 
 sub port { shift->{handle}->sockport }
@@ -280,6 +281,7 @@ Path to TLS certificate authority file.
 =item tls_cert
 
   tls_cert => '/etc/tls/server.crt'
+  tls_cert => {'mojolicious.org' => '/etc/tls/mojo.crt'}
 
 Path to the TLS cert file, defaults to a built-in test certificate.
 
@@ -287,11 +289,13 @@ Path to the TLS cert file, defaults to a built-in test certificate.
 
   tls_ciphers => 'AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH'
 
-Cipher specification string.
+TLS cipher specification string. For more information about the format see
+L<https://www.openssl.org/docs/manmaster/apps/ciphers.html#CIPHER-STRINGS>.
 
 =item tls_key
 
   tls_key => '/etc/tls/server.key'
+  tls_key => {'mojolicious.org' => '/etc/tls/mojo.key'}
 
 Path to the TLS key file, defaults to a built-in test key.
 
@@ -300,6 +304,12 @@ Path to the TLS key file, defaults to a built-in test key.
   tls_verify => 0x00
 
 TLS verification mode, defaults to C<0x03>.
+
+=item tls_version
+
+  tls_version => 'TLSv1_2'
+
+TLS protocol version.
 
 =back
 
@@ -323,6 +333,6 @@ Stop accepting connections.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

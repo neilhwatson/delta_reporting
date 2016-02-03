@@ -17,7 +17,7 @@ sub notify { $_[0]->_db->notify(@_[1, 2]) and return $_[0] }
 sub unlisten {
   my ($self, $name, $cb) = @_;
   my $chan = $self->{chans}{$name};
-  @$chan = grep { $cb ne $_ } @$chan;
+  @$chan = $cb ? grep { $cb ne $_ } @$chan : ();
   $self->_db->unlisten($name) and delete $self->{chans}{$name} unless @$chan;
   return $self;
 }
@@ -136,12 +136,13 @@ Notify a channel.
 
 =head2 unlisten
 
+  $pubsub = $pubsub->unlisten('foo');
   $pubsub = $pubsub->unlisten(foo => $cb);
 
 Unsubscribe from a channel.
 
 =head1 SEE ALSO
 
-L<Mojo::Pg>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojo::Pg>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

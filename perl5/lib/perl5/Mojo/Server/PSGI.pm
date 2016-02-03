@@ -57,7 +57,7 @@ sub getline {
   return '' unless defined $chunk;
 
   # End of content
-  return undef unless length $chunk;
+  return undef if $chunk eq '';
 
   $self->{offset} += length $chunk;
   return $chunk;
@@ -76,8 +76,7 @@ Mojo::Server::PSGI - PSGI server
   use Mojo::Server::PSGI;
 
   my $psgi = Mojo::Server::PSGI->new;
-  $psgi->unsubscribe('request');
-  $psgi->on(request => sub {
+  $psgi->unsubscribe('request')->on(request => sub {
     my ($psgi, $tx) = @_;
 
     # Request
@@ -128,6 +127,6 @@ Turn L<Mojo> application into L<PSGI> application.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

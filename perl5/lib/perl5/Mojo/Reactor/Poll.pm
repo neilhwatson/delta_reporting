@@ -64,7 +64,7 @@ sub one_tick {
     }
 
     # Wait for timeout if poll can't be used
-    elsif ($timeout) { usleep $timeout * 1000 }
+    elsif ($timeout) { usleep($timeout * 1000) }
 
     # Timers (time should not change in between timers)
     my $now = steady_time;
@@ -304,6 +304,6 @@ this method requires an active I/O watcher.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

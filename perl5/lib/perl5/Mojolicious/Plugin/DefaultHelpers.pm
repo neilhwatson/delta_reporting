@@ -5,7 +5,7 @@ use Mojo::ByteStream;
 use Mojo::Collection;
 use Mojo::Exception;
 use Mojo::IOLoop;
-use Mojo::Util qw(dumper sha1_sum steady_time);
+use Mojo::Util qw(dumper hmac_sha1_sum steady_time);
 
 sub register {
   my ($self, $app) = @_;
@@ -30,8 +30,7 @@ sub register {
   $app->helper(content_with => sub { _content(0, 1, @_) });
 
   $app->helper($_ => $self->can("_$_"))
-    for
-    qw(csrf_token current_route delay inactivity_timeout is_fresh url_with);
+    for qw(csrf_token current_route delay inactivity_timeout is_fresh url_with);
 
   $app->helper(dumper => sub { shift; dumper @_ });
   $app->helper(include => sub { shift->render_to_string(@_) });
@@ -68,8 +67,8 @@ sub _content {
 
 sub _csrf_token {
   my $c = shift;
-  $c->session->{csrf_token}
-    ||= sha1_sum $c->app->secrets->[0] . steady_time . rand 999;
+  return $c->session->{csrf_token}
+    ||= hmac_sha1_sum($$ . steady_time . rand 999, $c->app->secrets->[0]);
 }
 
 sub _current_route {
@@ -81,8 +80,7 @@ sub _delay {
   my $c     = shift;
   my $tx    = $c->render_later->tx;
   my $delay = Mojo::IOLoop->delay(@_);
-  $delay->catch(sub { $c->helpers->reply->exception(pop) and undef $tx })
-    ->wait;
+  $delay->catch(sub { $c->helpers->reply->exception(pop) and undef $tx })->wait;
 }
 
 sub _development {
@@ -107,14 +105,14 @@ sub _development {
     status   => $page eq 'exception' ? 500 : 404,
     template => "$page.$mode"
   };
-  my $inline = $renderer->_bundled($mode eq 'development' ? $mode : $page);
-  return $c if _fallbacks($c, $options, $page, $inline);
-  _fallbacks($c, {%$options, format => 'html'}, $page, $inline);
+  my $bundled = 'mojo/' . ($mode eq 'development' ? 'debug' : $page);
+  return $c if _fallbacks($c, $options, $page, $bundled);
+  _fallbacks($c, {%$options, format => 'html'}, $page, $bundled);
   return $c;
 }
 
 sub _fallbacks {
-  my ($c, $options, $template, $inline) = @_;
+  my ($c, $options, $template, $bundled) = @_;
 
   # Mode specific template
   return 1 if $c->render_maybe(%$options);
@@ -126,12 +124,14 @@ sub _fallbacks {
   my $stash = $c->stash;
   return undef unless $stash->{format} eq 'html';
   delete @$stash{qw(extends layout)};
-  return $c->render_maybe(%$options, inline => $inline, handler => 'ep');
+  return $c->render_maybe($bundled, %$options, handler => 'ep');
 }
 
 sub _inactivity_timeout {
-  return unless my $stream = Mojo::IOLoop->stream(shift->tx->connection // '');
-  $stream->timeout(shift);
+  my ($c, $timeout) = @_;
+  my $stream = Mojo::IOLoop->stream($c->tx->connection // '');
+  $stream->timeout($timeout) if $stream;
+  return $c;
 }
 
 sub _is_fresh {
@@ -219,7 +219,7 @@ Turn string into a L<Mojo::ByteStream> object.
 
 =head2 c
 
-  %= c(qw(a b c))->shuffle->join
+  %= c('a', 'b', 'c')->shuffle->join
 
 Turn list into a L<Mojo::Collection> object.
 
@@ -316,7 +316,7 @@ of the steps, breaking the chain.
   $c->delay(
     sub {
       my $delay = shift;
-      $c->ua->get('http://mojolicio.us' => $delay->begin);
+      $c->ua->get('http://mojolicious.org' => $delay->begin);
     },
     sub {
       my ($delay, $tx) = @_;
@@ -347,7 +347,7 @@ Alias for L<Mojolicious::Controller/"flash">.
 
 =head2 inactivity_timeout
 
-  $c->inactivity_timeout(3600);
+  $c = $c->inactivity_timeout(3600);
 
 Use L<Mojo::IOLoop/"stream"> to find the current connection and increase
 timeout if possible.
@@ -469,7 +469,7 @@ the L</"stash">.
 
 =head2 ua
 
-  %= ua->get('mojolicio.us')->res->dom->at('title')->text
+  %= ua->get('mojolicious.org')->res->dom->at('title')->text
 
 Alias for L<Mojo/"ua">.
 
@@ -478,6 +478,8 @@ Alias for L<Mojo/"ua">.
   %= url_for 'named', controller => 'bar', action => 'baz'
 
 Alias for L<Mojolicious::Controller/"url_for">.
+
+  %= url_for('/index.html')->query(foo => 'bar')
 
 =head2 url_with
 
@@ -507,6 +509,6 @@ Register helpers in L<Mojolicious> application.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

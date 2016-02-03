@@ -4,20 +4,16 @@ use Mojo::Base 'Mojo::Asset';
 use Mojo::Asset::File;
 use Mojo::Util 'spurt';
 
-# Last modified default
-my $MTIME = time;
-
 has 'auto_upgrade';
 has max_memory_size => sub { $ENV{MOJO_MAX_MEMORY_SIZE} || 262144 };
-has mtime => sub {$MTIME};
+has mtime => sub {$^T};
 
 sub add_chunk {
   my ($self, $chunk) = @_;
 
   # Upgrade if necessary
   $self->{content} .= $chunk // '';
-  return $self
-    if !$self->auto_upgrade || $self->size <= $self->max_memory_size;
+  return $self if !$self->auto_upgrade || $self->size <= $self->max_memory_size;
   my $file = Mojo::Asset::File->new;
   return $file->add_chunk($self->emit(upgrade => $file)->slurp);
 }
@@ -47,7 +43,7 @@ sub get_chunk {
 
 sub move_to {
   my ($self, $to) = @_;
-  spurt $self->{content}, $to;
+  spurt $self->{content} // '', $to;
   return $self;
 }
 
@@ -121,7 +117,7 @@ C<MOJO_MAX_MEMORY_SIZE> environment variable or C<262144> (256KB).
   my $mtime = $mem->mtime;
   $mem      = $mem->mtime(1408567500);
 
-Modification time of asset, defaults to the time this class was loaded.
+Modification time of asset, defaults to the value of C<$^T>.
 
 =head1 METHODS
 
@@ -169,6 +165,6 @@ Read all asset data at once.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

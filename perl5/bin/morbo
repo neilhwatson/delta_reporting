@@ -38,7 +38,7 @@ morbo - Morbo HTTP and WebSocket development server
     morbo ./myapp.pl
     morbo -m production -l https://*:443 -l http://[::]:3000 ./myapp.pl
     morbo -l 'https://*:443?cert=./server.crt&key=./server.key' ./myapp.pl
-    morbo -w /usr/local/lib -w public ./myapp.pl
+    morbo -w /usr/local/lib -w public -w myapp.conf ./myapp.pl
 
   Options:
     -h, --help                     Show this message
@@ -63,6 +63,6 @@ L<Mojo::Server::Morbo> web server.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

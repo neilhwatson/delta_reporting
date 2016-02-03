@@ -25,12 +25,19 @@ Mojolicious::Command::cgi - CGI command
 
   Usage: APPLICATION cgi [OPTIONS]
 
+    ./myapp.pl cgi
+
   Options:
-    --nph   Enable non-parsed-header mode
+    -h, --help          Show this summary of available options
+        --home <path>   Path to home directory of your application, defaults to
+                        the value of MOJO_HOME or auto-detection
+    -m, --mode <name>   Operating mode for your application, defaults to the
+                        value of MOJO_MODE/PLACK_ENV or "development"
+        --nph           Enable non-parsed-header mode
 
 =head1 DESCRIPTION
 
-L<Mojolicious::Command::cgi> starts applications with L<Mojo::Server::CGI>
+L<Mojolicious::Command::cgi> starts applications with the L<Mojo::Server::CGI>
 backend.
 
 This is a core command, that means it is always enabled and its code a good
@@ -71,6 +78,6 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

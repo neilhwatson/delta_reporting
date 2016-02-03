@@ -224,8 +224,8 @@ to the next step or L</"finish"> event.
 
   my $hash = $delay->data;
   my $foo  = $delay->data('foo');
-  $delay   = $delay->data({foo => 'bar'});
-  $delay   = $delay->data(foo => 'bar');
+  $delay   = $delay->data({foo => 'bar', baz => 23});
+  $delay   = $delay->data(foo => 'bar', baz => 23);
 
 Data shared between all L</"steps">.
 
@@ -265,6 +265,6 @@ gets emitted, does nothing when L</"ioloop"> is already running.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

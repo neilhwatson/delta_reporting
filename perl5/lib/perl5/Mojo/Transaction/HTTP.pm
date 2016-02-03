@@ -1,9 +1,24 @@
 package Mojo::Transaction::HTTP;
 use Mojo::Base 'Mojo::Transaction';
 
-use Mojo::Transaction::WebSocket;
-
 has 'previous';
+
+sub client_close {
+  my ($self, $close) = @_;
+
+  # Premature connection close
+  my $res = $self->res->finish;
+  if ($close && !$res->code && !$res->error) {
+    $res->error({message => 'Premature connection close'});
+  }
+
+  # 4xx/5xx
+  elsif ($res->is_status_class(400) || $res->is_status_class(500)) {
+    $res->error({message => $res->message, code => $res->code});
+  }
+
+  $self->server_close;
+}
 
 sub client_read {
   my ($self, $chunk) = @_;
@@ -14,10 +29,10 @@ sub client_read {
   return unless $res->parse($chunk)->is_finished;
 
   # Unexpected 1xx response
-  return $self->{state} = 'finished'
+  return $self->completed
     if !$res->is_status_class(100) || $res->headers->upgrade;
   $self->res($res->new)->emit(unexpected => $res);
-  return unless length(my $leftovers = $res->content->leftovers);
+  return if (my $leftovers = $res->content->leftovers) eq '';
   $self->client_read($leftovers);
 }
 
@@ -50,19 +65,17 @@ sub redirects {
   return \@redirects;
 }
 
+sub resume { ++$_[0]{writing} and return $_[0]->emit('resume') }
+
 sub server_read {
   my ($self, $chunk) = @_;
 
   # Parse request
   my $req = $self->req;
   $req->parse($chunk) unless $req->error;
-  $self->{state} ||= 'read';
 
   # Generate response
-  return unless $req->is_finished && !$self->{handled}++;
-  $self->emit(upgrade => Mojo::Transaction::WebSocket->new(handshake => $self))
-    if $req->is_handshake;
-  $self->emit('request');
+  $self->emit('request') if $req->is_finished && !$self->{handled}++;
 }
 
 sub server_write { shift->_write(1) }
@@ -75,19 +88,15 @@ sub _body {
   my $written = defined $buffer ? length $buffer : 0;
   $self->{write} = $msg->content->is_dynamic ? 1 : ($self->{write} - $written);
   $self->{offset} += $written;
-  if (defined $buffer) { delete $self->{delay} }
 
   # Delayed
-  else {
-    if   (delete $self->{delay}) { $self->{state} = 'paused' }
-    else                         { $self->{delay} = 1 }
-  }
+  $self->{writing} = 0 unless defined $buffer;
 
   # Finished
-  $self->{state} = $finish ? 'finished' : 'read'
-    if $self->{write} <= 0 || defined $buffer && !length $buffer;
+  $finish ? $self->completed : ($self->{writing} = 0)
+    if $self->{write} <= 0 || defined $buffer && $buffer eq '';
 
-  return defined $buffer ? $buffer : '';
+  return $buffer // '';
 }
 
 sub _headers {
@@ -104,7 +113,7 @@ sub _headers {
     $self->{offset} = 0;
 
     # Response without body
-    if ($head && $self->is_empty) { $self->{state} = 'finished' }
+    if ($head && $self->is_empty) { $self->completed }
 
     # Body
     else {
@@ -136,22 +145,13 @@ sub _write {
   my ($self, $server) = @_;
 
   # Client starts writing right away
-  $self->{state} ||= 'write' unless $server;
-  return '' unless $self->{state} eq 'write';
+  return '' unless $server ? $self->{writing} : ($self->{writing} //= 1);
 
   # Nothing written yet
   $self->{$_} ||= 0 for qw(offset write);
   my $msg = $server ? $self->res : $self->req;
-  unless ($self->{http_state}) {
-
-    # Connection header
-    my $headers = $msg->headers;
-    $headers->connection($self->keep_alive ? 'keep-alive' : 'close')
-      unless $headers->connection;
-
-    # Switch to start-line
-    @$self{qw(http_state write)} = ('start_line', $msg->start_line_size);
-  }
+  @$self{qw(http_state write)} = ('start_line', $msg->start_line_size)
+    unless $self->{http_state};
 
   # Start-line
   my $chunk = '';
@@ -200,7 +200,7 @@ Mojo::Transaction::HTTP - HTTP transaction
 
 =head1 DESCRIPTION
 
-L<Mojo::Transaction::HTTP> is a container for HTTP transactions based on
+L<Mojo::Transaction::HTTP> is a container for HTTP transactions, based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230> and
 L<RFC 7231|http://tools.ietf.org/html/rfc7231>.
 
@@ -223,6 +223,15 @@ Emitted when a request is ready and needs to be handled.
     $tx->res->headers->header('X-Bender' => 'Bite my shiny metal ass!');
   });
 
+=head2 resume
+
+  $tx->on(resume => sub {
+    my $tx = shift;
+    ...
+  });
+
+Emitted when transaction is resumed.
+
 =head2 unexpected
 
   $tx->on(unexpected => sub {
@@ -235,21 +244,6 @@ Emitted for unexpected C<1xx> responses that will be ignored.
   $tx->on(unexpected => sub {
     my $tx = shift;
     $tx->res->on(finish => sub { say 'Follow-up response is finished.' });
-  });
-
-=head2 upgrade
-
-  $tx->on(upgrade => sub {
-    my ($tx, $ws) = @_;
-    ...
-  });
-
-Emitted when transaction gets upgraded to a L<Mojo::Transaction::WebSocket>
-object.
-
-  $tx->on(upgrade => sub {
-    my ($tx, $ws) = @_;
-    $ws->res->headers->header('X-Bender' => 'Bite my shiny metal ass!');
   });
 
 =head1 ATTRIBUTES
@@ -274,17 +268,26 @@ L<Mojo::Transaction::HTTP> object.
 L<Mojo::Transaction::HTTP> inherits all methods from L<Mojo::Transaction> and
 implements the following new ones.
 
+=head2 client_close
+
+  $tx->client_close;
+  $tx->client_close(1);
+
+Transaction closed client-side, no actual connection close is assumed by
+default, used to implement user agents such as L<Mojo::UserAgent>.
+
 =head2 client_read
 
   $tx->client_read($bytes);
 
-Read data client-side, used to implement user agents.
+Read data client-side, used to implement user agents such as L<Mojo::UserAgent>.
 
 =head2 client_write
 
   my $bytes = $tx->client_write;
 
-Write data client-side, used to implement user agents.
+Write data client-side, used to implement user agents such as
+L<Mojo::UserAgent>.
 
 =head2 is_empty
 
@@ -302,26 +305,34 @@ Check if connection can be kept alive.
 
   my $redirects = $tx->redirects;
 
-Return a list of all previous transactions that preceded this follow-up
-transaction.
+Return an array reference with all previous transactions that preceded this
+follow-up transaction.
 
   # Paths of all previous requests
   say $_->req->url->path for @{$tx->redirects};
+
+=head2 resume
+
+  $tx = $tx->resume;
+
+Resume transaction.
 
 =head2 server_read
 
   $tx->server_read($bytes);
 
-Read data server-side, used to implement web servers.
+Read data server-side, used to implement web servers such as
+L<Mojo::Server::Daemon>.
 
 =head2 server_write
 
   my $bytes = $tx->server_write;
 
-Write data server-side, used to implement web servers.
+Write data server-side, used to implement web servers such as
+L<Mojo::Server::Daemon>.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

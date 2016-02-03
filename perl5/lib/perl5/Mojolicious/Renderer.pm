@@ -24,10 +24,8 @@ has helpers => sub { {} };
 has paths   => sub { [] };
 
 # Bundled templates
-my $HOME = Mojo::Home->new;
-$HOME->parse(
-  $HOME->parse($HOME->mojo_lib_dir)->rel_dir('Mojolicious/templates'));
-my %TEMPLATES = map { $_ => slurp $HOME->rel_file($_) } @{$HOME->list_files};
+my $TEMPLATES = Mojo::Home->new(Mojo::Home->new->mojo_lib_dir)
+  ->rel_dir('Mojolicious/resources/templates');
 
 sub DESTROY { Mojo::Util::_teardown($_) for @{shift->{namespaces}} }
 
@@ -93,8 +91,8 @@ sub render {
   local $stash->{extends} = $stash->{extends} if exists $stash->{extends};
 
   # Rendering to string
-  local @{$stash}{keys %$args} if my $ts = delete $args->{'mojo.to_string'};
-  delete @{$stash}{qw(layout extends)} if $ts;
+  local @{$stash}{keys %$args} if my $string = delete $args->{'mojo.string'};
+  delete @{$stash}{qw(layout extends)} if $string;
 
   # All other arguments just become part of the stash
   @$stash{keys %$args} = values %$args;
@@ -131,23 +129,24 @@ sub render {
   # Template or templateless handler
   else {
     $options->{template} ||= $self->template_for($c);
-    return unless $self->_render_template($c, \$output, $options);
+    return () unless $self->_render_template($c, \$output, $options);
   }
 
-  # Extends
+  # Inheritance
   my $content = $stash->{'mojo.content'} ||= {};
   local $content->{content} = $output if $stash->{extends} || $stash->{layout};
-  while ((my $extends = $self->_extends($stash)) && !defined $inline) {
-    @$options{qw(handler template)} = ($stash->{handler}, $extends);
+  while ((my $next = _next($stash)) && !defined $inline) {
+    @$options{qw(handler template)} = ($stash->{handler}, $next);
     $options->{format} = $stash->{format} || $self->default_format;
-    $self->_render_template($c, \$output, $options);
+    my $layout;
+    $output = $layout if $self->_render_template($c, \$layout, $options);
     $content->{content} = $output
       if $content->{content} !~ /\S/ && $output =~ /\S/;
   }
 
   # Encoding
   $output = encode $options->{encoding}, $output
-    if !$ts && $options->{encoding} && $output;
+    if !$string && $options->{encoding} && $output;
 
   return $output, $options->{format};
 }
@@ -169,8 +168,7 @@ sub template_for {
 sub template_handler {
   my ($self, $options) = @_;
   return undef unless my $file = $self->template_name($options);
-  return $self->default_handler
-    unless my $handlers = $self->{templates}{$file};
+  return $self->default_handler unless my $handlers = $self->{templates}{$file};
   return $handlers->[0];
 }
 
@@ -181,7 +179,7 @@ sub template_name {
   return undef unless my $format   = $options->{format};
   $template .= ".$format";
 
-  $self->_warmup unless $self->{templates};
+  $self->warmup unless $self->{templates};
 
   # Variants
   my $handler = $options->{handler};
@@ -202,7 +200,7 @@ sub template_path {
   return undef unless my $name = $self->template_name(shift);
 
   # Search all paths
-  for my $path (@{$self->paths}) {
+  for my $path (@{$self->paths}, $TEMPLATES) {
     my $file = catfile $path, split('/', $name);
     return $file if -r $file;
   }
@@ -210,44 +208,40 @@ sub template_path {
   return undef;
 }
 
-sub _bundled { $TEMPLATES{"@{[pop]}.html.ep"} }
-
-sub _extends {
-  my ($self, $stash) = @_;
-  my $layout = delete $stash->{layout};
-  $stash->{extends} ||= join('/', 'layouts', $layout) if $layout;
-  return delete $stash->{extends};
-}
-
-sub _render_template {
-  my ($self, $c, $output, $options) = @_;
-
-  # Find handler and render
-  my $handler = $options->{handler} ||= $self->template_handler($options);
-  return undef unless $handler;
-  if (my $renderer = $self->handlers->{$handler}) {
-    return 1 if $renderer->($self, $c, $output, $options);
-  }
-
-  # No handler
-  else { $c->app->log->error(qq{No handler for "$handler" available}) }
-  return undef;
-}
-
-sub _warmup {
+sub warmup {
   my $self = shift;
 
   my ($index, $templates) = @$self{qw(index templates)} = ({}, {});
 
   # Handlers for templates
   s/\.(\w+)$// and push @{$templates->{$_}}, $1
-    for map { sort @{Mojo::Home->new($_)->list_files} } @{$self->paths};
+    for map { sort @{Mojo::Home->new($_)->list_files} } @{$self->paths},
+    $TEMPLATES;
 
   # Handlers and classes for DATA templates
   for my $class (reverse @{$self->classes}) {
     $index->{$_} = $class for my @keys = sort keys %{data_section $class};
     s/\.(\w+)$// and unshift @{$templates->{$_}}, $1 for reverse @keys;
   }
+}
+
+sub _next {
+  my $stash = shift;
+  return delete $stash->{extends} if $stash->{extends};
+  return undef unless my $layout = delete $stash->{layout};
+  return join '/', 'layouts', $layout;
+}
+
+sub _render_template {
+  my ($self, $c, $output, $options) = @_;
+
+  my $handler = $options->{handler} ||= $self->template_handler($options);
+  return undef unless $handler;
+  $c->app->log->error(qq{No handler for "$handler" available}) and return undef
+    unless my $renderer = $self->handlers->{$handler};
+
+  $renderer->($self, $c, $output, $options);
+  return 1 if defined $$output;
 }
 
 1;
@@ -290,26 +284,31 @@ Renderer cache, defaults to a L<Mojo::Cache> object.
 
 Classes to use for finding templates in C<DATA> sections with L<Mojo::Loader>,
 first one has the highest precedence, defaults to C<main>. Only files with
-exactly two extensions will be used, like C<index.html.ep>. Note that these
-classes need to have already been loaded and added during application startup
-for templates to be detected.
+exactly two extensions will be used, like C<index.html.ep>. Note that for
+templates to be detected, these classes need to have already been loaded and
+added before L</"warmup"> is called, which usually happens automatically during
+application startup.
 
   # Add another class with templates in DATA section
   push @{$renderer->classes}, 'Mojolicious::Plugin::Fun';
+
+  # Add another class with templates in DATA section and higher precedence
+  unshift @{$renderer->classes}, 'Mojolicious::Plugin::MoreFun';
 
 =head2 default_format
 
   my $default = $renderer->default_format;
   $renderer   = $renderer->default_format('html');
 
-The default format to render if C<format> is not set in the stash.
+The default format to render if C<format> is not set in the stash, defaults to
+C<html>.
 
 =head2 default_handler
 
   my $default = $renderer->default_handler;
   $renderer   = $renderer->default_handler('ep');
 
-The default template handler to use for rendering in cases where auto detection
+The default template handler to use for rendering in cases where auto-detection
 doesn't work, like for C<inline> templates.
 
 =head2 encoding
@@ -346,6 +345,9 @@ Directories to look for templates in, first one has the highest precedence.
   # Add another "templates" directory
   push @{$renderer->paths}, '/home/sri/templates';
 
+  # Add another "templates" directory with higher precedence
+  unshift @{$renderer->paths}, '/home/sri/themes/blue/templates';
+
 =head1 METHODS
 
 L<Mojolicious::Renderer> inherits all methods from L<Mojo::Base> and implements
@@ -368,13 +370,24 @@ C<XMLHttpRequest>.
 
   $renderer = $renderer->add_handler(epl => sub {...});
 
-Register a new handler.
+Register a handler.
+
+  $renderer->add_handler(foo => sub {
+    my ($renderer, $c, $output, $options) = @_;
+    ...
+    $$output = 'Hello World!';
+  });
 
 =head2 add_helper
 
   $renderer = $renderer->add_helper(url_for => sub {...});
 
-Register a new helper.
+Register a helper.
+
+  $renderer->add_helper(foo => sub {
+    my ($c, @args) = @_;
+    ...
+  });
 
 =head2 get_data_template
 
@@ -384,13 +397,15 @@ Register a new helper.
     handler        => 'epl'
   });
 
-Get a C<DATA> section template by name, usually used by handlers.
+Return a C<DATA> section template from L</"classes"> for an options hash
+reference with C<template>, C<format>, C<variant> and C<handler> values, or
+C<undef> if no template could be found, usually used by handlers.
 
 =head2 get_helper
 
   my $helper = $renderer->get_helper('url_for');
 
-Get a helper by full name, generate a helper dynamically for a prefix or return
+Get a helper by full name, generate a helper dynamically for a prefix, or return
 C<undef> if no helper or prefix could be found. Generated helpers return a
 proxy object containing the current controller object and on which nested
 helpers can be called.
@@ -409,7 +424,8 @@ L<Mojolicious::Controller/"render"> for a more user-friendly interface.
 
   my $name = $renderer->template_for(Mojolicious::Controller->new);
 
-Generate default template name for L<Mojolicious::Controller> object.
+Return default template name for L<Mojolicious::Controller> object, or C<undef>
+if no name could be generated.
 
 =head2 template_handler
 
@@ -418,8 +434,8 @@ Generate default template name for L<Mojolicious::Controller> object.
     format   => 'html'
   });
 
-Detect handler based on an options hash reference with C<template> and
-C<format>.
+Return handler for an options hash reference with C<template>, C<format> and
+C<variant> values, or C<undef> if no handler could be found.
 
 =head2 template_name
 
@@ -429,8 +445,9 @@ C<format>.
     handler  => 'epl'
   });
 
-Builds a template name based on an options hash reference with C<template>,
-C<format> and C<handler>, usually used by handlers.
+Return a template name for an options hash reference with C<template>,
+C<format>, C<variant> and C<handler> values, or C<undef> if no template could be
+found, usually used by handlers.
 
 =head2 template_path
 
@@ -440,11 +457,18 @@ C<format> and C<handler>, usually used by handlers.
     handler  => 'epl'
   });
 
-Builds a full template path based on an options hash reference with
-C<template>, C<format> and C<handler>, usually used by handlers.
+Return the full template path for an options hash reference with C<template>,
+C<format>, C<variant> and C<handler> values, or C<undef> if the file does not
+exist in L</"paths">, usually used by handlers.
+
+=head2 warmup
+
+  $renderer->warmup;
+
+Prepare templates from L</"classes"> for future use.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

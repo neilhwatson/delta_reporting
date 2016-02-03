@@ -19,7 +19,8 @@ sub parse {
 
     while (my ($name, $value) = splice @$pairs, 0, 2) {
       next unless $ATTRS{my $attr = lc $name};
-      $value = Mojo::Date->new($value)->epoch if $attr eq 'expires';
+      $value =~ s/^\.// if $attr eq 'domain' && defined $value;
+      $value = Mojo::Date->new($value // '')->epoch if $attr eq 'expires';
       $value = 1 if $attr eq 'secure' || $attr eq 'httponly';
       $cookies[-1]{$attr eq 'max-age' ? 'max_age' : $attr} = $value;
     }
@@ -32,7 +33,7 @@ sub to_string {
   my $self = shift;
 
   # Name and value
-  return '' unless length(my $name = $self->name // '');
+  return '' if (my $name = $self->name // '') eq '';
   my $value = $self->value // '';
   my $cookie = join '=', $name, $value =~ /[,;" ]/ ? quote $value : $value;
 
@@ -77,7 +78,7 @@ Mojo::Cookie::Response - HTTP response cookie
 
 =head1 DESCRIPTION
 
-L<Mojo::Cookie::Response> is a container for HTTP response cookies based on
+L<Mojo::Cookie::Response> is a container for HTTP response cookies, based on
 L<RFC 6265|http://tools.ietf.org/html/rfc6265>.
 
 =head1 ATTRIBUTES
@@ -117,7 +118,7 @@ Max age for cookie.
 =head2 origin
 
   my $origin = $cookie->origin;
-  $cookie    = $cookie->origin('mojolicio.us');
+  $cookie    = $cookie->origin('mojolicious.org');
 
 Origin of the cookie.
 
@@ -155,6 +156,6 @@ Render cookie.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

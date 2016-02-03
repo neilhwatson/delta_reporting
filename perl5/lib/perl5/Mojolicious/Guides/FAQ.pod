@@ -66,7 +66,7 @@ already have done in the past.
 
 First of all, you need to be aware that according to the L<perlpolicy>, only
 the two most recent stable release series of Perl are supported by the
-community and receive bug fixes, which are currently 5.20.x and 5.18.x.
+community and receive bug fixes, which are currently 5.22.x and 5.20.x.
 L<Mojolicious> follows this model and fully supports these two release series.
 In addition we will also keep the distribution installable up to a certain
 legacy version that we deem worthy of supporting, but not specifically optimize
@@ -147,6 +147,29 @@ detection, or consider using
 L<relaxed placeholders|Mojolicious::Guides::Routing/"Relaxed placeholders"> to
 allow matching of the C<.> character.
 
+=head2 Can I configure Hypnotoad from the command line?
+
+No, you can't, Hypnotoad is a bit special in this regard. Because when you
+initiate a zero downtime software upgrade (hot deployment), you are only really
+sending a C<USR2> signal to the already running server, and no other information
+can be passed along. What you can do instead, is to use a
+L<Mojolicious::Plugin::Config> or L<Mojolicious::Plugin::JSONConfig>
+configuration file.
+
+  # myapp.conf
+  {
+    hypnotoad => {
+      listen  => ['http://*:8080'],
+      workers => 10
+    }
+  };
+
+Or if you don't actually need zero downtime software upgrades, just use
+L<Mojolicious::Command::prefork> instead, which is otherwise almost identical to
+Hypnotoad.
+
+  $ ./myapp.pl prefork -m production -l http://*:8080 -w 10
+
 =head2 What does the error "Maximum message size exceeded" mean?
 
 To protect your applications from excessively large requests and responses, our
@@ -185,8 +208,8 @@ variable to change this value.
 The L<Mojolicious> user agent and web servers are based on an event loop that
 supports multiple reactor backends. One of these backends is L<EV>, it is very
 fast and will be automatically used if possible. On Windows however, the
-C<ithreads> based C<fork()> emulation can interfere with it, and you may have
-to use the C<MOJO_REACTOR> environment variable to enforce a more portable one.
+C<ithreads>-based C<fork()> emulation can interfere with it, and you may have to
+use the C<MOJO_REACTOR> environment variable to enforce a more portable one.
 
   MOJO_REACTOR=Mojo::Reactor::Poll
 
@@ -215,8 +238,11 @@ before being closed automatically. It defaults to C<20> seconds for the user
 agent and C<15> seconds for all built-in web servers, and can be changed with
 the attributes L<Mojo::UserAgent/"inactivity_timeout"> and
 L<Mojo::Server::Daemon/"inactivity_timeout"> or the C<MOJO_INACTIVITY_TIMEOUT>
-environment variable. This timeout always applies, so you might have to tweak
-it for applications that take a long time to process a request.
+environment variable. In L<Mojolicious> applications you can also use the helper
+L<Mojolicious::Plugin::DefaultHelpers/"inactivity_timeout"> to change it on
+demand for each connection individually. This timeout always applies, so you
+might have to tweak it for applications that take a long time to process a
+request.
 
 =head2 What does "Premature connection close" mean?
 

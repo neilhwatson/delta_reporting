@@ -56,6 +56,7 @@ my %MESSAGES = (
   428 => 'Precondition Required',              # RFC 6585
   429 => 'Too Many Requests',                  # RFC 6585
   431 => 'Request Header Fields Too Large',    # RFC 6585
+  451 => 'Unavailable For Legal Reasons',      # Draft
   500 => 'Internal Server Error',
   501 => 'Not Implemented',
   502 => 'Bad Gateway',
@@ -79,10 +80,8 @@ sub cookies {
     unless @_;
 
   # Add cookies
-  for my $cookie (@_) {
-    $cookie = Mojo::Cookie::Response->new($cookie) if ref $cookie eq 'HASH';
-    $headers->add('Set-Cookie' => "$cookie");
-  }
+  $headers->add('Set-Cookie' => "$_")
+    for map { ref $_ eq 'HASH' ? Mojo::Cookie::Response->new($_) : $_ } @_;
 
   return $self;
 }
@@ -177,7 +176,7 @@ Mojo::Message::Response - HTTP response
 
 =head1 DESCRIPTION
 
-L<Mojo::Message::Response> is a container for HTTP responses based on
+L<Mojo::Message::Response> is a container for HTTP responses, based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230> and
 L<RFC 7231|http://tools.ietf.org/html/rfc7231>.
 
@@ -267,6 +266,6 @@ Size of the status-line in bytes. Note that this method finalizes the response.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

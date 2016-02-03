@@ -54,7 +54,7 @@ sub ihost {
 
   # Decode
   return $self->host(join '.',
-    map { /^xn--(.+)$/ ? punycode_decode($_) : $_ } split /\./, shift)
+    map { /^xn--(.+)$/ ? punycode_decode $1 : $_ } split(/\./, shift, -1))
     if @_;
 
   # Check if host needs to be encoded
@@ -63,8 +63,8 @@ sub ihost {
 
   # Encode
   return lc join '.',
-    map { /[^\x00-\x7f]/ ? ('xn--' . punycode_encode $_) : $_ } split /\./,
-    $host;
+    map { /[^\x00-\x7f]/ ? ('xn--' . punycode_encode $_) : $_ }
+    split(/\./, $host, -1);
 }
 
 sub is_abs { !!shift->scheme }
@@ -101,7 +101,7 @@ sub path {
 sub path_query {
   my $self  = shift;
   my $query = $self->query->to_string;
-  return $self->path->to_string . (length $query ? "?$query" : '');
+  return $self->path->to_string . ($query eq '' ? '' : "?$query");
 }
 
 sub protocol { lc(shift->scheme // '') }
@@ -153,7 +153,7 @@ sub to_abs {
       = $abs->path($base_path->clone)->path->trailing_slash(0)->canonicalize;
 
     # Query
-    return $abs if length $abs->query->to_string;
+    return $abs if $abs->query->to_string ne '';
     $abs->query($base->query->clone);
   }
 
@@ -485,6 +485,6 @@ Alias for L</"to_string">.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

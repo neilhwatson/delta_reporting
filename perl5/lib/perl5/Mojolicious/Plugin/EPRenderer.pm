@@ -20,7 +20,7 @@ sub register {
       my ($renderer, $c, $output, $options) = @_;
 
       my $name = $options->{inline} // $renderer->template_name($options);
-      return undef unless defined $name;
+      return unless defined $name;
       my @keys = sort grep {/^\w+$/} keys %{$c->stash};
       my $key = md5_sum encode 'UTF-8', join(',', $name, @keys);
 
@@ -47,7 +47,7 @@ sub register {
       local *{"${ns}::_C"} = sub {$c};
 
       # Render with "epl" handler
-      return $renderer->handlers->{epl}($renderer, $c, $output, $options);
+      $renderer->handlers->{epl}($renderer, $c, $output, $options);
     }
   );
 }
@@ -73,12 +73,12 @@ Mojolicious::Plugin::EPRenderer - Embedded Perl renderer plugin
   # Mojolicious
   $app->plugin('EPRenderer');
   $app->plugin(EPRenderer => {name => 'foo'});
-  $app->plugin(EPRenderer => {template => {line_start => '.'}});
+  $app->plugin(EPRenderer => {name => 'bar', template => {line_start => '.'}});
 
   # Mojolicious::Lite
   plugin 'EPRenderer';
   plugin EPRenderer => {name => 'foo'};
-  plugin EPRenderer => {template => {line_start => '.'}};
+  plugin EPRenderer => {name => 'bar', template => {line_start => '.'}};
 
 =head1 DESCRIPTION
 
@@ -129,6 +129,6 @@ Register renderer in L<Mojolicious> application.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

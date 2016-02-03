@@ -4,7 +4,6 @@ use Mojo::Base 'Mojo::EventEmitter';
 use Carp 'croak';
 use Compress::Raw::Zlib qw(WANT_GZIP Z_STREAM_END);
 use Mojo::Headers;
-use Mojo::Util 'deprecated';
 use Scalar::Util 'looks_like_number';
 
 has [qw(auto_decompress auto_relax expect_close relaxed skip_body)];
@@ -25,10 +24,6 @@ sub boundary {
   (shift->headers->content_type // '') =~ $BOUNDARY_RE ? $1 // $2 : undef;
 }
 
-# DEPRECATED in Clinking Beer Mugs!
-sub build_body    { shift->_build('get_body_chunk') }
-sub build_headers { shift->_build('get_header_chunk') }
-
 sub charset {
   my $type = shift->headers->content_type // '';
   return $type =~ /charset\s*=\s*"?([^"\s;]+)"?/i ? $1 : undef;
@@ -43,10 +38,9 @@ sub clone {
 sub generate_body_chunk {
   my ($self, $offset) = @_;
 
-  $self->emit(drain => $offset)
-    if !delete $self->{delay} && !length($self->{body_buffer} // '');
+  $self->emit(drain => $offset) if ($self->{body_buffer} // '') eq '';
   my $chunk = delete $self->{body_buffer} // '';
-  return $self->{eof} ? '' : undef unless length $chunk;
+  return $self->{eof} ? '' : undef if $chunk eq '';
 
   return $chunk;
 }
@@ -109,7 +103,7 @@ sub parse {
   # Relaxed parsing
   my $headers = $self->headers;
   my $len = $headers->content_length // '';
-  if ($self->auto_relax && !length $len) {
+  if ($self->auto_relax && $len eq '') {
     my $connection = lc($headers->connection // '');
     $self->relaxed(1)
       if $connection eq 'close' || (!$connection && $self->expect_close);
@@ -153,8 +147,7 @@ sub write {
   my ($self, $chunk, $cb) = @_;
 
   $self->{dynamic} = 1;
-  if (defined $chunk) { $self->{body_buffer} .= $chunk }
-  else                { $self->{delay} = 1 }
+  $self->{body_buffer} .= $chunk if defined $chunk;
   $self->once(drain => $cb) if $cb;
   $self->{eof} = 1 if defined $chunk && $chunk eq '';
 
@@ -169,28 +162,11 @@ sub write_chunk {
   return $self;
 }
 
-# DEPRECATED in Clinking Beer Mugs!
-sub _build {
-  deprecated 'Mojo::Content::build_body and Mojo::Content::build_headers'
-    . ' are DEPRECATED';
-  my ($self, $method) = @_;
-
-  my ($buffer, $offset) = ('', 0);
-  while (1) {
-    next unless defined(my $chunk = $self->$method($offset));
-    last unless my $len = length $chunk;
-    $offset += $len;
-    $buffer .= $chunk;
-  }
-
-  return $buffer;
-}
-
 sub _build_chunk {
   my ($self, $chunk) = @_;
 
   # End
-  return "\x0d\x0a0\x0d\x0a\x0d\x0a" unless length $chunk;
+  return "\x0d\x0a0\x0d\x0a\x0d\x0a" if $chunk eq '';
 
   # First chunk has no leading CRLF
   my $crlf = $self->{chunks}++ ? "\x0d\x0a" : '';
@@ -317,7 +293,7 @@ Mojo::Content - HTTP content base class
 
 =head1 DESCRIPTION
 
-L<Mojo::Content> is an abstract base class for HTTP content containers based on
+L<Mojo::Content> is an abstract base class for HTTP content containers, based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230> and
 L<RFC 7231|http://tools.ietf.org/html/rfc7231>, like
 L<Mojo::Content::MultiPart> and L<Mojo::Content::Single>.
@@ -364,8 +340,7 @@ Emitted once all data has been written.
 
 Emitted when a new chunk of content arrives.
 
-  $content->unsubscribe('read');
-  $content->on(read => sub {
+  $content->unsubscribe('read')->on(read => sub {
     my ($content, $bytes) = @_;
     say "Streaming: $bytes";
   });
@@ -507,13 +482,13 @@ content.
 
   my $bool = $content->is_chunked;
 
-Check if content is chunked.
+Check if C<Transfer-Encoding> header indicates chunked tranfer encoding.
 
 =head2 is_compressed
 
   my $bool = $content->is_compressed;
 
-Check if content is gzip compressed.
+Check C<Content-Encoding> header for C<gzip> value.
 
 =head2 is_dynamic
 
@@ -599,11 +574,11 @@ later. You can write an empty chunk of data at any time to end the stream.
   $content = $content->write_chunk($bytes);
   $content = $content->write_chunk($bytes => sub {...});
 
-Write dynamic content non-blocking with C<chunked> transfer encoding, the
-optional drain callback will be invoked once all data has been written. Calling
-this method without a chunk of data will finalize the L</"headers"> and allow
-for dynamic content to be written later. You can write an empty chunk of data
-at any time to end the stream.
+Write dynamic content non-blocking with chunked transfer encoding, the optional
+drain callback will be invoked once all data has been written. Calling this
+method without a chunk of data will finalize the L</"headers"> and allow for
+dynamic content to be written later. You can write an empty chunk of data at any
+time to end the stream.
 
   # Make sure previous chunk of data has been written before continuing
   $content->write_chunk('He' => sub {
@@ -616,6 +591,6 @@ at any time to end the stream.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

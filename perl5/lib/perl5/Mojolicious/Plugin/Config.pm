@@ -14,8 +14,7 @@ sub parse {
   my ($self, $content, $file, $conf, $app) = @_;
 
   # Run Perl code in sandbox
-  my $config
-    = eval 'package Mojolicious::Plugin::Config::Sandbox; no warnings;'
+  my $config = eval 'package Mojolicious::Plugin::Config::Sandbox; no warnings;'
     . "sub app; local *app = sub { \$app }; use Mojo::Base -strict; $content";
   die qq{Can't load configuration from file "$file": $@} if $@;
   die qq{Configuration file "$file" did not return a hash reference.\n}
@@ -87,7 +86,7 @@ Mojolicious::Plugin::Config - Perl-ish configuration plugin
   # foo.html.ep
   %= $config->{foo}
 
-  # The configuration is available application wide
+  # The configuration is available application-wide
   my $config = app->config;
   say $config->{foo};
 
@@ -176,6 +175,6 @@ Register plugin in L<Mojolicious> application and merge configuration.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

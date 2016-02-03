@@ -8,13 +8,12 @@ sub register {
 
   my $path  = (keys %$conf)[0];
   my $embed = Mojo::Server->new->load_app($conf->{$path});
+  $embed->secrets($app->secrets);
 
   # Extract host
   my $host;
-  if ($path =~ m!^(\*\.)?([^/]+)(/.*)?$!) {
-    $host = $1 ? qr/^(?:.*\.)?\Q$2\E$/i : qr/^\Q$2\E$/i;
-    $path = $3;
-  }
+  ($host, $path) = ($1 ? qr/^(?:.*\.)?\Q$2\E$/i : qr/^\Q$2\E$/i, $3)
+    if $path =~ m!^(\*\.)?([^/]+)(/.*)?$!;
 
   my $route = $app->routes->route($path)->detour(app => $embed);
   return $host ? $route->over(host => $host) : $route;
@@ -77,6 +76,6 @@ usually a L<Mojolicious::Routes::Route> object.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

@@ -71,8 +71,8 @@ sub content_type_like {
 sub content_type_unlike {
   my ($self, $regex, $desc) = @_;
   $desc ||= 'Content-Type is not similar';
-  return $self->_test('unlike', $self->tx->res->headers->content_type,
-    $regex, $desc);
+  return $self->_test('unlike', $self->tx->res->headers->content_type, $regex,
+    $desc);
 }
 
 sub content_unlike {
@@ -259,7 +259,7 @@ sub request_ok { shift->_request_ok($_[0], $_[0]->req->url->to_string) }
 
 sub reset_session {
   my $self = shift;
-  if (my $jar = $self->ua->cookie_jar) { $jar->empty }
+  $self->ua->cookie_jar->empty;
   return $self->tx(undef);
 }
 
@@ -483,7 +483,7 @@ True if the last test was successful.
   };
   $t->get_ok('/')
     ->status_is(302)
-    ->$location_is('http://mojolicio.us')
+    ->$location_is('http://mojolicious.org')
     ->or(sub { diag 'Must have been Joel!' });
 
 =head2 tx
@@ -497,9 +497,7 @@ L<Mojo::Transaction::WebSocket> object.
   # More specific tests
   is $t->tx->res->json->{foo}, 'bar', 'right value';
   ok $t->tx->res->content->is_multipart, 'multipart content';
-
-  # Test custom transactions
-  $t->tx($t->tx->previous)->status_is(302)->header_like(Location => qr/foo/);
+  is $t->tx->previous->res->code, 302, 'right status';
 
 =head2 ua
 
@@ -626,6 +624,7 @@ Opposite of L</"content_like">.
 
 =head2 delete_ok
 
+  $t = $t->delete_ok('http://example.com/foo');
   $t = $t->delete_ok('/foo');
   $t = $t->delete_ok('/foo' => {Accept => '*/*'} => 'Hi!');
   $t = $t->delete_ok('/foo' => {Accept => '*/*'} => form => {a => 'b'});
@@ -681,6 +680,7 @@ Wait for WebSocket connection to be closed gracefully and check status.
 
 =head2 get_ok
 
+  $t = $t->get_ok('http://example.com/foo');
   $t = $t->get_ok('/foo');
   $t = $t->get_ok('/foo' => {Accept => '*/*'} => 'Hi!');
   $t = $t->get_ok('/foo' => {Accept => '*/*'} => form => {a => 'b'});
@@ -690,7 +690,7 @@ Perform a C<GET> request and check for transport errors, takes the same
 arguments as L<Mojo::UserAgent/"get">, except for the callback.
 
   # Run tests against remote host
-  $t->get_ok('http://mojolicio.us/perldoc')->status_is(200);
+  $t->get_ok('http://mojolicious.org/perldoc')->status_is(200);
 
   # Use relative URL for request with Basic authentication
   $t->get_ok('//sri:secr3t@/secrets.json')
@@ -699,10 +699,11 @@ arguments as L<Mojo::UserAgent/"get">, except for the callback.
 
   # Run additional tests on the transaction
   $t->get_ok('/foo')->status_is(200);
-  is $t->tx->res->dom->at('input')->{value}, 'whatever', 'right value';
+  is $t->tx->res->dom->at('input')->val, 'whatever', 'right value';
 
 =head2 head_ok
 
+  $t = $t->head_ok('http://example.com/foo');
   $t = $t->head_ok('/foo');
   $t = $t->head_ok('/foo' => {Accept => '*/*'} => 'Hi!');
   $t = $t->head_ok('/foo' => {Accept => '*/*'} => form => {a => 'b'});
@@ -878,6 +879,7 @@ Construct a new L<Test::Mojo> object.
 
 =head2 options_ok
 
+  $t = $t->options_ok('http://example.com/foo');
   $t = $t->options_ok('/foo');
   $t = $t->options_ok('/foo' => {Accept => '*/*'} => 'Hi!');
   $t = $t->options_ok('/foo' => {Accept => '*/*'} => form => {a => 'b'});
@@ -898,6 +900,7 @@ Invoke callback if the value of L</"success"> is false.
 
 =head2 patch_ok
 
+  $t = $t->patch_ok('http://example.com/foo');
   $t = $t->patch_ok('/foo');
   $t = $t->patch_ok('/foo' => {Accept => '*/*'} => 'Hi!');
   $t = $t->patch_ok('/foo' => {Accept => '*/*'} => form => {a => 'b'});
@@ -908,6 +911,7 @@ arguments as L<Mojo::UserAgent/"patch">, except for the callback.
 
 =head2 post_ok
 
+  $t = $t->post_ok('http://example.com/foo');
   $t = $t->post_ok('/foo');
   $t = $t->post_ok('/foo' => {Accept => '*/*'} => 'Hi!');
   $t = $t->post_ok('/foo' => {Accept => '*/*'} => form => {a => 'b'});
@@ -927,6 +931,7 @@ arguments as L<Mojo::UserAgent/"post">, except for the callback.
 
 =head2 put_ok
 
+  $t = $t->put_ok('http://example.com/foo');
   $t = $t->put_ok('/foo');
   $t = $t->put_ok('/foo' => {Accept => '*/*'} => 'Hi!');
   $t = $t->put_ok('/foo' => {Accept => '*/*'} => form => {a => 'b'});
@@ -1025,6 +1030,7 @@ Opposite of L</"text_like">.
 
 =head2 websocket_ok
 
+  $t = $t->websocket_ok('http://example.com/echo');
   $t = $t->websocket_ok('/echo');
   $t = $t->websocket_ok('/echo' => {DNT => 1} => ['v1.proto']);
 
@@ -1040,6 +1046,6 @@ arguments as L<Mojo::UserAgent/"websocket">, except for the callback.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

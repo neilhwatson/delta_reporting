@@ -10,7 +10,7 @@ use Mojo::Server::Prefork;
 use Mojo::Util qw(steady_time);
 use Scalar::Util 'weaken';
 
-has prefork => sub { Mojo::Server::Prefork->new };
+has prefork => sub { Mojo::Server::Prefork->new(listen => ['http://*:8080']) };
 has upgrade_timeout => 60;
 
 sub configure {
@@ -19,7 +19,6 @@ sub configure {
   # Hypnotoad settings
   my $prefork = $self->prefork;
   my $c = $prefork->app->config($name) || {};
-  $c->{listen} ||= ['http://*:8080'];
   $self->upgrade_timeout($c->{upgrade_timeout}) if $c->{upgrade_timeout};
 
   # Prefork settings
@@ -69,8 +68,8 @@ sub run {
   $self->_hot_deploy unless $ENV{HYPNOTOAD_PID};
 
   # Daemonize as early as possible (but not for restarts)
-  $prefork->daemonize
-    if !$ENV{HYPNOTOAD_FOREGROUND} && $ENV{HYPNOTOAD_REV} < 3;
+  $prefork->start;
+  $prefork->daemonize if !$ENV{HYPNOTOAD_FOREGROUND} && $ENV{HYPNOTOAD_REV} < 3;
 
   # Start accepting connections
   local $SIG{USR2} = sub { $self->{upgrade} ||= steady_time };
@@ -153,10 +152,10 @@ Mojo::Server::Hypnotoad - ALL GLORY TO THE HYPNOTOAD!
 
 L<Mojo::Server::Hypnotoad> is a full featured, UNIX optimized, preforking
 non-blocking I/O HTTP and WebSocket server, built around the very well tested
-and reliable L<Mojo::Server::Prefork>, with IPv6, TLS, Comet (long polling),
-keep-alive, multiple event loop and hot deployment support that just works.
-Note that the server uses signals for process management, so you should avoid
-modifying signal handlers in your applications.
+and reliable L<Mojo::Server::Prefork>, with IPv6, TLS, SNI, Comet (long
+polling), keep-alive, multiple event loop and hot deployment support that just
+works. Note that the server uses signals for process management, so you should
+avoid modifying signal handlers in your applications.
 
 To start applications with it you can use the L<hypnotoad> script, which
 listens on port C<8080>, automatically daemonizes the server process and
@@ -385,10 +384,10 @@ Configure server from application settings.
 
   $hypnotoad->run('script/my_app');
 
-Run server for application.
+Run server for application and wait for L</"MANAGER SIGNALS">.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

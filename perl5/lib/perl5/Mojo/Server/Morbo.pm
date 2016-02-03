@@ -36,7 +36,7 @@ sub run {
     $self->{finished} = 1;
     kill 'TERM', $self->{worker} if $self->{worker};
   };
-  unshift @{$self->watch}, $app;
+  unshift @{$self->watch}, $0 = $app;
   $self->{modified} = 1;
 
   # Prepare and cache listen sockets for smooth restarting
@@ -110,8 +110,8 @@ Mojo::Server::Morbo - DOOOOOOOOOOOOOOOOOOM!
 
 L<Mojo::Server::Morbo> is a full featured, self-restart capable non-blocking
 I/O HTTP and WebSocket server, built around the very well tested and reliable
-L<Mojo::Server::Daemon>, with IPv6, TLS, Comet (long polling), keep-alive and
-multiple event loop support. Note that the server uses signals for process
+L<Mojo::Server::Daemon>, with IPv6, TLS, SNI, Comet (long polling), keep-alive
+and multiple event loop support. Note that the server uses signals for process
 management, so you should avoid modifying signal handlers in your applications.
 
 To start applications with it you can use the L<morbo> script.
@@ -167,16 +167,16 @@ the following new ones.
   my $file = $morbo->check;
 
 Check if file from L</"watch"> has been modified since last check and return
-its name or C<undef> if there have been no changes.
+its name, or C<undef> if there have been no changes.
 
 =head2 run
 
   $morbo->run('script/my_app');
 
-Run server for application.
+Run server for application and wait for L</"SIGNALS">.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

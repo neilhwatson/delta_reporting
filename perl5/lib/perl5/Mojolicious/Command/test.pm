@@ -41,6 +41,7 @@ Mojolicious::Command::test - Test command
     ./myapp.pl test -v t/foo/*.t
 
   Options:
+    -h, --help      Show this summary of available options
     -v, --verbose   Print verbose debug information to STDERR
 
 =head1 DESCRIPTION
@@ -85,6 +86,6 @@ Run this command.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

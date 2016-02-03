@@ -16,12 +16,8 @@ sub register {
   $app->renderer->add_handler(
     $conf->{name} || 'pod' => sub {
       my ($renderer, $c, $output, $options) = @_;
-
-      # Preprocess and render
-      my $handler = $renderer->handlers->{$preprocess};
-      return undef unless $handler->($renderer, $c, $output, $options);
-      $$output = _pod_to_html($$output);
-      return 1;
+      $renderer->handlers->{$preprocess}($renderer, $c, $output, $options);
+      $$output = _pod_to_html($$output) if defined $$output;
     }
   );
 
@@ -61,14 +57,13 @@ sub _html {
   # Rewrite headers
   my $toc = Mojo::URL->new->fragment('toc');
   my @parts;
-  for my $e ($dom->find('h1, h2, h3')->each) {
+  for my $e ($dom->find('h1, h2, h3, h4')->each) {
 
     push @parts, [] if $e->tag eq 'h1' || !@parts;
-    my $anchor = $e->{id};
-    my $link   = Mojo::URL->new->fragment($anchor);
+    my $link = Mojo::URL->new->fragment($e->{id});
     push @{$parts[-1]}, my $text = $e->all_text, $link;
     my $permalink = $c->link_to('#' => $link, class => 'permalink');
-    $e->content($permalink . $c->link_to($text => $toc, id => $anchor));
+    $e->content($permalink . $c->link_to($text => $toc));
   }
 
   # Try to find a title
@@ -77,8 +72,7 @@ sub _html {
 
   # Combine everything to a proper response
   $c->content_for(perldoc => "$dom");
-  my $template = $c->app->renderer->_bundled('perldoc');
-  $c->render(inline => $template, title => $title, parts => \@parts);
+  $c->render('mojo/perldoc', title => $title, parts => \@parts);
 }
 
 sub _perldoc {
@@ -198,6 +192,6 @@ Register renderer and helper in L<Mojolicious> application.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

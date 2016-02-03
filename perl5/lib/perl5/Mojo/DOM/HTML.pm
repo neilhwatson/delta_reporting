@@ -8,16 +8,10 @@ has tree => sub { ['root'] };
 has 'xml';
 
 my $ATTR_RE = qr/
-  ([^<>=\s\/]+|\/)   # Key
+  ([^<>=\s\/]+|\/)                     # Key
   (?:
     \s*=\s*
-    (?:
-      "([^"]*?)"     # Quotation marks
-    |
-      '([^']*?)'     # Apostrophes
-    |
-      ([^>\s]*)      # Unquoted
-    )
+    (?s:(["'])(.*?)\g{-2}|([^>\s]*))   # Value
   )?
   \s*
 /x;
@@ -126,7 +120,7 @@ sub parse {
         # Attributes
         my (%attrs, $closing);
         while ($attr =~ /$ATTR_RE/go) {
-          my ($key, $value) = ($xml ? $1 : lc $1, $2 // $3 // $4);
+          my ($key, $value) = ($xml ? $1 : lc $1, $3 // $4);
 
           # Empty tag
           ++$closing and next if $key eq '/';
@@ -228,8 +222,9 @@ sub _render {
 
   # Attributes
   for my $key (sort keys %{$tree->[2]}) {
-    $result .= " $key" and next unless defined(my $value = $tree->[2]{$key});
-    $result .= " $key" . '="' . xml_escape($value) . '"';
+    my $value = $tree->[2]{$key};
+    $result .= $xml ? qq{ $key="$key"} : " $key" and next unless defined $value;
+    $result .= qq{ $key="} . xml_escape($value) . '"';
   }
 
   # No children
@@ -288,8 +283,8 @@ Mojo::DOM::HTML - HTML/XML engine
 
 =head1 DESCRIPTION
 
-L<Mojo::DOM::HTML> is the HTML/XML engine used by L<Mojo::DOM> and based on the
-L<HTML Living Standard|https://html.spec.whatwg.org> as well as the
+L<Mojo::DOM::HTML> is the HTML/XML engine used by L<Mojo::DOM>, based on the
+L<HTML Living Standard|https://html.spec.whatwg.org> and the
 L<Extensible Markup Language (XML) 1.0|http://www.w3.org/TR/xml/>.
 
 =head1 ATTRIBUTES
@@ -310,7 +305,7 @@ carefully since it is very dynamic.
   $html    = $html->xml($bool);
 
 Disable HTML semantics in parser and activate case-sensitivity, defaults to
-auto detection based on processing instructions.
+auto-detection based on XML declarations.
 
 =head1 METHODS
 
@@ -331,6 +326,6 @@ Render DOM to HTML/XML.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

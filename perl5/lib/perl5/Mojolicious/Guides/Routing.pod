@@ -42,7 +42,7 @@ disposal and can use many more variables than just the request path, such as
 request method and headers like C<Host>, C<User-Agent> and C<Accept>.
 
   GET /user/show/23 HTTP/1.1
-  Host: mojolicio.us
+  Host: mojolicious.org
   User-Agent: Mojolicious (Perl)
   Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
 
@@ -156,7 +156,7 @@ Most commonly used features every L<Mojolicious> developer should know about.
 =head2 Minimal route
 
 The attribute L<Mojolicious/"routes"> contains a router you can use to generate
-route structures, they match in the same order in which they were defined.
+route structures.
 
   # Application
   package MyApp;
@@ -175,7 +175,9 @@ route structures, they match in the same order in which they were defined.
   1;
 
 The minimal route above will load and instantiate the class
-C<MyApp::Controller::Foo> and call its C<welcome> method.
+C<MyApp::Controller::Foo> and call its C<welcome> method. Routes are usually
+configured in the C<startup> method of the application class, but the router can
+be accessed from everywhere (even at runtime).
 
   # Controller
   package MyApp::Controller::Foo;
@@ -191,8 +193,11 @@ C<MyApp::Controller::Foo> and call its C<welcome> method.
 
   1;
 
-Routes are usually configured in the C<startup> method of the application
-class, but the router can be accessed from everywhere (even at runtime).
+All routes match in the same order in which they were defined, and matching
+stops as soon as a suitable route has been found. So you can improve the routing
+performance by declaring your most frequently accessed routes first. A routing
+cache will also be used automatically to handle sudden traffic spikes more
+gracefully.
 
 =head2 Routing destination
 
@@ -224,7 +229,7 @@ arbitrary request methods as first argument.
   $r->post('/hello')->to(controller => 'foo', action => 'hello');
 
   # GET|POST /bye  -> {controller => 'foo', action => 'bye'}
-  $r->any([qw(GET POST)] => '/bye')->to(controller => 'foo', action => 'bye');
+  $r->any(['GET', 'POST'] => '/bye')->to(controller => 'foo', action => 'bye');
 
   # * /whatever -> {controller => 'foo', action => 'whatever'}
   $r->any('/whatever')->to(controller => 'foo', action => 'whatever');
@@ -301,6 +306,10 @@ ones.
   $cats->get('/')->to(action => 'index');
   $cats->get('/nyan')->to(action => 'nyan');
   $cats->get('/lol');
+
+With a few common prefixes you can also greatly improve the routing performance
+of applications with many routes, because children are only tried if the prefix
+matched first.
 
 =head2 Special stash values
 
@@ -491,7 +500,7 @@ L<Mojolicious::Routes/"hide"> to add additional ones.
 This has already been done for all attributes and methods from
 L<Mojolicious::Controller>.
 
-=head2 More restrictive placeholders
+=head2 Restrictive placeholders
 
 A very easy way to make placeholders more restrictive are alternatives, you
 just make a list of possible values, which then work similar to the regular
@@ -500,12 +509,12 @@ expression C<(bender|leela)>.
   # /fry    -> undef
   # /bender -> {controller => 'foo', action => 'bar', name => 'bender'}
   # /leela  -> {controller => 'foo', action => 'bar', name => 'leela'}
-  $r->get('/:name' => [name => [qw(bender leela)]])->to('foo#bar');
+  $r->get('/:name' => [name => ['bender', 'leela']])->to('foo#bar');
 
 You can also adjust the regular expressions behind placeholders directly, just
 make sure not to use C<^> and C<$> or capturing groups C<(...)>, because
-placeholders become part of a larger regular expression internally, C<(?:...)>
-is fine though.
+placeholders become part of a larger regular expression internally,
+non-capturing groups C<(?:...)> are fine though.
 
   # /23   -> {controller => 'foo', action => 'bar', number => 23}
   # /test -> undef
@@ -550,7 +559,7 @@ authentication.
   $auth->get('/blackjack')->to('hideout#blackjack');
 
 Broken dispatch chains can be continued by calling the method
-L<Mojolicious::Controller/"continue">, this allows for example non-blocking
+L<Mojolicious::Controller/"continue">, this allows for example, non-blocking
 operations to finish before reaching the next dispatch cycle.
 
   my $maybe = $r->under('/maybe' => sub {
@@ -588,14 +597,22 @@ automatically detected and stored in the stash value C<format>.
   # /foo.txt  -> {controller => 'foo', action => 'bar', format => 'txt'}
   $r->get('/foo')->to('foo#bar');
 
-This for example allows multiple templates in different formats to share the
+This for example, allows multiple templates in different formats to share the
 same action code. Restrictive placeholders can also be used to limit the
 allowed formats.
 
   # /foo.txt -> undef
   # /foo.rss -> {controller => 'foo', action => 'bar', format => 'rss'}
   # /foo.xml -> {controller => 'foo', action => 'bar', format => 'xml'}
-  $r->get('/foo' => [format => [qw(rss xml)]])->to('foo#bar');
+  $r->get('/foo' => [format => ['rss', 'xml']])->to('foo#bar');
+
+A C<format> value can also be passed to L<Mojolicious::Controller/"url_for">.
+
+  # /foo/bar.txt -> {controller => 'foo', action => 'bar', format => 'txt'}
+  $r->get('/foo/:action')->to('foo#')->name('baz');
+
+  # Generate URL "/foo/bar.txt" for route "baz"
+  my $url = $c->url_for('baz', action => 'bar', format => 'txt');
 
 Or you can just disable format detection with a special type of restrictive
 placeholder, which gets inherited by nested routes, and then re-enable it on
@@ -613,7 +630,7 @@ demand.
   # /baz.xml  -> undef
   my $inactive = $r->under([format => 0]);
   $inactive->get('/foo')->to('foo#bar');
-  $inactive->get('/baz' => [format => [qw(txt html)]])->to('baz#yada');
+  $inactive->get('/baz' => [format => ['txt', 'html']])->to('baz#yada');
 
 =head2 WebSockets
 
@@ -645,7 +662,7 @@ subscribe to an event with L<Mojolicious::Controller/"on"> or send a message
 with L<Mojolicious::Controller/"send"> right away.
 
   GET /echo HTTP/1.1
-  Host: mojolicio.us
+  Host: mojolicious.org
   User-Agent: Mojolicious (Perl)
   Connection: Upgrade
   Upgrade: websocket
@@ -679,8 +696,8 @@ L<Mojolicious::Plugin::HeaderCondition> can be applied to any route with the
 method L<Mojolicious::Routes::Route/"over">, and allow even more powerful route
 constructs.
 
-  # / (Origin: http://mojolicio.us)
-  $r->get('/')->over(headers => {Origin => qr/mojolicio\.us/})->to('foo#bar');
+  # / (Origin: http://perl.org)
+  $r->get('/')->over(headers => {Origin => qr/perl\.org/})->to('foo#bar');
 
   # / (Firefox)
   $r->get('/')->over(agent => qr/Firefox/)->to('browser-test#firefox');
@@ -688,8 +705,8 @@ constructs.
   # / (Internet Explorer)
   $r->get('/')->over(agent => qr/Internet Explorer/)->to('browser-test#ie');
 
-  # http://mojolicio.us/perldoc
-  $r->get('/perldoc')->over(host => 'mojolicio.us')->to('perldoc#index');
+  # http://mojolicious.org/perldoc
+  $r->get('/perldoc')->over(host => 'mojolicious.org')->to('perldoc#index');
 
 Just be aware that conditions are too complex for the routing cache, which
 normally speeds up recurring requests, and can therefore reduce performance.
@@ -779,10 +796,10 @@ to list all available routes together with name and underlying regular
 expressions.
 
   $ ./myapp.pl routes -v
-  /foo/:name  ....  POST  fooname  ^/foo/([^/\.]+)  ^/?(?:\.([^/]+))?$
+  /foo/:name  ....  POST  fooname  ^/foo/([^/.]+)/?(?:\.([^/]+))?$
   /bar        ..U.  *     bar      ^/bar
-    +/baz     ...W  GET   baz      ^/baz            ^/?(?:\.([^/]+))?$
-  /yada       ....  *     yada     ^/yada           ^/?(?:\.([^/]+))?$
+    +/baz     ...W  GET   baz      ^/baz/?(?:\.([^/]+))?$
+  /yada       ....  *     yada     ^/yada/?(?:\.([^/]+))?$
 
 =head1 ADVANCED
 
@@ -849,6 +866,16 @@ L<Mojolicious::Routes::Route/"remove">.
 
 Especially for rearranging routes created by plugins this can be very useful,
 to find routes by their name you can use L<Mojolicious::Routes::Route/"find">.
+
+  # GET /example/test -> {controller => 'example', action => 'test'}
+  $r->get('/something/else')->to('something#else')->name('test');
+  my $test = $r->find('test');
+  $test->pattern->parse('/example/test');
+  $test->pattern->defaults({controller => 'example', action => 'test'});
+
+Even the route pattern and destination can still be changed with
+L<Mojolicious::Routes::Pattern/"parse"> and
+L<Mojolicious::Routes::Pattern/"defaults">.
 
 =head2 Adding conditions
 
@@ -941,8 +968,8 @@ applications under a domain and/or prefix.
 
 =head2 Embed applications
 
-For a litte more power you can also embed applications by using them instead of
-a controller. This allows for example the use of the L<Mojolicious::Lite>
+For a little more power you can also embed applications by using them instead of
+a controller. This allows for example, the use of the L<Mojolicious::Lite>
 domain specific language in normal L<Mojolicious> controllers.
 
   # Controller

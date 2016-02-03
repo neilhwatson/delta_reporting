@@ -158,8 +158,8 @@ works with all built-in web servers.
   $ ./script/my_app prefork -P /tmp/first.pid -l http://*:8080?reuse=1
   Server available at http://127.0.0.1:8080
 
-All you have to do is start a second web server listening to the same port and
-stop the first web server gracefully afterwards.
+All you have to do, is to start a second web server listening to the same port,
+and stop the first web server gracefully afterwards.
 
   $ ./script/my_app prefork -P /tmp/second.pid -l http://*:8080?reuse=1
   Server available at http://127.0.0.1:8080
@@ -296,8 +296,9 @@ But you could even use middleware right in your application.
 
 Sometimes you might have to deploy your application in a blackbox environment
 where you can't just change the server configuration or behind a reverse proxy
-that passes along additional information with C<X-*> headers. In such cases you
-can use the hook L<Mojolicious/"before_dispatch"> to rewrite incoming requests.
+that passes along additional information with C<X-Forwarded-*> headers. In such
+cases you can use the hook L<Mojolicious/"before_dispatch"> to rewrite incoming
+requests.
 
   # Change scheme if "X-Forwarded-HTTPS" header is set
   $app->hook(before_dispatch => sub {
@@ -308,7 +309,9 @@ can use the hook L<Mojolicious/"before_dispatch"> to rewrite incoming requests.
 
 Since reverse proxies generally don't pass along information about path
 prefixes your application might be deployed under, rewriting the base path of
-incoming requests is also quite common.
+incoming requests is also quite common. This allows
+L<Mojolicious::Controller/"url_for"> for example, to generate portable URLs
+based on the current environment.
 
   # Move first part and slash from path to base path in production mode
   $app->hook(before_dispatch => sub {
@@ -344,6 +347,8 @@ The plugin L<Mojolicious::Plugin::Mount> uses this functionality to allow you
 to combine multiple applications into one and deploy them together.
 
   use Mojolicious::Lite;
+
+  app->config(hypnotoad => {listen => ['http://*:80']});
 
   plugin Mount => {'test1.example.com' => '/home/sri/myapp1.pl'};
   plugin Mount => {'test2.example.com' => '/home/sri/myapp2.pl'};
@@ -453,7 +458,7 @@ nested closures that often result from continuation-passing style.
 =head2 Timers
 
 Timers, another primary feature of the event loop, are created with
-L<Mojo::IOLoop/"timer"> and can for example be used to delay rendering of a
+L<Mojo::IOLoop/"timer"> and can, for example, be used to delay rendering of a
 response, and unlike C<sleep>, won't block any other requests that might be
 processed concurrently.
 
@@ -503,7 +508,7 @@ created at startup time.
   # Check title in the background every 10 seconds
   my $title = 'Got no title yet.';
   Mojo::IOLoop->recurring(10 => sub {
-    app->ua->get('http://mojolicio.us' => sub {
+    app->ua->get('http://mojolicious.org' => sub {
       my ($ua, $tx) = @_;
       $title = $tx->res->dom->at('title')->text;
     });
@@ -634,6 +639,11 @@ You can activate C<permessage-deflate> compression with
 L<Mojo::Transaction::WebSocket/"with_compression">, this can result in much
 better performance, but also increases memory usage by up to 300KB per
 connection.
+
+  my $proto = $c->tx->with_protocols('v2.proto', 'v1.proto');
+
+You can also use L<Mojo::Transaction::WebSocket/"with_protocols"> to negotiate a
+subprotocol.
 
 =head2 Testing WebSocket web services
 
@@ -789,7 +799,7 @@ can be combined to solve some of hardest problems in web development.
 =head2 Event loops
 
 Internally the L<Mojo::IOLoop> event loop can use multiple reactor backends,
-L<EV> for example will be automatically used if possible. Which in turn allows
+L<EV> for example, will be automatically used if possible. Which in turn allows
 other event loops like L<AnyEvent> to just work.
 
   use Mojolicious::Lite;
@@ -823,7 +833,7 @@ Who actually controls the event loop backend is not important.
   });
   say $cv->recv;
 
-You could for example just embed the built-in web server into an L<AnyEvent>
+You could, for example, just embed the built-in web server into an L<AnyEvent>
 application.
 
   use Mojolicious::Lite;
@@ -850,7 +860,7 @@ right in.
 
 =head2 Web scraping
 
-Scraping information from web sites has never been this much fun before. The
+Scraping information from websites has never been this much fun before. The
 built-in HTML/XML parser L<Mojo::DOM> is accessible through
 L<Mojo::Message/"dom"> and supports all CSS selectors that make sense for a
 standalone parser, it can be a very powerful tool especially for testing web
@@ -858,9 +868,9 @@ application.
 
   use Mojo::UserAgent;
 
-  # Fetch web site
+  # Fetch website
   my $ua = Mojo::UserAgent->new;
-  my $tx = $ua->get('mojolicio.us/perldoc');
+  my $tx = $ua->get('mojolicious.org/perldoc');
 
   # Extract title
   say 'Title: ', $tx->res->dom->at('head > title')->text;
@@ -984,7 +994,7 @@ file with L<Mojo::Asset::File/"move_to">.
 
   use Mojo::UserAgent;
 
-  # Lets fetch the latest Mojolicious tarball
+  # Fetch the latest Mojolicious tarball
   my $ua = Mojo::UserAgent->new(max_redirects => 5);
   my $tx = $ua->get('https://www.github.com/kraih/mojo/tarball/master');
   $tx->res->content->asset->move_to('mojo.tar.gz');
@@ -1035,8 +1045,8 @@ L<Mojo::UserAgent> makes it actually easy.
   $tx = $ua->start($tx);
 
 The event L<Mojo::Content/"read"> will be emitted for every chunk of data that
-is received, even C<chunked> encoding and gzip compression will be handled
-transparently if necessary.
+is received, even chunked transfer encoding and gzip content encoding will be
+handled transparently if necessary.
 
 =head2 Streaming request
 
@@ -1057,7 +1067,7 @@ Sending a streaming request is almost just as easy.
   $drain = sub {
     my $content = shift;
     my $chunk   = substr $body, 0, 1, '';
-    $drain      = undef unless length $body;
+    $drain      = undef if $body eq '';
     $content->write($chunk, $drain);
   };
   $tx->req->content->$drain;
@@ -1164,27 +1174,27 @@ command L<Mojolicious::Command::get> that is about to change. You can just pick
 the parts that actually matter with the CSS selectors from L<Mojo::DOM> and
 JSON Pointers from L<Mojo::JSON::Pointer>.
 
-  $ mojo get http://mojolicio.us 'head > title'
+  $ mojo get http://mojolicious.org 'head > title'
 
 How about a list of all id attributes?
 
-  $ mojo get http://mojolicio.us '*' attr id
+  $ mojo get http://mojolicious.org '*' attr id
 
 Or the text content of all heading tags?
 
-  $ mojo get http://mojolicio.us 'h1, h2, h3' text
+  $ mojo get http://mojolicious.org 'h1, h2, h3' text
 
 Maybe just the text of the third heading?
 
-  $ mojo get http://mojolicio.us 'h1, h2, h3' 3 text
+  $ mojo get http://mojolicious.org 'h1, h2, h3' 3 text
 
 You can also extract all text from nested child elements.
 
-  $ mojo get http://mojolicio.us '#mojobar' all
+  $ mojo get http://mojolicious.org '#mojobar' all
 
 The request can be customized as well.
 
-  $ mojo get -M POST -c 'Hello!' http://mojolicio.us
+  $ mojo get -M POST -c 'Hello!' http://mojolicious.org
   $ mojo get -H 'X-Bender: Bite my shiny metal ass!' http://google.com
 
 You can follow redirects and view the headers for all messages.
@@ -1204,7 +1214,7 @@ This can be an invaluable tool for testing your applications.
 For quick hacks and especially testing, L<ojo> one-liners are also a great
 choice.
 
-  $ perl -Mojo -E 'say g("mojolicio.us")->dom->at("title")->text'
+  $ perl -Mojo -E 'say g("mojolicious.org")->dom->at("title")->text'
 
 =head1 APPLICATIONS
 
@@ -1386,6 +1396,7 @@ itself can be accessed via C<app>.
 
   $ mojo generate lite_app myapp.pl
   $ ./myapp.pl eval 'say for @{app->static->paths}'
+  $ ./myapp.pl eval 'say for sort keys %{app->renderer->helpers}'
 
 The C<verbose> options will automatically print the return value or returned
 data structure to C<STDOUT>.
@@ -1436,11 +1447,9 @@ automatically installed with the modules.
 
   1;
 
-Finally a few small changes should be made to the application script. The
-shebang becomes the recommended C<#!perl>, which the toolchain rewrites to the
-proper shebang during installation. Also use L<FindBin> rather than L<lib>,
-since installable scripts can't use L<lib> without breaking updated dual-life
-modules.
+Finally there is just one small change to be made to the application script. The
+shebang line becomes the recommended C<#!perl>, which the toolchain can rewrite
+to the proper shebang during installation.
 
   #!perl
 

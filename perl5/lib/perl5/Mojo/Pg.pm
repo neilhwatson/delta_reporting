@@ -9,6 +9,7 @@ use Mojo::Pg::PubSub;
 use Mojo::URL;
 use Scalar::Util 'weaken';
 
+has [qw(auto_migrate search_path)];
 has dsn             => 'dbi:Pg:';
 has max_connections => 5;
 has migrations      => sub {
@@ -17,12 +18,7 @@ has migrations      => sub {
   return $migrations;
 };
 has options => sub {
-  {
-    AutoCommit          => 1,
-    AutoInactiveDestroy => 1,
-    PrintError          => 0,
-    RaiseError          => 1
-  };
+  {AutoCommit => 1, AutoInactiveDestroy => 1, PrintError => 0, RaiseError => 1};
 };
 has [qw(password username)] => '';
 has pubsub => sub {
@@ -31,7 +27,7 @@ has pubsub => sub {
   return $pubsub;
 };
 
-our $VERSION = '2.08';
+our $VERSION = '2.18';
 
 sub db {
   my $self = shift;
@@ -79,9 +75,17 @@ sub new { @_ > 1 ? shift->SUPER::new->from_string(@_) : shift->SUPER::new }
 
 sub _dequeue {
   my $self = shift;
+
   while (my $dbh = shift @{$self->{queue} || []}) { return $dbh if $dbh->ping }
   my $dbh = DBI->connect(map { $self->$_ } qw(dsn username password options));
+  if (my $path = $self->search_path) {
+    my $search_path = join ', ', map { $dbh->quote_identifier($_) } @$path;
+    $dbh->do("set search_path to $search_path");
+  }
+  ++$self->{migrated} and $self->migrations->migrate
+    if $self->auto_migrate && !$self->{migrated};
   $self->emit(connection => $dbh);
+
   return $dbh;
 }
 
@@ -169,7 +173,7 @@ Mojo::Pg - Mojolicious ♥ PostgreSQL
 
 L<Mojo::Pg> is a tiny wrapper around L<DBD::Pg> that makes
 L<PostgreSQL|http://www.postgresql.org> a lot of fun to use with the
-L<Mojolicious|http://mojolicio.us> real-time web framework.
+L<Mojolicious|http://mojolicious.org> real-time web framework.
 
 Database and statement handles are cached automatically, so they can be reused
 transparently to increase performance. And you can handle connection timeouts
@@ -220,9 +224,22 @@ following new ones.
 
 Emitted when a new database connection has been established.
 
+  $pg->on(connection => sub {
+    my ($pg, $dbh) = @_;
+    $dbh->do('set search_path to my_schema');
+  });
+
 =head1 ATTRIBUTES
 
 L<Mojo::Pg> implements the following attributes.
+
+=head2 auto_migrate
+
+  my $bool = $pg->auto_migrate;
+  $pg      = $pg->auto_migrate($bool);
+
+Automatically migrate to the latest database schema with L</"migrations">, as
+soon as the first database connection has been established.
 
 =head2 dsn
 
@@ -283,6 +300,17 @@ efficiently, by sharing a single database connection with many consumers.
 
   # Notify a channel
   $pg->pubsub->notify(news => 'PostgreSQL rocks!');
+
+=head2 search_path
+
+  my $path = $pg->search_path;
+  $pg      = $pg->search_path(['$user', 'foo', 'public']);
+
+Schema search path assigned to all new connections.
+
+  # Isolate tests and avoid race conditions when running them in parallel
+  $pg->search_path(['test_one']);
+  $pg->migrations->migrate(0)->migrate;
 
 =head2 username
 
@@ -385,7 +413,7 @@ Hernan Lopes
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2014-2015, Sebastian Riedel.
+Copyright (C) 2014-2016, Sebastian Riedel.
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
@@ -393,6 +421,6 @@ the terms of the Artistic License version 2.0.
 =head1 SEE ALSO
 
 L<https://github.com/kraih/mojo-pg>, L<Mojolicious::Guides>,
-L<http://mojolicio.us>.
+L<http://mojolicious.org>.
 
 =cut

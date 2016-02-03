@@ -47,15 +47,15 @@ should be followed at all costs.
 REST is a software architectural style for distributed hypermedia systems such
 as the web. While it can be applied to many protocols it is most commonly used
 with HTTP these days. In REST terms, when you are opening a URL like
-C<http://mojolicio.us/foo> with your browser, you are basically asking the web
-server for the HTML I<representation> of the C<http://mojolicio.us/foo>
+C<http://mojolicious.org/foo> with your browser, you are basically asking the
+web server for the HTML I<representation> of the C<http://mojolicious.org/foo>
 I<resource>.
 
-  +--------+                                +--------+
-  |        | -> http://mojolicio.us/foo  -> |        |
-  | Client |                                | Server |
-  |        | <- <html>Mojo rocks!</html> <- |        |
-  +--------+                                +--------+
+  +--------+                                  +--------+
+  |        | -> http://mojolicious.org/foo -> |        |
+  | Client |                                  | Server |
+  |        | <-  <html>Mojo rocks!</html>  <- |        |
+  +--------+                                  +--------+
 
 The fundamental idea here is that all resources are uniquely addressable with
 URLs and every resource can have different representations such as HTML, RSS or
@@ -90,7 +90,7 @@ Sessions solve this problem by allowing web applications to keep stateful
 information across several HTTP requests.
 
   GET /login?user=sebastian&pass=s3cret HTTP/1.1
-  Host: mojolicio.us
+  Host: mojolicious.org
 
   HTTP/1.1 200 OK
   Set-Cookie: sessionid=987654321
@@ -98,7 +98,7 @@ information across several HTTP requests.
   Hello sebastian.
 
   GET /protected HTTP/1.1
-  Host: mojolicio.us
+  Host: mojolicious.org
   Cookie: sessionid=987654321
 
   HTTP/1.1 200 OK
@@ -202,7 +202,7 @@ fun thanks to automatic reloading.
 Just save your changes and they will be automatically in effect the next time
 you refresh your browser.
 
-=head2 A birds-eye view
+=head2 A bird's-eye view
 
 It all starts with an HTTP request like this, sent by your browser.
 
@@ -213,12 +213,30 @@ Once the request has been received by the web server through the event loop, it
 will be passed on to L<Mojolicious>, where it will be handled in a few simple
 steps.
 
-  1. Check if a static file exists that would meet the requirements.
-  2. Try to find a route that would meet the requirements.
-  3. Dispatch the request to this route, usually reaching one or more actions.
-  4. Process the request, maybe generating a response with the renderer.
-  5. Return control to the web server, and if no response has been generated
-     yet, wait for a non-blocking operation to do so through the event loop.
+=over 2
+
+=item  1.
+
+Check if a static file exists that would meet the requirements.
+
+=item 2.
+
+Try to find a route that would meet the requirements.
+
+=item 3.
+
+Dispatch the request to this route, usually reaching one or more actions.
+
+=item 4.
+
+Process the request, maybe generating a response with the renderer.
+
+=item 5.
+
+Return control to the web server, and if no response has been generated yet,
+wait for a non-blocking operation to do so through the event loop.
+
+=back
 
 With our application the router would have found an action in step 2, and
 rendered some text in step 4, resulting in an HTTP response like this being
@@ -388,8 +406,8 @@ L<Mojolicious/"secrets">.
 
   $app->secrets(['Mojolicious rocks']);
 
-This passphrase is used by the HMAC-SHA1 algorithm to make signed cookies
-secure and can be changed at any time to invalidate all existing sessions.
+This passphrase is used by the HMAC-SHA1 algorithm to make signed cookies tamper
+resistant and can be changed at any time to invalidate all existing sessions.
 
   $c->session(user => 'sebastian');
   my $user = $c->session('user');
@@ -427,7 +445,7 @@ this.
   use lib 'lib';
   use MyApp::Model::Users;
 
-  # Make signed cookies secure
+  # Make signed cookies tamper resistant
   app->secrets(['Mojolicious rocks']);
 
   helper users => sub { state $users = MyApp::Model::Users->new };
@@ -725,6 +743,21 @@ C<my_app> to follow the CPAN standard.
 
   $ mkdir script
   $ mv myapp.pl script/my_app
+
+Just a few small details change, instead of L<lib> we now use L<FindBin> and
+C<@INC>, allowing us to start the application from outside its home directory.
+
+  #!/usr/bin/env perl
+
+  use strict;
+  use warnings;
+
+  use FindBin;
+  BEGIN { unshift @INC, "$FindBin::Bin/../lib" }
+
+  # Start command line interface for application
+  require Mojolicious::Commands;
+  Mojolicious::Commands->start_app('MyApp');
 
 =head2 Simplified tests
 

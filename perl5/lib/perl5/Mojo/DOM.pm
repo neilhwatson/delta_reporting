@@ -126,7 +126,7 @@ sub remove { shift->replace('') }
 sub replace {
   my ($self, $new) = @_;
   return $self->parse($new) if (my $tree = $self->tree)->[0] eq 'root';
-  return $self->_replace($self->_parent, $tree, $self->_parse($new));
+  return $self->_replace($self->_parent, $tree, _nodes($self->_parse($new)));
 }
 
 sub root {
@@ -138,7 +138,7 @@ sub root {
 sub strip {
   my $self = shift;
   return $self if (my $tree = $self->tree)->[0] ne 'tag';
-  return $self->_replace($tree->[3], $tree, ['root', _nodes($tree)]);
+  return $self->_replace($tree->[3], $tree, _nodes($tree));
 }
 
 sub tag {
@@ -159,6 +159,20 @@ sub tree { shift->_delegate(tree => @_) }
 
 sub type { shift->tree->[0] }
 
+sub val {
+  my $self = shift;
+
+  # "option"
+  return $self->{value} // $self->text if (my $tag = $self->tag) eq 'option';
+
+  # "textarea", "input" or "button"
+  return $tag eq 'textarea' ? $self->text : $self->{value} if $tag ne 'select';
+
+  # "select"
+  my $v = $self->find('option:checked')->map('val');
+  return exists $self->{multiple} ? $v->size ? $v->to_array : undef : $v->last;
+}
+
 sub wrap         { shift->_wrap(0, @_) }
 sub wrap_content { shift->_wrap(1, @_) }
 
@@ -171,7 +185,7 @@ sub _add {
 
   my $parent = $self->_parent;
   splice @$parent, _offset($parent, $tree) + $offset, 0,
-    _link($self->_parse($new), $parent);
+    _link($parent, _nodes($self->_parse($new)));
 
   return $self;
 }
@@ -185,10 +199,9 @@ sub _all_text {
 
   # Detect "pre" tag
   my $tree = $self->tree;
-  if (!defined $trim || $trim) {
-    $trim = 1;
-    $_->[1] eq 'pre' and $trim = 0 for $self->_ancestors, $tree;
-  }
+  $trim = 1 unless defined $trim;
+  map { $_->[1] eq 'pre' and $trim = 0 } $self->_ancestors, $tree
+    if $trim && $tree->[0] ne 'root';
 
   return _text([_nodes($tree)], $recurse, $trim);
 }
@@ -196,7 +209,7 @@ sub _all_text {
 sub _ancestors {
   my ($self, $root) = @_;
 
-  return unless my $tree = $self->_parent;
+  return () unless my $tree = $self->_parent;
   my @ancestors;
   do { push @ancestors, $tree }
     while ($tree->[0] eq 'tag') && ($tree = $tree->[3]);
@@ -222,7 +235,7 @@ sub _content {
 
   $start  = $start  ? ($#$tree + 1) : _start($tree);
   $offset = $offset ? $#$tree       : 0;
-  splice @$tree, $start, $offset, _link($self->_parse($new), $tree);
+  splice @$tree, $start, $offset, _link($tree, _nodes($self->_parse($new)));
 
   return $self;
 }
@@ -237,23 +250,22 @@ sub _delegate {
 }
 
 sub _link {
-  my ($children, $parent) = @_;
+  my ($parent, @children) = @_;
 
   # Link parent to children
-  my @new = @$children[1 .. $#$children];
-  for my $node (@new) {
+  for my $node (@children) {
     my $offset = $node->[0] eq 'tag' ? 3 : 2;
     $node->[$offset] = $parent;
     weaken $node->[$offset];
   }
 
-  return @new;
+  return @children;
 }
 
 sub _maybe { $_[1] ? $_[0]->_build($_[1], $_[0]->xml) : undef }
 
 sub _nodes {
-  return unless my $tree = shift;
+  return () unless my $tree = shift;
   my @nodes = @$tree[_start($tree) .. $#$tree];
   return shift() ? grep { $_->[0] eq 'tag' } @nodes : @nodes;
 }
@@ -270,8 +282,8 @@ sub _parent { $_[0]->tree->[$_[0]->type eq 'tag' ? 3 : 2] }
 sub _parse { Mojo::DOM::HTML->new(xml => shift->xml)->parse(shift)->tree }
 
 sub _replace {
-  my ($self, $parent, $tree, $new) = @_;
-  splice @$parent, _offset($parent, $tree), 1, _link($new, $parent);
+  my ($self, $parent, $child, @nodes) = @_;
+  splice @$parent, _offset($parent, $child), 1, _link($parent, @nodes);
   return $self->parent;
 }
 
@@ -339,8 +351,8 @@ sub _text {
 sub _wrap {
   my ($self, $content, $new) = @_;
 
-  $content = 1 if (my $tree = $self->tree)->[0] eq 'root';
-  $content = 0 if $tree->[0] ne 'root' && $tree->[0] ne 'tag';
+  return $self if (my $tree = $self->tree)->[0] eq 'root' && !$content;
+  return $self if $tree->[0] ne 'root' && $tree->[0] ne 'tag' && $content;
 
   # Find innermost tag
   my $current;
@@ -350,14 +362,14 @@ sub _wrap {
 
   # Wrap content
   if ($content) {
-    push @$current, _link(['root', _nodes($tree)], $current);
-    splice @$tree, _start($tree), $#$tree, _link($new, $tree);
+    push @$current, _link($current, _nodes($tree));
+    splice @$tree, _start($tree), $#$tree, _link($tree, _nodes($new));
     return $self;
   }
 
   # Wrap element
-  $self->_replace($self->_parent, $tree, $new);
-  push @$current, _link(['root', $tree], $current);
+  $self->_replace($self->_parent, $tree, _nodes($new));
+  push @$current, _link($current, $tree);
   return $self;
 }
 
@@ -402,27 +414,57 @@ L<Mojo::DOM> is a minimalistic and relaxed HTML/XML DOM parser with CSS
 selector support. It will even try to interpret broken HTML and XML, so you
 should not use it for validation.
 
+=head1 NODES AND ELEMENTS
+
+When we parse an HTML/XML fragment, it gets turned into a tree of nodes.
+
+  <!DOCTYPE html>
+  <html>
+    <head><title>Hello</title></head>
+    <body>World!</body>
+  </html>
+
+There are currently eight different kinds of nodes, C<cdata>, C<comment>,
+C<doctype>, C<pi>, C<raw>, C<root>, C<tag> and C<text>. Elements are nodes of
+the type C<tag>.
+
+  root
+  |- doctype (html)
+  +- tag (html)
+     |- tag (head)
+     |  +- tag (title)
+     |     +- raw (Hello)
+     +- tag (body)
+        +- text (World!)
+
+While all node types are represented as L<Mojo::DOM> objects, some methods like
+L</"attr"> and L</"namespace"> only apply to elements.
+
 =head1 CASE-SENSITIVITY
 
 L<Mojo::DOM> defaults to HTML semantics, that means all tags and attribute
 names are lowercased and selectors need to be lowercase as well.
 
+  # HTML semantics
   my $dom = Mojo::DOM->new('<P ID="greeting">Hi!</P>');
   say $dom->at('p[id]')->text;
 
-If XML processing instructions are found, the parser will automatically switch
-into XML mode and everything becomes case-sensitive.
+If an XML declaration is found, the parser will automatically switch into XML
+mode and everything becomes case-sensitive.
 
+  # XML semantics
   my $dom = Mojo::DOM->new('<?xml version="1.0"?><P ID="greeting">Hi!</P>');
   say $dom->at('P[ID]')->text;
 
 XML detection can also be disabled with the L</"xml"> method.
 
   # Force XML semantics
-  $dom->xml(1);
+  my $dom = Mojo::DOM->new->xml(1)->parse('<P ID="greeting">Hi!</P>');
+  say $dom->at('P[ID]')->text;
 
   # Force HTML semantics
-  $dom->xml(0);
+  my $dom = Mojo::DOM->new->xml(0)->parse('<P ID="greeting">Hi!</P>');
+  say $dom->at('p[id]')->text;
 
 =head1 METHODS
 
@@ -458,7 +500,7 @@ All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
 
   $dom = $dom->append('<p>I ♥ Mojolicious!</p>');
 
-Append HTML/XML fragment to this node.
+Append HTML/XML fragment to this node (for all node types other than C<root>).
 
   # "<div><h1>Test</h1><h2>123</h2></div>"
   $dom->parse('<div><h1>Test</h1></div>')
@@ -491,8 +533,8 @@ node's content.
   my $result = $dom->at('div ~ p');
 
 Find first descendant element of this element matching the CSS selector and
-return it as a L<Mojo::DOM> object or return C<undef> if none could be found.
-All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
+return it as a L<Mojo::DOM> object, or C<undef> if none could be found. All
+selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
 
   # Find first element with "svg" namespace definition
   my $namespace = $dom->at('[xmlns\:svg]')->{'xmlns:svg'};
@@ -505,6 +547,12 @@ All selectors from L<Mojo::DOM::CSS/"SELECTORS"> are supported.
   $dom     = $dom->attr(foo => 'bar');
 
 This element's attributes.
+
+  # Remove an attribute
+  delete $dom->attr->{id};
+
+  # Attribute without value
+  $dom->attr(selected => undef);
 
   # List id attributes
   say $dom->find('*')->map(attr => 'id')->compact->join("\n");
@@ -519,8 +567,11 @@ as L<Mojo::DOM> objects.
   # "<p><b>123</b></p>"
   $dom->parse('<p>Test<b>123</b></p>')->at('p')->child_nodes->first->remove;
 
-  # "<!-- Test -->"
-  $dom->parse('<!-- Test --><b>123</b>')->child_nodes->first;
+  # "<!DOCTYPE html>"
+  $dom->parse('<!DOCTYPE html><b>123</b>')->child_nodes->first;
+
+  # " Test "
+  $dom->parse('<b>123</b><!-- Test -->')->child_nodes->last->content;
 
 =head2 children
 
@@ -639,7 +690,7 @@ L<Mojo::DOM::CSS/"SELECTORS"> are supported.
 
   my $namespace = $dom->namespace;
 
-Find this element's namespace or return C<undef> if none could be found.
+Find this element's namespace, or return C<undef> if none could be found.
 
   # Find namespace for an element with namespace prefix
   my $namespace = $dom->at('svg > svg\:circle')->namespace;
@@ -659,7 +710,7 @@ fragment if necessary.
 
   my $sibling = $dom->next;
 
-Return L<Mojo::DOM> object for next sibling element or C<undef> if there are no
+Return L<Mojo::DOM> object for next sibling element, or C<undef> if there are no
 more siblings.
 
   # "<h2>123</h2>"
@@ -669,7 +720,7 @@ more siblings.
 
   my $sibling = $dom->next_node;
 
-Return L<Mojo::DOM> object for next sibling node or C<undef> if there are no
+Return L<Mojo::DOM> object for next sibling node, or C<undef> if there are no
 more siblings.
 
   # "456"
@@ -684,8 +735,11 @@ more siblings.
 
   my $parent = $dom->parent;
 
-Return L<Mojo::DOM> object for parent of this node or C<undef> if this node has
+Return L<Mojo::DOM> object for parent of this node, or C<undef> if this node has
 no parent.
+
+  # "<b><i>Test</i></b>"
+  $dom->parse('<p><b><i>Test</i></b></p>')->at('i')->parent;
 
 =head2 parse
 
@@ -694,7 +748,7 @@ no parent.
 Parse HTML/XML fragment with L<Mojo::DOM::HTML>.
 
   # Parse XML
-  my $dom = Mojo::DOM->new->xml(1)->parse($xml);
+  my $dom = Mojo::DOM->new->xml(1)->parse('<foo>I ♥ Mojolicious!</foo>');
 
 =head2 preceding
 
@@ -722,7 +776,7 @@ node as L<Mojo::DOM> objects.
 
   $dom = $dom->prepend('<p>I ♥ Mojolicious!</p>');
 
-Prepend HTML/XML fragment to this node.
+Prepend HTML/XML fragment to this node (for all node types other than C<root>).
 
   # "<div><h1>Test</h1><h2>123</h2></div>"
   $dom->parse('<div><h2>123</h2></div>')
@@ -754,7 +808,7 @@ node's content.
 
   my $sibling = $dom->previous;
 
-Return L<Mojo::DOM> object for previous sibling element or C<undef> if there
+Return L<Mojo::DOM> object for previous sibling element, or C<undef> if there
 are no more siblings.
 
   # "<h1>Test</h1>"
@@ -764,7 +818,7 @@ are no more siblings.
 
   my $sibling = $dom->previous_node;
 
-Return L<Mojo::DOM> object for previous sibling node or C<undef> if there are
+Return L<Mojo::DOM> object for previous sibling node, or C<undef> if there are
 no more siblings.
 
   # "123"
@@ -779,7 +833,7 @@ no more siblings.
 
   my $parent = $dom->remove;
 
-Remove this node and return L</"parent">.
+Remove this node and return L</"root"> (for C<root> nodes) or L</"parent">.
 
   # "<div></div>"
   $dom->parse('<div><h1>Test</h1></div>')->at('h1')->remove;
@@ -792,7 +846,8 @@ Remove this node and return L</"parent">.
 
   my $parent = $dom->replace('<div>I ♥ Mojolicious!</div>');
 
-Replace this node with HTML/XML fragment and return L</"parent">.
+Replace this node with HTML/XML fragment and return L</"root"> (for C<root>
+nodes) or L</"parent">.
 
   # "<div><h2>123</h2></div>"
   $dom->parse('<div><h1>Test</h1></div>')->at('h1')->replace('<h2>123</h2>');
@@ -805,7 +860,7 @@ Replace this node with HTML/XML fragment and return L</"parent">.
 
   my $root = $dom->root;
 
-Return L<Mojo::DOM> object for root node.
+Return L<Mojo::DOM> object for C<root> node.
 
 =head2 strip
 
@@ -870,12 +925,63 @@ carefully since it is very dynamic.
 This node's type, usually C<cdata>, C<comment>, C<doctype>, C<pi>, C<raw>,
 C<root>, C<tag> or C<text>.
 
+  # "cdata"
+  $dom->parse('<![CDATA[Test]]>')->child_nodes->first->type;
+
+  # "comment"
+  $dom->parse('<!-- Test -->')->child_nodes->first->type;
+
+  # "doctype"
+  $dom->parse('<!DOCTYPE html>')->child_nodes->first->type;
+
+  # "pi"
+  $dom->parse('<?xml version="1.0"?>')->child_nodes->first->type;
+
+  # "raw"
+  $dom->parse('<title>Test</title>')->at('title')->child_nodes->first->type;
+
+  # "root"
+  $dom->parse('<p>Test</p>')->type;
+
+  # "tag"
+  $dom->parse('<p>Test</p>')->at('p')->type;
+
+  # "text"
+  $dom->parse('<p>Test</p>')->at('p')->child_nodes->first->type;
+
+=head2 val
+
+  my $value = $dom->val;
+
+Extract value from form element (such as C<button>, C<input>, C<option>,
+C<select> and C<textarea>), or return C<undef> if this element has no value. In
+the case of C<select> with C<multiple> attribute, find C<option> elements with
+C<selected> attribute and return an array reference with all values, or C<undef>
+if none could be found.
+
+  # "a"
+  $dom->parse('<input name="test" value="a">')->at('input')->val;
+
+  # "b"
+  $dom->parse('<textarea>b</textarea>')->at('textarea')->val;
+
+  # "c"
+  $dom->parse('<option value="c">Test</option>')->at('option')->val;
+
+  # "d"
+  $dom->parse('<select><option selected>d</option></select>')
+    ->at('select')->val;
+
+  # "e"
+  $dom->parse('<select multiple><option selected>e</option></select>')
+    ->at('select')->val->[0];
+
 =head2 wrap
 
   $dom = $dom->wrap('<div></div>');
 
-Wrap HTML/XML fragment around this node, placing it as the last child of the
-first innermost element.
+Wrap HTML/XML fragment around this node (for all node types other than C<root>),
+placing it as the last child of the first innermost element.
 
   # "<p>123<b>Test</b></p>"
   $dom->parse('<b>Test</b>')->at('b')->wrap('<p>123</p>')->root;
@@ -893,8 +999,8 @@ first innermost element.
 
   $dom = $dom->wrap_content('<div></div>');
 
-Wrap HTML/XML fragment around this node's content, placing it as the last
-children of the first innermost element.
+Wrap HTML/XML fragment around this node's content (for C<root> and C<tag>
+nodes), placing it as the last children of the first innermost element.
 
   # "<p><b>123Test</b></p>"
   $dom->parse('<p>Test<p>')->at('p')->wrap_content('<b>123</b>')->root;
@@ -908,7 +1014,7 @@ children of the first innermost element.
   $dom     = $dom->xml($bool);
 
 Disable HTML semantics in parser and activate case-sensitivity, defaults to
-auto detection based on processing instructions.
+auto-detection based on XML declarations.
 
 =head1 OPERATORS
 
@@ -946,6 +1052,6 @@ Alias for L</"to_string">.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

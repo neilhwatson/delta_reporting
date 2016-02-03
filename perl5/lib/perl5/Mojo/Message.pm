@@ -110,7 +110,7 @@ sub get_body_chunk {
 
   $self->emit('progress', 'body', $offset);
   my $chunk = $self->content->get_body_chunk($offset);
-  return $chunk if !defined $chunk || length $chunk;
+  return $chunk if !defined $chunk || $chunk ne '';
   $self->finish;
 
   return $chunk;
@@ -305,7 +305,7 @@ Mojo::Message - HTTP message base class
 
 =head1 DESCRIPTION
 
-L<Mojo::Message> is an abstract base class for HTTP message containers based on
+L<Mojo::Message> is an abstract base class for HTTP message containers, based on
 L<RFC 7230|http://tools.ietf.org/html/rfc7230>,
 L<RFC 7231|http://tools.ietf.org/html/rfc7231> and
 L<RFC 2388|http://tools.ietf.org/html/rfc2388>, like L<Mojo::Message::Request>
@@ -390,7 +390,7 @@ C<MOJO_MAX_LINE_SIZE> environment variable or C<8192> (8KB).
 Maximum message size in bytes, defaults to the value of the
 C<MOJO_MAX_MESSAGE_SIZE> environment variable or C<16777216> (16MB). Setting
 the value to C<0> will allow messages of indefinite size. Note that increasing
-this value can also drastically increase memory usage, should you for example
+this value can also drastically increase memory usage, should you for example,
 attempt to parse an excessively large message body with the L</"body_params">,
 L</"dom"> or L</"json"> methods.
 
@@ -661,6 +661,6 @@ All C<multipart/form-data> file uploads, usually L<Mojo::Upload> objects.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
 
 =cut

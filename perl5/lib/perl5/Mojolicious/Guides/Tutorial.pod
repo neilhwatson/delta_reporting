@@ -7,7 +7,7 @@ Mojolicious::Guides::Tutorial - Tutorial
 
 =head1 TUTORIAL
 
-A quick example driven introduction to the wonders of L<Mojolicious::Lite>.
+A quick example-driven introduction to the wonders of L<Mojolicious::Lite>.
 Almost everything you'll learn here also applies to full L<Mojolicious>
 applications.
 
@@ -265,7 +265,7 @@ by the C<begin> and C<end> keywords, they are the foundation for many helpers.
   <html>
     <head><title>Sebastians frameworks</title></head>
     <body>
-      %= $link->('http://mojolicio.us', 'Mojolicious')
+      %= $link->('http://mojolicious.org', 'Mojolicious')
       %= $link->('http://catalystframework.org', 'Catalyst')
     </body>
   </html>
@@ -383,7 +383,7 @@ Routes can be restricted to specific request methods with different keywords.
   };
 
   # GET|POST|PATCH /bye
-  any [qw(GET POST PATCH)] => '/bye' => sub {
+  any ['GET', 'POST', 'PATCH'] => '/bye' => sub {
     my $c = shift;
     $c->render(text => 'Bye World!');
   };
@@ -429,7 +429,7 @@ just make a list of possible values.
 
   # /test
   # /123
-  any '/:foo' => [foo => [qw(test 123)]] => sub {
+  any '/:foo' => [foo => ['test', '123']] => sub {
     my $c   = shift;
     my $foo = $c->param('foo');
     $c->render(text => "Our :foo placeholder matched $foo");
@@ -581,7 +581,7 @@ limit possible values.
 
   # /hello.json
   # /hello.txt
-  get '/hello' => [format => [qw(json txt)]] => sub {
+  get '/hello' => [format => ['json', 'txt']] => sub {
     my $c = shift;
     return $c->render(json => {hello => 'world'})
       if $c->stash('format') eq 'json';
@@ -704,8 +704,8 @@ constructs.
     $c->render(text => 'Dude, you really need to upgrade to Firefox.');
   };
 
-  # http://mojolicio.us/bar
-  get '/bar' => (host => 'mojolicio.us') => sub {
+  # http://mojolicious.org/bar
+  get '/bar' => (host => 'mojolicious.org') => sub {
     my $c = shift;
     $c->render(text => 'Hello Mojolicious.');
   };
@@ -714,7 +714,7 @@ constructs.
 
 =head2 Sessions
 
-Cookie based sessions just work out of the box, as soon as you start using them
+Cookie-based sessions just work out of the box, as soon as you start using them
 through the helper L<Mojolicious::Plugin::DefaultHelpers/"session">. Just be
 aware that all session data gets serialized with L<Mojo::JSON> and stored
 client-side, with a cryptographic signature to prevent tampering.
@@ -734,7 +734,7 @@ client-side, with a cryptographic signature to prevent tampering.
   Counter: <%= session 'counter' %>
 
 Note that you should use custom L<Mojolicious/"secrets"> to make signed cookies
-really secure.
+really tamper resistant.
 
   app->secrets(['My secret passphrase here']);
 
@@ -801,7 +801,7 @@ L<Mojo::JSON> and L<Mojo::DOM> this can be a very powerful tool.
   # Blocking
   get '/headers' => sub {
     my $c   = shift;
-    my $url = $c->param('url') || 'http://mojolicio.us';
+    my $url = $c->param('url') || 'http://mojolicious.org';
     my $dom = $c->ua->get($url)->res->dom;
     $c->render(json => $dom->find('h1, h2, h3')->map('text')->to_array);
   };
@@ -809,7 +809,7 @@ L<Mojo::JSON> and L<Mojo::DOM> this can be a very powerful tool.
   # Non-blocking
   get '/title' => sub {
     my $c = shift;
-    $c->ua->get('mojolicio.us' => sub {
+    $c->ua->get('mojolicious.org' => sub {
       my ($ua, $tx) = @_;
       $c->render(data => $tx->res->dom->at('title')->text);
     });
@@ -821,8 +821,8 @@ L<Mojo::JSON> and L<Mojo::DOM> this can be a very powerful tool.
     $c->delay(
       sub {
         my $delay = shift;
-        $c->ua->get('http://mojolicio.us'  => $delay->begin);
-        $c->ua->get('https://metacpan.org' => $delay->begin);
+        $c->ua->get('http://mojolicious.org' => $delay->begin);
+        $c->ua->get('https://metacpan.org'   => $delay->begin);
       },
       sub {
         my ($delay, $mojo, $cpan) = @_;
