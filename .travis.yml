@@ -1,0 +1,27 @@
+language: perl
+perl:
+   - "5.22"
+   - "5.20"
+   - "5.18"
+   - "5.16"
+
+services:
+   - postgresql
+
+before-script:
+   - psql -c 'CREATE DATABASE delta_reporting_test;' -U postgres
+   - psql -c 'CREATE USER deltar_ro;' -U postgres
+   - psql -c 'CREATE USER deltar_rw;' -U postgres
+   - psql -c 'GRANT SELECT ON delta_reporting.* TO delta_ro;' -U postgres
+   - psql -c 'GRANT SELECT INSERT DELETE CREATE ON delta_reporting.* TO delta_rw;' -U postgres
+
+install:
+   - cd app; cpanm -n --installdeps . 
+
+script:
+   - cd app; ./DeltaR.pl test
+
+sudo: false
+
+notifications:
+   email: false
