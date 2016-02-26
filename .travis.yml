@@ -16,7 +16,7 @@ before-script:
    - psql -c 'GRANT SELECT INSERT DELETE CREATE ON delta_reporting.* TO delta_rw;' -U postgres
 
 install:
-   - cd app; cpanm -n --installdeps . 
+   - cpanm -n install Test::More Test::Exception Net::DNS Regexp::Common Sys::Hostname::Long DBI DBI:Pg
 
 script:
    - cd app; ./DeltaR.pl test
