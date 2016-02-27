@@ -13,7 +13,7 @@ before_script:
    - psql -c 'CREATE USER deltar_ro;' -U postgres
    - psql -c 'CREATE USER deltar_rw;' -U postgres
    - psql -c 'GRANT SELECT ON ALL TABLES IN SCHEMA public TO deltar_ro;' -U postgres
-   - psql -c 'GRANT SELECT INSERT DELETE CREATE ON ALL TABLES IN SCHEMA public TO deltar_rw;' -U postgres
+   - psql -c 'GRANT SELECT INSERT UPDATE DELETE ON ALL TABLES IN SCHEMA public TO deltar_rw;' -U postgres
 
 install:
    - cpanm -n Test::More Test::Exception Net::DNS Regexp::Common Sys::Hostname::Long DBI DBD::Pg IO::Socket::IP Log::Log4perl
