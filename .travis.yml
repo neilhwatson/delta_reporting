@@ -16,7 +16,7 @@ before_script:
    - psql -c 'GRANT ALL ON ALL TABLES IN SCHEMA public TO deltar_rw;' -U postgres
 
 install:
-   - cpanm -n Test::More Net::DNS Regexp::Common Sys::Hostname::Long DBI DBD::Pg IO::Socket::IP Log::Log4perl
+   - cpanm -n Test::More Net::DNS Regexp::Common Sys::Hostname::Long DBI DBD::Pg IO::Socket::IP Log::Log4perl local::lib
    - echo 'perl [$PERL]'
    - echo 'which perl:'; which perl
    - echo 'perl version:'; perl -v
