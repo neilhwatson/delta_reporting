@@ -27,4 +27,4 @@ then
 fi
 
 cd ${base}/..
-perl -I${base}/../../perl5/lib/perl5 -Mlocal::lib ${base}/../../perl5/bin/morbo ${listen} DeltaR.pl
+env perl -I${base}/../../perl5/lib/perl5 -Mlocal::lib ${base}/../../perl5/bin/morbo ${listen} DeltaR.pl
