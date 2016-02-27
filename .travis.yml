@@ -17,6 +17,7 @@ before_script:
 
 install:
    - cpanm -n Test::More Net::DNS Regexp::Common Sys::Hostname::Long DBI DBD::Pg IO::Socket::IP Log::Log4perl
+   - echo 'perl [$PERL]'
 
 script:
    - cd app; perl DeltaR.pl test

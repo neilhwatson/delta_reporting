@@ -32,6 +32,7 @@ if ( $log eq '' ) {
    exit 1;
 }
 
+warn " env perl is [$ENV{perl}] ";
 my $dir = dirname( $0 );
 
 if ( -e "$log" ){
