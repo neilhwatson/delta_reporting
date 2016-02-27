@@ -33,14 +33,12 @@ if ( $log eq '' ) {
    exit 1;
 }
 
-warn " perl version is $^V";
 my $dir = dirname( $0 );
 
 if ( -e "$log" ){
    chdir "${dir}/..";
    if ( WIFEXITED( system( "./DeltaR.pl load '$log'" ) >> 8 ) ){
       exit;
-      #env perl -I${dir}/../../perl5/lib/perl5 -Mlocal::lib DeltaR.pl load "$log"
    }
    else{
       croak "DeltaR.pl load [$log] exited with an error";

@@ -6,8 +6,6 @@ use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
 
-warn " perl version is $^V";
-
 my $hosts = 2;
 my @log_data;
 
