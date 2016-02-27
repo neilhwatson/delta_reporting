@@ -19,9 +19,6 @@
 
 # This is wrapper to load agent logs
 
-PATH=/usr/bin
-export PATH=$PATH
-
 base=$(dirname $0)
 
 perl -v
