@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl 
 
 =pod
 Delta Reporting is a central server compliance log that uses CFEngine.

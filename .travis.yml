@@ -16,7 +16,7 @@ before_script:
    - psql -c 'GRANT ALL ON ALL TABLES IN SCHEMA public TO deltar_rw;' -U postgres
 
 install:
-   - cpanm -n Test::More Test::Exception Net::DNS Regexp::Common Sys::Hostname::Long DBI DBD::Pg IO::Socket::IP Log::Log4perl
+   - cpanm -n Test::More Net::DNS Regexp::Common Sys::Hostname::Long DBI DBD::Pg IO::Socket::IP Log::Log4perl
 
 script:
    - cd app; perl DeltaR.pl test
