@@ -27,7 +27,7 @@ This is for testing the home page.
 
 Delta Reporting is a central server compliance log that uses CFEngine.
 
-Copyright (C) 2013 Evolve Thinking http://evolvethinking.com
+Copyright (C) 2016 Neil H. Watson http://watson-wilson.ca
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

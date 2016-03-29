@@ -1,8 +1,8 @@
 % layout 'main';
 
    <ul>
-      <li>Copywrite 2013 <a href="http://evolvethinking.com">Evolve Thinking Limited</a></li>
-      <li><a href="http://github.com/evolvethinking/delta_reporting">Source code here</a>.</li>
+      <li>Copywrite 2013 <a href="http://watson-wilson.ca">Neil H. Watson</a></li>
+      <li><a href="http://github.com/neilhwatson/delta_reporting">Source code here</a>.</li>
       <li>Powered by <a href="http://mojolicio.us">Mojolicious</a> and <a href="http://perl.org">Perl</a>.</li>
       <li>Back end is <a href="http://postgresql.org">PostgeSQL</a>
          by default, but will work with most databases.
@@ -11,12 +11,12 @@
 
    <h2>Delta Hardening </h2>
 
-   <a href="http://evolvethinking.com/products/delta_hardening/"><img src="/media/dh-logo.png" style="padding-bottom:5px" height="110"></a>
-   <p><a href="http://evolvethinking.com/products/delta_hardening/">Delta Hardening</a> is a host hardening addon for Delta Reporting.</p> 
+   <p><a href="https://github.com/neilhwatson/evolve_cfengine_freelib/tree/master/policy_data/delta_hardening">
+   Delta Hardening</a> is part of the Evolve Free Library and works to harden servers to NIST and NSA recommendations.
 
    <h2>License</h2>
 
-   <p>Copyright Evolve Thinking (<a href="www.evolvethinking.com">www.evolvethinking.com</a>).</p>
+   <p>Copyright Neil H. Watson (<a href="http://watson-wilson.ca">watson-wilson.ca</a>).</p>
 
    <p>Delta Reporting is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p>
 

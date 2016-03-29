@@ -21,18 +21,18 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 
 ## Demo ##
 
-[demo.evolvethinking.com](http://demo.evolvethinking.com). User 'evolve', password 'thinking'.
+[drdemo.watson-wilson.ca](http://drdemo.watson-wilson.ca). User 'evolve', password 'thinking'.
 
 ## Requirements ##
 
 ### Client and Server ###
 1. CFEngine 3.6.3+.
-1. [EFL](https://github.com/evolvethinking/evolve\_cfengine\_freelib/), the Evolve Thinking free promise library. It very important that you know how to use this.
+1. [EFL](https://github.com/neilhwatson/evolve\_cfengine\_freelib/), the Evolve Thinking free promise library. It very important that you know how to use this.
 1. Perl 5.10+
 
 #### Note about EFL ####
 
-[EFL](https://github.com/evolvethinking/evolve\_cfengine\_freelib/) contains logging action and classes attributes that log promise outcomes for Delta Reporting to gather and process. EFL's promise bundles use these automatically. To use your own promises you will need to use these EFL action and classes attributes. See EFL bundles efl\_rkn, efl\_delta\_reporting, and the Delta Reporting architecture docs.
+[EFL](https://github.com/neilhwatson/evolve\_cfengine\_freelib/) contains logging action and classes attributes that log promise outcomes for Delta Reporting to gather and process. EFL's promise bundles use these automatically. To use your own promises you will need to use these EFL action and classes attributes. See EFL bundles efl\_rkn, efl\_delta\_reporting, and the Delta Reporting architecture docs.
 
 ### Server ###
 
@@ -62,7 +62,7 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 
 ## Support ##
 
-Evolve Thinking is the creator and caretaker of Delta Reporting. They offer professional support services for Delta Reporting, CFEngine, and other IT services. ( http://evolvethinking.com ).
+Neil Watson is the creator and caretaker of Delta Reporting. They offer professional support services for Delta Reporting, CFEngine, and other IT services. ( http://watson-wilson.ca ).
 
 ## How it works ##
 
@@ -122,7 +122,7 @@ If you have mutiple CFEngine servers, install Delta Reporting on each, but point
 
 Delta Reporting is a central server compliance log that uses CFEngine.
 
-Copyright (C) 2013 Evolve Thinking http://evolvethinking.com
+Copyright (C) 2016 Neil H. Watson http://watson-wilson.ca
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
