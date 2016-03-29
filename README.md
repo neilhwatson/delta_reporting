@@ -6,6 +6,10 @@ Delta Reporting provides centralized CFEngine class and promise reporting via a 
 
 [More screenshots](Screenshots.md)
 
+## Testing ##
+
+The software is well teseted. See it's automated testing over at [Travis-CI](https://travis-ci.org/neilhwatson/delta_reporting).
+
 ## Features ##
 - Report on class membership history.
 - Report on low level promise compliance history.
