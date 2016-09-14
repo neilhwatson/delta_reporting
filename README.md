@@ -1,5 +1,7 @@
 # delta\_reporting #
 
+[![Build Status](https://travis-ci.org/neilhwatson/delta_reporting.svg?branch=master)](https://travis-ci.org/neilhwatson/delta_reporting)
+
 Delta Reporting provides centralized CFEngine class and promise reporting via a modern and responsive web application.
 
 ![Dashboard screenshot](screenshots/dr-dashboard.png)
