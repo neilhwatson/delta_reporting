@@ -29,7 +29,9 @@ my $fqhn = hostname_long();
 warn 'FQDN is '.$fqhn;
 
 # Get IP from FQHN
-my $ip = _get_ip( $fqhn );
+# We can't use the gathered fqhn from above because testing hosts like
+# travis-ci will not have dns entries. So we use a known fqhn.
+my $ip = _get_ip( 'watson-wilson.ca' );
 warn 'ip is '.$ip;
 
 # Now PTR lookup ip using DeltaR's prod subroutine.
@@ -68,7 +70,7 @@ sub _get_ip {
 		}
 	}
 	
-   return 'unknow';
+   return 0;
 }
 
 	
