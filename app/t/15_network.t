@@ -26,15 +26,15 @@ my $fqhn_regex = qr/\A $RE{net}{domain}{-nospace}{-rfc1101}\.? \Z/x;
 
 # Get FQHN hostname
 my $fqhn = hostname_long();
-say 'FQDN is '.$fqhn;
+warn 'FQDN is '.$fqhn;
 
 # Get IP from FQHN
 my $ip = _get_ip( $fqhn );
-say 'ip is '.$ip;
+warn 'ip is '.$ip;
 
 # Now PTR lookup ip using DeltaR's prod subroutine.
 my $ptr_fqhn  = DeltaR::Query::_get_ptr( $ip );
-say 'final hostname is '.$ptr_fqhn;
+warn 'final hostname is '.$ptr_fqhn;
 
 like( $fqhn,     $fqhn_regex, 'Sys::Hostname::Long Can resolve hostname' );
 like( $ip,       $ip_regex,   'Can resolve ip address' );
