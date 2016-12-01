@@ -1,6 +1,6 @@
-# Copyright Evolve Thinking ( www.evolvethinking.com ).
+# Copyright Neil H. Watson ( http://watson-wilson.ca)
 # For fresh updates visit:
-# https://github.com/evolvethinking/evolve_cfengine_freelib
+# https://github.com/neilhwatson/evolve_cfengine_freelib
 
 #
 # License
@@ -2668,7 +2668,7 @@ bundle agent efl_rcs_pull( ref )
       "field_1" string => "Update working copy command";
 # Example: /usr/bin/git reset --hard HEAD && /usr/bin/git pull
       "field_2" string => "Checkout command to be used if update command fails";
-# Example: /usr/bin/git clone https://github.com/evolvethinking/evolve_cfengine_freelib.git
+# Example: /usr/bin/git clone https://github.com/neilhwatson/evolve_cfengine_freelib.git
       "field_3" string => "Destination directory, or your working directory";
       "field_4" string => "Mode for destination directory.";
       "field_5" string => "Owner";

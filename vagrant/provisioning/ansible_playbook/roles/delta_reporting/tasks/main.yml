@@ -93,7 +93,7 @@
 
 - name: clone delta reporting repo to /opt/delta_reporting
   git: dest=/opt/delta_reporting
-    repo=https://github.com/evolvethinking/delta_reporting
+    repo=https://github.com/neilhwatson/delta_reporting
 
 - name: ensure proper configuration file DeltaR.conf
   template: src=DeltaR.conf.j2 dest=/opt/delta_reporting/app/DeltaR.conf
