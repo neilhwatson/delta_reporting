@@ -1,8 +1,9 @@
-use strict;
-use warnings;
+use lib './lib';
 use Test::More;
 use Test::Mojo;
 use Storable;
+use strict;
+use warnings;
 
 my $shared = retrieve( '/tmp/delta_reporting_test_data' );
 

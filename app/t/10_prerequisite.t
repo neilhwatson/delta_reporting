@@ -1,11 +1,12 @@
-use strict;
-use warnings;
+use lib './lib';
 use Test::More;
 use Test::Exception;
 use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
 use feature 'say';
+use strict;
+use warnings;
 
 my $timestamp           = strftime "%Y-%m-%dT%H:%M:%S%z", localtime; 
 my $datestamp_yesterday = strftime "%Y-%m-%d", localtime( time - 60**2 *24 );

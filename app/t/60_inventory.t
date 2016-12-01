@@ -1,7 +1,8 @@
-use strict;
-use warnings;
+use lib './lib';
 use Test::More;
 use Test::Mojo;
+use strict;
+use warnings;
 
 my $t = Test::Mojo->new('DeltaR');
 $t->ua->max_redirects(1);

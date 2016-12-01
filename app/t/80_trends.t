@@ -1,9 +1,10 @@
-use strict;
-use warnings;
+use lib './lib';
 use Test::More;
 use Test::Mojo;
 use Storable;
 use Regexp::Common qw/number/;
+use strict;
+use warnings;
 
 my $data_file = '/tmp/delta_reporting_test_data';
 my $stored = retrieve( $data_file ) or die "Cannot open [$data_file], [$!]";

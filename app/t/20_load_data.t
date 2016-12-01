@@ -1,10 +1,11 @@
-use strict;
-use warnings;
+use lib './lib';
 use Test::More;
 use Test::Exception;
 use Test::Mojo;
 use POSIX( 'strftime' );
 use Storable;
+use strict;
+use warnings;
 
 my $hosts = 2;
 my @log_data;

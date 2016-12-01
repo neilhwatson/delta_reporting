@@ -1,9 +1,10 @@
-use strict;
-use warnings;
+use lib './lib';
 use Test::More;
 use Test::Mojo;
 use Storable;
 use Regexp::Common q/net/;
+use strict;
+use warnings;
 
   
 # duplicate of test data from load test

@@ -1,9 +1,10 @@
-use strict;
-use warnings;
+use lib './lib';
 use Test::More;
 use Test::Mojo;
 use Storable;
 use Regexp::Common q/net/;
+use strict;
+use warnings;
 
 my %test_params = (
    # A copy of the test data that was inserted.
