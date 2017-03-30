@@ -25,10 +25,6 @@ This software is well teseted. See its automated testing over at [Travis-CI](htt
 - Save your reports in multiple formats.
 - Command line report tool that outputs multiple formats.
 
-## Demo ##
-
-[drdemo.watson-wilson.ca](http://drdemo.watson-wilson.ca). User 'evolve', password 'thinking'.
-
 ## Requirements ##
 
 ### Client and Server ###
